@@ -1,0 +1,48 @@
+{
+  "balls": [
+    {
+      "count": 2,
+      "radius": "10",
+      "position": ["random.uniform(-0.2, 0.2)", "random.uniform(-0.2, 0.02)"],
+      "velocity": [
+        "random.uniform(-0.01, 0.01)",
+        "random.uniform(-0.01, 0.01)"
+      ],
+      "color": "(1.0, 1.0, 1.0, 1.0)",
+      "fragments_explode": 50,
+      "fragments_touch": 50
+    }
+  ],
+  "arcs": [
+    {
+      "count": 10,
+      "radius": "(80 + total*15)",
+      "speed": "random.uniform(-2, 2)",
+      "angle_start": 0,
+      "angle_end": "300-total*3",
+      "width": 10,
+      "color": "(random.uniform(0.0, 1), random.uniform(0.0, 1), random.uniform(0.0, 1), 1.0)",
+      "colors9": [
+        "(random.uniform(0.0, 1), random.uniform(0.0, 1), random.uniform(0.0, 1), 1.0)",
+        "(random.uniform(0.0, 1), random.uniform(0.0, 1), random.uniform(0.0, 1), 1.0)"
+      ],
+      "fragments_explode": 50
+    }
+  ],
+  "texts_": [
+    {
+      "text": "'Bonjour'",
+      "textl": "'Est-ce que ça te donne envie d’y jouer ou juste de le regarder ?'",
+      "font_size": 32,
+      "font_family": "'Sans'",
+      "position": [0.0, 1.1],
+      "color": "(1.0, 0.0, 1.0)",
+      "bg_color": "(1.0, 0.0, 1.0)",
+      "size": [200, 100]
+    }
+  ],
+  "fragments": {
+    "max": 100
+  },
+  "window_size": [540, 960]
+}
