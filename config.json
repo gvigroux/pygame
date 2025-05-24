@@ -9,8 +9,8 @@
         "random.uniform(-0.01, 0.01)"
       ],
       "color": "(1.0, 1.0, 1.0, 1.0)",
-      "fragments_explode": 50,
-      "fragments_touch": 50
+      "fragments_explode": 5,
+      "fragments_touch": 5
     }
   ],
   "arcs": [
@@ -26,7 +26,7 @@
         "(random.uniform(0.0, 1), random.uniform(0.0, 1), random.uniform(0.0, 1), 1.0)",
         "(random.uniform(0.0, 1), random.uniform(0.0, 1), random.uniform(0.0, 1), 1.0)"
       ],
-      "fragments_explode": 50
+      "fragments_explode": 5
     }
   ],
   "texts_": [
@@ -42,7 +42,7 @@
     }
   ],
   "fragments": {
-    "max": 100
+    "max": 10
   },
   "window_size": [540, 960]
 }

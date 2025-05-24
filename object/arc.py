@@ -78,11 +78,17 @@ class Arc(Object):
 
         
     def update(self, dt):
+        self.age += dt
+        if( self.age < self.timer ):
+            return
         if( self.is_destroyed() ):
             return
                 
-        self.angle += self.speed #* dt
+        self.angle += self.speed * dt * 50
 
+    
+        
+    def draw(self):
         angle_rad = math.radians(self.angle)
         scale = self.size / self.window_size[0]
         cos_a = math.cos(angle_rad) * scale

@@ -26,8 +26,7 @@ from object.ball import Ball
 from object.particule_system import ParticleSystem
 from object.text import Text
 from video.capture import Capture
-
-
+from moviepy import *
 
 # --- LOAD CONFIG ---
 
@@ -89,13 +88,7 @@ def check_ball_collision(ball1, ball2):
     # Approximate combined radius (you can also use ellipse distance if needed)
     radius_gl = max(radius1_x + radius2_x, radius1_y + radius2_y)
     return distance < radius_gl
-    
-    
-
-#def enum_windows(hwnd, _):
-#    if win32gui.IsWindowVisible(hwnd):
-#        print(win32gui.GetWindowText(hwnd))
-#win32gui.EnumWindows(enum_windows, None)
+        
 
 capture = Capture()
     
@@ -136,15 +129,25 @@ for data in config.get("texts", []):
 
 # --- BOUCLE PRINCIPALE ---
 running = True
-last_explosion = time.time()
 sound1 = pygame.mixer.Sound('media/sound/jump.wav') 
 
+last_time = time.time()
+last_time2 = time.perf_counter()
+frame_count = 0
 
-capture.start("pygame window")
+if( running ):
+    #capture.start("pygame window")
+    pass
 
 while running:
     ctx.clear(0.1, 0.1, 0.1, 0.0)
-    dt = clock.tick(60) / 1000.0  # en secondes
+    
+    # Calculate DT
+    #dt = clock.tick(60) / 1000.0  # en secondes
+    current_time = time.perf_counter()
+    dt = current_time - last_time2
+    last_time2 = current_time
+
 
     background.Draw()
     
@@ -187,22 +190,13 @@ while running:
             elif( zone == 'hole' ):
                 sound1.play()
                 arc.explode(particle_system)
-                #ball.explode(particle_system)
-
-
-    # if( len(arcs) == 0 ):
-    #     pt = ball.get_fragment_points()
-    #     particle_system.clean()
-    #     for pt in points: 
-    #         angle = np.random.uniform(0, 2 * np.pi)
-    #         speed = np.random.uniform(30, 80)  # pixels/sec
-    #         vx = np.cos(angle) * speed
-    #         vy = np.sin(angle) * speed
-    #         particle_system.spawn(pt, (vx, vy), ball.color, lifetime=1.0)
          
     # Ball
     for ball in balls:
         ball.draw()
+
+    for arc in arcs:
+        arc.draw()
 
     # --- Particules ---
     particle_system.update(dt)
@@ -223,6 +217,56 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+    
+    # FPS
+    frame_count += 1
+    if time.time() - last_time >= 1.0:
+        #print("FPS:", frame_count)
+        frame_count = 0
+        last_time = time.time()
             
 capture.stop()
+
+
+def add_audio(video, audios):
+    audioclip   = AudioFileClip("media/sound/jump.wav")
+    clips = []
+    for audio in audios:
+        start_in    = audio[0]
+        end_in      = audioclip.duration
+        clips.append(video.subclipped(start_in, end_in).with_audio(audioclip))    
+    return clips
+
+
+
+
+# # Chargement de la vidéo
+# video = VideoFileClip("output.mp4")
+
+# # Charger l'effet sonore à insérer (ex: rebond)
+# bounce_sound = AudioFileClip("media/sound/jump.wav")
+
+# # Moments où la balle rebondit (en secondes)
+# bounce_times = [1.2, 1.5, 1.6, 2]  # À adapter selon ton jeu
+
+# # Créer un effet sonore décalé pour chaque rebond
+# bounce_clips = [
+#     bounce_sound.with_start(t)
+#     for t in bounce_times
+# ]
+# # Optionnel : fond sonore global (ex: musique)
+# # background_audio = AudioFileClip("music.mp3").with_duration(video.duration)
+
+# # Composer tous les sons (rebonds + musique de fond)
+# final_audio = CompositeAudioClip(bounce_clips)  # ou [background_audio] + bounce_clips si tu veux les 2
+
+# # Associer l’audio à la vidéo
+# video_with_audio = video.with_audio(final_audio)
+
+# # Export
+# video_with_audio.write_videofile("result.mp4", codec="libx264", audio_codec="aac")
+
+
+
+
 pygame.quit()

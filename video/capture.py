@@ -9,33 +9,25 @@ class Capture:
 
     def start(self, window_title):
 
-        return
-
         ffmpeg_cmd = [
             "ffmpeg",
-            "-y", 
-            
-            #"-thread_queue_size", "512",
-            "-f", "gdigrab", 
-            "-framerate", "60",
+            "-y",
+            "-framerate", "50",
+            "-f", "gdigrab",
+            "-draw_mouse", "0",
             "-i", f"title={window_title}",
-    
-            #"-thread_queue_size", "512",
-            "-f", "dshow",
-            "-i", "audio=CABLE Output (VB-Audio Virtual Cable)", #CABLE Output (VB-Audio Virtual Cable)   #Stereo Mix (Realtek(R) Audio)"
-            "-c:a", "aac",
-            "-b:a", "128k",
-            "-ar", "44100",
-            #"-shortest",
-
             "-c:v", "libx264",
             "-preset", "ultrafast",
-            #"-tune" , "zerolatency",
-            #"-pix_fmt" , "yuv420p",
-            #"-crf" , "23",
-
+            "-tune", "zerolatency",
             "output.mp4"
         ]
+
+            #"-thread_queue_size", "512",
+            #"-f", "dshow",
+            #"-i", "audio=CABLE Output (VB-Audio Virtual Cable)", #CABLE Output (VB-Audio Virtual Cable)   #Stereo Mix (Realtek(R) Audio)"
+            #"-c:a", "aac",
+            #"-b:a", "128k",
+            #"-ar", "44100",
 
         # ffmpeg_audio_cmd = [
         #     "ffmpeg", "-y",
@@ -68,6 +60,7 @@ class Capture:
                              ffmpeg_cmd,
                              stdin=subprocess.PIPE,
                              creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+        threading.Thread(target=self.wait_for_ffmpeg_ready, args=(self.video_process,), daemon=True).start()
         
                 
         # self.audio_thread = threading.Thread(target=self.capture_audio)
@@ -104,6 +97,16 @@ class Capture:
             stdin=subprocess.PIPE,
             creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
 
+    def wait_for_ffmpeg_ready(process):
+        while True:
+            line = process.stderr.readline()
+            if not line:
+                break
+            decoded = line.decode('utf-8').strip()
+            print(decoded)  # Debug
+            if "Press [q] to stop" in decoded or "frame=" in decoded:
+                print("FFmpeg is ready.")
+                break
 
     def stop(self):
 

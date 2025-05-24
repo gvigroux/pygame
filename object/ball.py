@@ -65,8 +65,10 @@ class Ball(Object):
             Ball.vao = context.simple_vertex_array(Ball.prog, vbo, 'in_position', 'in_texcoord')
 
     def update(self, dt):
-
-        self.position += self.velocity  # * dt * 60
+        self.age += dt
+        if( self.age < self.timer ):
+            return
+        self.position += self.velocity  * dt * 50
 
         # Bords de l'écran (rebond)
         for i in range(2):

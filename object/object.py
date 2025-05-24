@@ -31,6 +31,8 @@ class Object:
         
         self.index  = i
         self.amount = amount 
+        self.age    = 0
+        self.timer = self.config("timer", 1.0)
         self.color = self.config("color", (1.0, 0.0, 1.0, 1.0))
         self.fragments_explode = self.config("fragments_explode", 50)
         self.fragments_touch   = self.config("fragments_touch", 50)
