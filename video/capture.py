@@ -7,7 +7,9 @@ class Capture:
         self.audio_process = None
         self.video_process = None
 
-    def start(self, window_title):
+    def start(self):
+
+        window_title = "pygame window"
 
         ffmpeg_cmd = [
             "ffmpeg",

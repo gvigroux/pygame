@@ -1,138 +1,151 @@
+
+
+
 import math
 import random
-import moderngl
-import numpy as np
+
 import cairo
-import pygame
 
 from object.object import Object
-
-
-def color_random():
-    return random.randrange(0,100)/100
+from object.particle import Particle
 
 
 class Arc(Object):
-    
-    # VAO/VBO Shared by all arcs
-    vao = None
-    prog = None
+    def __init__(self, data, window_size, count, id):
+        super().__init__(data, window_size, count, id)
+        self.id = id
+        self.position = data.get("position", (window_size[0]//2, window_size[1]//2))
+        self.lifetime = data.get("lifetime", 1.0)
+        self.exploded = False
+        self.destroyed = False
+        self.start_time = 0.0
+        self.end_time = 0.0
 
-
-    def __init__(self, context, vbo, json, window_size, amount =1, i = 1):
-        super().__init__(context, vbo, json, window_size, amount, i)
-
+        
         self.radius      = self.config("radius", 10)
         self.angle_start = self.config("angle_start", 0)
         self.angle_end   = self.config("angle_end", 330)
         self.width       = self.config("width", 5)
         self.speed       = self.config("speed", random.uniform(-2, 2))
+        self.visible_deg = self.angle_end - self.angle_start
+        self.current_angle = 0.0  # angle accumulé
+        self.total_time = 0.0  # accumulateur interne
+        #self.speed *= 100  # multiplier pour faire tourner plus vite
 
-        self.angle = 0
+        self.start_angle = math.radians(self.angle_start)
+        self.end_angle = self.start_angle + math.radians(self.angle_end-self.angle_start)
+        self.visible_deg  = math.radians(self.angle_end - self.angle_start) 
+        self.exploded = False
+        self.fade_speed = 1.0  # vitesse de disparition (1.0 = lent, 5.0 = rapide)
 
-        self.size = self.radius * 2 + 20
-        data = np.zeros((self.size, self.size, 4), dtype=np.uint8)
-        surface = cairo.ImageSurface.create_for_data(data, cairo.FORMAT_ARGB32, self.size, self.size)
-        ctx_cairo = cairo.Context(surface)
-        ctx_cairo.set_antialias(cairo.ANTIALIAS_BEST)
-        ctx_cairo.set_line_width(self.width)
-        ctx_cairo.set_source_rgba(self.color[2], self.color[1], self.color[0], self.color[3])   #BGRA        
-        ctx_cairo.arc(self.size // 2, self.size // 2, self.radius, math.radians(self.angle_start), math.radians(self.angle_end))
-        ctx_cairo.stroke()
-        self.texture = self.context.texture((self.size, self.size), 4, data.tobytes())
-        self.texture.build_mipmaps()
-        self.position = np.array([0.0, 0.0], dtype=np.float32)
-
-                
-        # --- SHADERS (GPU) ---
-        if Arc.vao is None:
-            Arc.prog = context.program(
-                vertex_shader="""
-                    #version 330
-                    in vec2 in_position;
-                    in vec2 in_texcoord;
-                    out vec2 v_texcoord;
-                    uniform mat4 model;
-                    uniform mat4 projection;
-                    void main() {
-                        gl_Position = projection * model * vec4(in_position, 0.0, 1.0);
-                        v_texcoord = in_texcoord;
-                    }
-                """,
-                fragment_shader="""
-                    #version 330
-                    in vec2 v_texcoord;
-                    out vec4 fragColor;
-                    uniform sampler2D tex;
-                    uniform float alpha;
-                    uniform float time;
-                    void main() {
-                        vec4 color = texture(tex, v_texcoord);
-                        fragColor = vec4(color.rgb, color.a * alpha);
-                        fragColor += vec4(0.0, 0.0, 0.0, 0.0001 * time);
-                    }
-                """
-            )
-            Arc.vao = context.simple_vertex_array(Arc.prog, vbo, 'in_position', 'in_texcoord')
-
-
-        
     def update(self, dt):
-        self.age += dt
-        if( self.age < self.timer ):
-            return
-        if( self.is_destroyed() ):
-            return
-                
-        self.angle += self.speed * dt * 50
 
-    
+        for particle in self.particles:
+            particle.update(0.016)
+        # Enlève les particules mortes
+        self.particles = [p for p in self.particles if p.alpha > 0]
+
+        if self.destroyed:
+            return
         
-    def draw(self):
-        angle_rad = math.radians(self.angle)
-        scale = self.size / self.window_size[0]
-        cos_a = math.cos(angle_rad) * scale
-        sin_a = math.sin(angle_rad) * scale
+        if self.exploded:
+            self.alpha -= self.fade_speed * self.total_time
+            if self.alpha <= 0.0:
+                self.alpha = 0.0
+                self.destroyed = True
+        
+        # if self.exploded:
+        #     if self.total_time is None:
+        #         return  # fail-safe
+        #     t = (self.total_time - self.start_time) / (self.end_time - self.start_time)
+        #     if t >= 1.0:
+        #         self.destroyed = True
+        #     else:
+        #         # Effet d'explosion : agrandissement ou autre
+        #         self.alpha = max(0.0, 1.0 - t)  #
 
-        # Matrice 4x4 pour OpenGL
-        model = np.array([
-            [cos_a, sin_a, 0.0, 0.0],
-            [-sin_a, cos_a, 0.0, 0.0],
-            [0.0,    0.0,  1.0, 0.0],
-            [0.0,    0.0,  0.0, 1.0],
-        ], dtype='f4')
+        # self.total_time += dt
+        # self.current_angle = (self.speed * self.total_time) % 360
+        # self.start_angle = math.radians(self.current_angle)
+        # self.end_angle   = self.start_angle + self.visible_deg
+
+        self.total_time = dt
+        angle = (dt * self.speed) % 360
+        self.start_angle = math.radians(angle)
+        self.end_angle = self.start_angle + self.visible_deg 
 
 
-        Arc.prog['model'].write(model.tobytes())
-        Arc.prog['alpha'].value = self.alpha()
-        Arc.prog['time'].value = pygame.time.get_ticks() / 1000.0
-        self.texture.use()        
-        self.Render(Arc.vao, Arc.prog)
+        # Incrémente l'angle accumulé à chaque frame
+        #self.current_angle = (self.current_angle + self.speed * dt) % 360
+        #self.start_angle = math.radians(self.current_angle)
+        #self.end_angle = self.start_angle + math.radians(self.visible_deg)
+        
+   
 
-    def get_fragment_points(self):
-        """Renvoie une liste de points en coordonnées monde, pour générer les particules"""
-        points = []
-        segments = self.fragments_explode
+    def draw(self, ctx):
+        ctx.set_line_width(self.width)
+        #ctx.set_source_rgba(*self.color)
+        r, g, b, a = self.color
+        ctx.set_source_rgba(r, g, b, self.alpha) 
+        ctx.arc(self.position[0], self.position[1], self.radius, self.start_angle, self.end_angle)
+        ctx.stroke()
+        for particle in self.particles:
+            particle.draw(ctx)
 
-        # Angle de départ et de fin en degrés + rotation
-        angle_start_deg = (self.angle_start + self.angle) % 360
-        angle_end_deg = (self.angle_end + self.angle) % 360
+    def create_particles_center(self, count=20):
+        for _ in range(count):
+            angle = random.uniform(0, 2 * math.pi)
+            speed = random.uniform(50, 150)  # pixels/sec
+            vx = math.cos(angle) * speed
+            vy = math.sin(angle) * speed
+            particle = Particle(self.position, (vx, vy))
+            self.particles.append(particle)
 
-        # Assure que l’arc tourne dans le bon sens
-        if angle_end_deg < angle_start_deg:
-            angle_end_deg += 360
+    def create_particles(self, count=100):
+        r, g, b, a = self.color  # Couleur de base de l'arc
+        for _ in range(count):
+            # Angle aléatoire sur l’arc visible
+            theta = random.uniform(self.start_angle, self.end_angle)
 
-        angle_step = (angle_end_deg - angle_start_deg) / segments
+            # Position sur l’arc (bord visible)
+            x = self.position[0] + math.cos(theta) * self.radius
+            y = self.position[1] + math.sin(theta) * self.radius
 
-        for i in range(segments + 1):
-            angle_deg = angle_start_deg + i * angle_step
-            angle_rad = math.radians(angle_deg)
+            # Grand angle de dispersion : ±90° autour du theta
+            spread_angle = random.uniform(-math.pi / 2, math.pi / 2)
+            direction = theta + spread_angle
 
-            x = math.cos(angle_rad) * self.radius
-            y = math.sin(angle_rad) * self.radius / self.ratio
+            # Vitesse plus lente
+            speed = random.uniform(30, 70)
+            vx = math.cos(direction) * speed
+            vy = math.sin(direction) * speed
 
-            # Appliquer la position de l’arc
-            px = (self.window_size[0] // 2) + x
-            py = (self.window_size[1] // 2) + y
-            points.append((px, py))
-        return points
+            # Taille variable
+            radius = random.uniform(1.5, 4.0)
+
+            # Légère variation de couleur
+            dr = random.uniform(-0.1, 0.1)
+            dg = random.uniform(-0.1, 0.1)
+            db = random.uniform(-0.1, 0.1)
+            particle_color = (
+                min(max(r + dr, 0.0), 1.0),
+                min(max(g + dg, 0.0), 1.0),
+                min(max(b + db, 0.0), 1.0),
+                1.0
+            )
+
+            # Créer la particule
+            particle = Particle(position=(x, y), velocity=(vx, vy),
+                                radius=radius, lifetime=0.6, color=particle_color)
+            self.particles.append(particle)
+
+        
+    def explode(self):
+        if not self.exploded:
+            self.exploded = True
+            self.start_time = self.total_time
+            self.end_time = self.total_time + self.lifetime
+            self.create_particles()
+
+
+
