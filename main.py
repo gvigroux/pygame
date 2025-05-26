@@ -7,7 +7,11 @@ import time
 
 from object.arc import Arc
 from object.ball import Ball
-from video import capture
+from video import ffmpeg
+from video import opencv
+from video.py_save import RecorderPyGame
+
+
 # --- LOAD CONFIG ---
 
 file_path = os.path.dirname(os.path.realpath(__file__))
@@ -27,6 +31,7 @@ GAP_DEGREES = 60
 
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.DOUBLEBUF | pygame.HWSURFACE | pygame.SRCALPHA, vsync=1)
+
 
 
 def cairo_to_pygame(surface):
@@ -50,15 +55,21 @@ for data in config["arcs"]:
     for i in range(count):
         arcs.append(Arc(data, window_size, count, i))
 
+
+
+# Dossier pour stocker les images
+
+#recorder = opencv.RecorderOpenCV(window_size)
+#recorder = ffmpeg.RecorderFFMPEG(window_size)
+recorder = RecorderPyGame(window_size)
+
+
+frame_count = 0
 dt_history = []
 clock = pygame.time.Clock()
 start_time = time.perf_counter()
 last_time = time.perf_counter()
 running = True
-
-
-capture = capture.Capture()
-capture.start()
 
 while running:
     t0 = time.perf_counter()
@@ -113,11 +124,18 @@ while running:
     img = cairo_to_pygame(surface)
     t4 = time.perf_counter()
 
+    recorder.write(pygame, screen, frame_count)
+    #pygame.image.save(screen, f"captures/frame_{frame_count:04d}.png")
+    frame_count += 1
+    #if frame_count % 2 == 0:
+    #    pixels = pygame.surfarray.array3d(screen)
+    #    opencv.write(pixels)
+
     # Step 4 : Affichage
     screen.blit(img, (0, 0))
     pygame.display.flip()
     t5 = time.perf_counter()
-    clock.tick(60)
+    clock.tick(50)
  
     # Debug print
     #print(f"UPDATE: {(t2 - t1)*1000:.2f} ms | DRAW: {(t3 - t2)*1000:.2f} ms | CONVERT: {(t4 - t3)*1000:.2f} ms | BLIT+DISPLAY: {(t5 - t4)*1000:.2f} ms | TOTAL: {(t5 - t0)*1000:.2f} ms")
@@ -125,5 +143,5 @@ while running:
     #pygame.display.set_caption(f"FPS: {fps:.1f}")
     print(f"FPS={clock.get_fps():.2f} | dt={dt*1000:.2f}ms")
 
-capture.stop()
+recorder.stop()
 pygame.quit()

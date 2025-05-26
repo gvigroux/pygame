@@ -2,3 +2,7 @@ __pycache__/
 **/__pycache__/
 .git/
 ff*.exe
+captures/
+*.avi
+*.mp4
+*.png

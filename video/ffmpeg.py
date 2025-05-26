@@ -1,13 +1,11 @@
 import subprocess
 import threading
 
-class Capture:
+class RecorderFFMPEG:
 
-    def __init__(self):
+    def __init__(self, window_size):
         self.audio_process = None
         self.video_process = None
-
-    def start(self):
 
         window_title = "pygame window"
 
@@ -72,6 +70,9 @@ class Capture:
         # self.video_thread.start()
         # print("audio and video thread started")
 
+
+    def write(self, pygame, screen, frame_count):
+        pass
 
     def capture_audio(self):
         self.audio_thread = subprocess.Popen([

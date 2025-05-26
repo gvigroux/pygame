@@ -25,7 +25,7 @@ from object.arc import Arc
 from object.ball import Ball
 from object.particule_system import ParticleSystem
 from object.text import Text
-from video.capture import Capture
+from video.ffmpeg import Capture
 from moviepy import *
 
 # --- LOAD CONFIG ---
