@@ -11,95 +11,49 @@ from object.particle import Particle
 
 
 class Arc(Object):
-    def __init__(self, data, window_size, count, id):
-        super().__init__(data, window_size, count, id)
-        self.id = id
-        self.position = data.get("position", (window_size[0]//2, window_size[1]//2))
-        self.lifetime = data.get("lifetime", 1.0)
-        self.exploded = False
-        self.destroyed = False
-        self.start_time = 0.0
-        self.end_time = 0.0
+    def __init__(self, data, pygame, window_size, count, id):
+        super().__init__(data, pygame, window_size, count, id)
 
-        
+        self.position    = self.config("position", (window_size[0]//2, window_size[1]//2))
         self.radius      = self.config("radius", 10)
         self.angle_start = self.config("angle_start", 0)
         self.angle_end   = self.config("angle_end", 330)
         self.width       = self.config("width", 5)
         self.speed       = self.config("speed", random.uniform(-2, 2))
-        self.visible_deg = self.angle_end - self.angle_start
-        self.current_angle = 0.0  # angle accumulé
-        self.total_time = 0.0  # accumulateur interne
-        #self.speed *= 100  # multiplier pour faire tourner plus vite
 
-        self.start_angle = math.radians(self.angle_start)
-        self.end_angle = self.start_angle + math.radians(self.angle_end-self.angle_start)
-        self.visible_deg  = math.radians(self.angle_end - self.angle_start) 
-        self.exploded = False
-        self.fade_speed = 1.0  # vitesse de disparition (1.0 = lent, 5.0 = rapide)
 
-    def update(self, dt):
+        self.current_angle  = 0.0  # angle accumulé
+        self.start_angle    = math.radians(self.angle_start)
+        self.end_angle      = self.start_angle + math.radians(self.angle_end-self.angle_start)
+        self.visible_rad    = math.radians(self.angle_end - self.angle_start) 
 
-        for particle in self.particles:
-            particle.update(0.016)
-        # Enlève les particules mortes
-        self.particles = [p for p in self.particles if p.alpha > 0]
 
-        if self.destroyed:
-            return
-        
-        if self.exploded:
-            self.alpha -= self.fade_speed * self.total_time
-            if self.alpha <= 0.0:
-                self.alpha = 0.0
-                self.destroyed = True
-        
-        # if self.exploded:
-        #     if self.total_time is None:
-        #         return  # fail-safe
-        #     t = (self.total_time - self.start_time) / (self.end_time - self.start_time)
-        #     if t >= 1.0:
-        #         self.destroyed = True
-        #     else:
-        #         # Effet d'explosion : agrandissement ou autre
-        #         self.alpha = max(0.0, 1.0 - t)  #
+    def _update(self, dt):
 
-        # self.total_time += dt
-        # self.current_angle = (self.speed * self.total_time) % 360
-        # self.start_angle = math.radians(self.current_angle)
-        # self.end_angle   = self.start_angle + self.visible_deg
-
-        self.total_time = dt
-        angle = (dt * self.speed) % 360
-        self.start_angle = math.radians(angle)
-        self.end_angle = self.start_angle + self.visible_deg 
-
+        self.current_angle = (self.speed * self.age / 1000) % 360  # Division par 1000 si total_time est en ms
+        self.start_angle = math.radians(self.current_angle)
+        self.end_angle   = self.start_angle + self.visible_rad
 
         # Incrémente l'angle accumulé à chaque frame
         #self.current_angle = (self.current_angle + self.speed * dt) % 360
         #self.start_angle = math.radians(self.current_angle)
-        #self.end_angle = self.start_angle + math.radians(self.visible_deg)
-        
+        #self.end_angle = self.start_angle + self.visible_rad
    
 
-    def draw(self, ctx):
+    def _draw(self, ctx):
         ctx.set_line_width(self.width)
-        #ctx.set_source_rgba(*self.color)
-        r, g, b, a = self.color
-        ctx.set_source_rgba(r, g, b, self.alpha) 
         ctx.arc(self.position[0], self.position[1], self.radius, self.start_angle, self.end_angle)
         ctx.stroke()
-        for particle in self.particles:
-            particle.draw(ctx)
 
-    def create_particles_center(self, count=20):
-        for _ in range(count):
-            angle = random.uniform(0, 2 * math.pi)
-            speed = random.uniform(50, 150)  # pixels/sec
-            vx = math.cos(angle) * speed
-            vy = math.sin(angle) * speed
-            particle = Particle(self.position, (vx, vy))
-            self.particles.append(particle)
+
+    # def create_particles_center(self, count=20):
+    #     for _ in range(count):
+    #         angle = random.uniform(0, 2 * math.pi)
+    #         speed = random.uniform(50, 150)  # pixels/sec
+    #         vx = math.cos(angle) * speed
+    #         vy = math.sin(angle) * speed
+    #         particle = Particle(self.position, (vx, vy))
+    #         self.particles.append(particle)
 
     def create_particles(self, count=100):
         r, g, b, a = self.color  # Couleur de base de l'arc
@@ -140,12 +94,5 @@ class Arc(Object):
             self.particles.append(particle)
 
         
-    def explode(self):
-        if not self.exploded:
-            self.exploded = True
-            self.start_time = self.total_time
-            self.end_time = self.total_time + self.lifetime
-            self.create_particles()
-
 
 

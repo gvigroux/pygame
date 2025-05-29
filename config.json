@@ -1,11 +1,10 @@
 {
   "balls": [
     {
-      "count": 1,
+      "count": 5,
       "radius": "10",
-      "position": ["random.uniform(250, 290)", "random.uniform(460, 500)"],
-      "velocityr": ["random.uniform(-100, 100)", "random.uniform(-100, 100)"],
-      "velocity": ["70", "80"],
+      "position": ["random.uniform(240, 300)", "random.uniform(450, 510)"],
+      "velocity": ["random.uniform(-100, 100)", "random.uniform(-100, 100)"],
       "color": "(1.0, 1.0, 1.0, 1.0)",
       "fragments_explode": 5,
       "fragments_touch": 5
@@ -17,7 +16,7 @@
       "radius": "(80 + total*15)",
       "speed": "random.uniform(-100, 100)",
       "angle_start": 0,
-      "angle_end": "200-total*3",
+      "angle_end": "300-total*3",
       "width": 10,
       "color": "(random.uniform(0.0, 1), random.uniform(0.0, 1), random.uniform(0.0, 1), 1.0)",
       "colors9": [
@@ -27,15 +26,15 @@
       "fragments_explode": 5
     }
   ],
-  "texts_": [
+  "texts": [
     {
-      "text": "'Bonjour'",
-      "textl": "'Est-ce que ça te donne envie d’y jouer ou juste de le regarder ?'",
+      "titre": "'98% échouent'",
+      "text": "'Citez 5 pays sans la lettre A.........                     Avant qu il ne reste plus rien !'",
       "font_size": 32,
       "font_family": "'Sans'",
       "position": [0.0, 1.1],
-      "color": "(1.0, 0.0, 1.0)",
-      "bg_color": "(1.0, 0.0, 1.0)",
+      "color": "(1.0, 0.0, 1.0, 1.0)",
+      "bg_color": "(1.0, 1.0, 1.0, 1.0)",
       "size": [200, 100]
     }
   ],
