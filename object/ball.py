@@ -8,17 +8,14 @@ from object.object import Object
 from object.particle import Particle
 
 class Ball(Object):
-    def __init__(self, data, pygame, window_size, count, id):
-        super().__init__(data, pygame, window_size, count, id)
+    def __init__(self, data, pygame, screen,window_size, count, id):
+        super().__init__(data, pygame, screen,window_size, count, id)
         self.radius     = self.config("radius", 8)
         self.position   = self.config("position", [random.uniform(250, 290), random.uniform(460, 500)])
         self.velocity   = self.config("velocity", [random.uniform(-150, 150), random.uniform(-150, 150)])
         self.collision_margin = 1.5
 
-    def _update(self, dt):
-
-        if( self.age/1000 < self.freeze ):
-            return
+    def _update(self, dt, step):
     
         self.position[0] += self.velocity[0] * dt
         self.position[1] += self.velocity[1] * dt

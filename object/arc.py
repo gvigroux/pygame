@@ -11,8 +11,8 @@ from object.particle import Particle
 
 
 class Arc(Object):
-    def __init__(self, data, pygame, window_size, count, id):
-        super().__init__(data, pygame, window_size, count, id)
+    def __init__(self, data, pygame, screen,window_size, count, id):
+        super().__init__(data, pygame, screen,window_size, count, id)
 
         self.position    = self.config("position", (window_size[0]//2, window_size[1]//2))
         self.radius      = self.config("radius", 10)
@@ -28,16 +28,10 @@ class Arc(Object):
         self.visible_rad    = math.radians(self.angle_end - self.angle_start) 
 
 
-    def _update(self, dt):
-
-        self.current_angle = (self.speed * self.age / 1000) % 360  # Division par 1000 si total_time est en ms
-        self.start_angle = math.radians(self.current_angle)
-        self.end_angle   = self.start_angle + self.visible_rad
-
-        # Incrémente l'angle accumulé à chaque frame
-        #self.current_angle = (self.current_angle + self.speed * dt) % 360
-        #self.start_angle = math.radians(self.current_angle)
-        #self.end_angle = self.start_angle + self.visible_rad
+    def _update(self, dt, step):
+        self.current_angle  = (self.speed * self.age / 1000) % 360  # Division par 1000 si total_time est en ms
+        self.start_angle    = math.radians(self.current_angle)
+        self.end_angle      = self.start_angle + self.visible_rad
    
 
     def _draw(self, ctx):

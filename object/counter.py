@@ -11,16 +11,19 @@ from object.particle import Particle
 
 
 class Counter(Object):
-    def __init__(self, data, pygame, window_size, count, id):
-        super().__init__(data, pygame, window_size, count, id) 
+    def __init__(self, data, pygame, screen, window_size, count, id):
+        super().__init__(data, pygame, screen, window_size, count, id) 
         self.position   = (-1, -1)
         self.text       = "00"
+        self.start_step = self.config("start_step", 0)
+        self.end_step = self.config("end_step", 2)
     
 
-    def _update(self, dt):
+    def _update(self, dt, step):
+        if( step < self.start_step ) or ( step >= self.end_step ):
+            return
         minutes, self.seconds = divmod(int(self.age/1000), 60)
-        self.text = f"{self.seconds:02d}"
-        pass   
+        self.text = f"{self.seconds:02d}"   
 
     def _draw(self, ctx):
         ctx.select_font_face("Wumpus Mono Pro")

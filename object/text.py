@@ -22,10 +22,11 @@ class Text(Object):
         self.text        = self.config("text", "N/A")
         self.title       = self.config("title", "N/A")
 
+        
+
 
     def _update(self, dt):
         pass
-
 
 
     def _draw(self, ctx):

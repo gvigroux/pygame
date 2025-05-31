@@ -10,7 +10,7 @@ from backgrounds import BackgroundFactory
 from object.arc import Arc
 from object.ball import Ball
 from object.counter import Counter
-from object.text import Text
+from object.pytext import Text
 from object.text_tiktok import TextTikTok
 from video import ffmpeg
 from video import opencv
@@ -24,8 +24,25 @@ file_path = os.path.dirname(os.path.realpath(__file__))
 file = os.path.join(file_path, "config.json")
 if( os.path.isfile(file) == False ):
     exit()
-with open(file) as f:
-    config = json.load(f)
+
+# Lecture avec encodage UTF-8 explicite et gestion d'erreur
+try:
+    with open(file, 'r', encoding='utf-8') as f:
+        config = json.load(f)
+except UnicodeDecodeError:
+    # Fallback si UTF-8 échoue (pour les fichiers mal encodés)
+    try:
+        with open(file, 'r', encoding='latin-1') as f:
+            config = json.load(f)
+    except json.JSONDecodeError as e:
+        print(f"Erreur de décodage JSON: {e}")
+        exit()
+except json.JSONDecodeError as e:
+    print(f"Erreur de syntaxe JSON: {e}")
+    exit()
+except Exception as e:
+    print(f"Erreur inattendue: {e}")
+    exit()
 
 window_size = config.get("window_size", [540, 960])
 
@@ -33,6 +50,7 @@ window_size = config.get("window_size", [540, 960])
 pygame.init()
 screen = pygame.display.set_mode((window_size[0], window_size[1]), pygame.DOUBLEBUF | pygame.HWSURFACE | pygame.SRCALPHA, vsync=1)
         
+
 
 def cairo_to_pygame(surface):
     return pygame.image.frombuffer(
@@ -44,7 +62,7 @@ balls = []
 for data in config["balls"]:
     count = data.get("count", 1)
     while( len(balls) < count ):
-        ball = Ball( data, pygame, window_size, count, len(balls))
+        ball = Ball( data, pygame, screen, window_size, count, len(balls))
         if not any(ball.check_ball_collision(other) for other in balls):
             balls.append(ball)
 
@@ -53,15 +71,21 @@ arcs = []
 for data in config["arcs"]:
     count = data.get("count", 1)
     for i in range(count):
-        arcs.append(Arc(data, pygame, window_size, count, i))
+        arcs.append(Arc(data, pygame, screen, window_size, count, i))
 
 # Texts creation
 texts = []
 for data in config.get("texts", []):
-    for i in range(data.get("count", 1)):
-        texts.append(Text(data, pygame, window_size, count, i))
+    count = 1
+    parts = [data.get("text")]
+    if( data.get("split", False) ):
+        parts = data.get("text").split('\\n')
+        count = len(parts)
+    for i in range(count):
+        data["text"] = parts[i]
+        texts.append(Text(data, pygame, screen, window_size, count, i))
 
-counter = Counter({}, pygame, window_size, 1, 0)
+counter = Counter({}, pygame, screen, window_size, 1, 0)
 
 
 frame_count = 0
@@ -77,9 +101,13 @@ bounce_sound    = pygame.mixer.Sound("media/sound/retro/SoundJump2.wav")
 bounce_sound.set_volume(0.1)
 explosion_sound = pygame.mixer.Sound("media/sound/retro/SoundLand2.wav")
 bounce_sound.set_volume(0.1)
+pygame.mixer.music.load("media/music/Sam Gellaitry - Assumptions.mp3")
+pygame.mixer.music.play(loops=0, start=20.0, fade_ms=200)
+
 
 
 background = BackgroundFactory.create("concentric_wave")
+current_step = 0
 
 while running:
     t0 = time.perf_counter()
@@ -121,28 +149,45 @@ while running:
                 bounce_sound.play()
 
     for ball in balls:
-        ball.update(dt)
-    for arc in arcs:
-        #arc.update(elapsed_time)
-        arc.update(dt)
-    counter.update(dt)
-    t2 = time.perf_counter()
+        ball.update(dt, current_step)
 
+    for arc in arcs:
+        arc.update(dt, current_step)
+
+    counter.update(dt, current_step)
+    
+    for text in texts:
+        text.update(dt, current_step)
 
     # Remove dead objects
+    a, b = len(arcs), len(balls)
     arcs    = [obj for obj in arcs  if not obj.destroyed]
     balls   = [obj for obj in balls if not obj.is_destroyed()]
+    
+    if( len(arcs) == 0 and a > 0 ):
+        current_step += 1
+
+    if( len(balls) == 0 and b > 0 ):
+        current_step += 1
+
+
+    #if( len(arcs) > 0 ):
+    #    counter.update(dt, current_step)
+    #else:
+    #    timing = "end"
+    
+    #for text in texts:
+    #    text.update_timing(timing)
+ 
+    t2 = time.perf_counter()
 
     if( len(arcs) == 0 ):
         for ball in balls:
             ball.explode()
 
-
     # Step 2 : Cairo rendering
     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, window_size[0], window_size[1])
     ctx = cairo.Context(surface)    
-    #ctx.set_antialias(cairo.ANTIALIAS_NONE)
-    
     
     ctx.set_source_rgba(0, 0, 0, 1)
     ctx.rectangle(0, 0, window_size[0], window_size[1])
@@ -159,13 +204,6 @@ while running:
     for ball in balls:
         ball.draw(ctx)
 
-    #for text in texts:
-    #    text.draw(ctx)
-
-
-    
-
-
     t3 = time.perf_counter()
 
     
@@ -178,10 +216,9 @@ while running:
     # Step 4 : Affichage
     screen.blit(img, (0, 0))
 
-    #font = pygame.font.SysFont("TikTok Text", 50)  # Police système (Arial, Verdana...)
-    #text = font.render("Votre texte ici", True, (255, 255, 255))  # Couleur blanche
-    #screen.blit(text, (100, 400))  # Position (x, y)
 
+    for text in texts:
+        text.draw(ctx)
 
 
     pygame.display.flip()
@@ -191,7 +228,7 @@ while running:
     # Debug print
     #print(f"UPDATE: {(t2 - t1)*1000:.2f} ms | DRAW: {(t3 - t2)*1000:.2f} ms | CONVERT: {(t4 - t3)*1000:.2f} ms | BLIT+DISPLAY: {(t5 - t4)*1000:.2f} ms | TOTAL: {(t5 - t0)*1000:.2f} ms")
     fps = clock.get_fps()
-    print(f"FPS={clock.get_fps():.2f} | dt={dt*1000:.2f}ms")
+    #print(f"FPS={clock.get_fps():.2f} | dt={dt*1000:.2f}ms")
 
 
 pygame.quit()
