@@ -24,12 +24,15 @@ class Object:
         self.amount     = amount
 
         # Timing management
-        self.delay      = self.config("delay", 0)
+        self.enable     = self.config("enable", True)
+        self.step_block = self.config("step_block", False)
         self.step_delay = self.config("step_delay", 0)
         self.fade_in    = self.config("fade_in", 0)
         self.fade_out   = self.config("fade_out", 2)
         self.step       = self.config("step_start", 0)
         self.step_stop  = self.config("step_stop", -1)
+        self.delay      = self.config("delay", 0)
+        self.step_duration  = self.config("step_duration", -1)
         self.current_step = -1
         self.start_time = 0
         self.should_draw = False
@@ -65,9 +68,26 @@ class Object:
     
     def is_destroyed(self):
         return self.destroyed and len(self.particles) == 0
+
+    def is_alive(self, step):
+        if( self.is_destroyed() ):
+            return False
+        return self.step <= step and (self.step_stop >= step or self.step_stop == -1)
+
+    def block(self, step):
+        if( self.is_destroyed() ):
+            return False
+        if(( self.step <= step and (self.step_stop >= step or self.step_stop == -1)) == False ):
+            return False
+        if( self.step_block ):
+            return True
+        return False
     
-    
+
     def update(self, dt, step):
+
+        if( self.enable == False ):
+            return
 
         # Update particles
         for particle in self.particles:
@@ -85,6 +105,10 @@ class Object:
         if( (self.pygame.time.get_ticks() - self.start_time)/1000 < self.step_delay ): 
             return
         
+        phase_out = False
+        if( self.step_duration > 0 and self.age/1000 > self.step_duration ):
+            phase_out = True
+        
         self.should_draw    = True
         
         # Fade in
@@ -93,11 +117,18 @@ class Object:
             self.alpha = min(self.current_fade_in_time / self.fade_in, 1.0)
 
         if( self.step_stop >= 0 and self.step_stop < step and self.fade_out > 0):
+            phase_out = True
+
+        if( phase_out ):
             if self.current_fade_out_time <= self.fade_out:
                 self.current_fade_out_time -= dt
-                self.alpha = max(self.current_fade_out_time / self.fade_out, 0.0)       
+                self.alpha = max(self.current_fade_out_time / self.fade_out, 0.0) 
+
+            if( self.alpha <= 0.0 ):
+                self.destroyed = True
 
         if self.destroyed:
+            self.should_draw = False
             return
         
         if self.exploded:
@@ -105,6 +136,7 @@ class Object:
             if self.alpha <= 0.0:
                 self.alpha = 0.0
                 self.destroyed = True
+                self.should_draw = False
 
         if( self.age/1000 >= self.delay ):
             self._update(dt, step)
@@ -113,6 +145,9 @@ class Object:
 
     def draw(self, ctx):
 
+        if( self.enable == False ):
+            return
+        
         for particle in self.particles:
             particle.draw(ctx)
 

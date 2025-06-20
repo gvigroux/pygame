@@ -14,6 +14,7 @@ class Ball(Object):
         self.position   = self.config("position", [random.uniform(250, 290), random.uniform(460, 500)])
         self.velocity   = self.config("velocity", [random.uniform(-150, 150), random.uniform(-150, 150)])
         self.collision_margin = 1.5
+        self.first_draw = False
 
     def _update(self, dt, step):
     
@@ -34,6 +35,10 @@ class Ball(Object):
         #ctx.arc(self.position[0], self.position[1], self.radius, 0, 2 * math.pi)
         #ctx.fill()
         #return 
+        if(  self.first_draw == False ):
+            self.first_draw = True
+            bounce_sound    = self.pygame.mixer.Sound("media/sound/retro/SoundJump2.wav")
+            bounce_sound.play()
     
         #BALL GRADIENT
         gradient = cairo.RadialGradient(
@@ -61,8 +66,8 @@ class Ball(Object):
         self.velocity[1] -= dot * normal[1]
 
     def accelerate(self):
-        self.velocity[0] *= 1.1
-        self.velocity[1] *= 1.1
+        self.velocity[0] *= 1.08
+        self.velocity[1] *= 1.08
 
 
     def check_ball_collision(self,ball):

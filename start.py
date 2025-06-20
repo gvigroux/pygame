@@ -24,7 +24,7 @@ from background.wave import Wave
 from object.arc import Arc
 from object.ball import Ball
 from object.particule_system import ParticleSystem
-from object.text import Text
+from object.OLD_text import Text
 from video.ffmpeg import Capture
 from moviepy import *
 

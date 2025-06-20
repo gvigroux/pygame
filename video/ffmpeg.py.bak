@@ -136,55 +136,6 @@ class RecorderFFMPEG:
             "output_synced.mp4"
         ]        
 
-
-        ffmpeg_cmd = [
-            "ffmpeg",
-            "-y",
-            
-            # 1. Configuration de base
-            "-flush_packets", "1",  # Force l'écriture immédiate des paquets
-            "-fflags", "+genpts+igndts",  # Régénère les PTS et ignore les DTS problématiques
-            
-            # 2. Capture vidéo
-            "-f", "gdigrab",
-            "-framerate", "60",
-            "-thread_queue_size", "8192",  # Augmenté pour stabilité
-            "-draw_mouse", "1",
-            "-i", f"title={window_title}",
-            
-            # 3. Capture audio
-            "-f", "dshow",
-            "-thread_queue_size", "8192",
-            "-audio_buffer_size", "50",  # Buffer réduit pour moins de latence
-            "-i", "audio=CABLE Output (VB-Audio Virtual Cable)",
-            
-            # 4. Paramètres de synchronisation critiques
-            "-use_wallclock_as_timestamps", "1",  # Utilise l'horloge système réelle
-            "-vsync", "2",  # Mode 'passthrough' amélioré
-            "-async", "1",  # Mode de synchronisation strict
-            
-            # 5. Filtres de correction
-            "-filter_complex", 
-            "[1:a]aresample=async=1000:first_pts=0,asetpts=N/SR/TB[audio];" +
-            "[0:v]setpts='if(eq(N,0),0,PTS+1/TB)'[video]",
-            
-            # 6. Encodage
-            "-map", "[video]",
-            "-map", "[audio]",
-            "-c:v", "libx264",
-            "-preset", "ultrafast",
-            "-x264opts", "force-cfr=1",  # Force le mode CFR
-            "-c:a", "aac",
-            "-b:a", "192k",
-            "-ar", "48000",
-            
-            # 7. Paramètres de sortie
-            "-max_interleave_delta", "0",  # Évite le réordonnancement
-            "-avoid_negative_ts", "make_zero",  # Corrige les timestamps négatifs
-            "-f", "mp4",
-            "output_fixed.mp4"
-        ]
-
         #"-thread_queue_size", "512",
         #"-f", "dshow",
         #"-i", "audio=CABLE Output (VB-Audio Virtual Cable)", #CABLE Output (VB-Audio Virtual Cable)   #Stereo Mix (Realtek(R) Audio)"

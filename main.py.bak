@@ -11,7 +11,7 @@ from object.arc import Arc
 from object.ball import Ball
 from object.counter import Counter
 from object.pytext import Text
-from object.OLD_text_tiktok import TextTikTok
+from object.text_tiktok import TextTikTok
 from video import ffmpeg
 from video import opencv
 from video.empty import RecorderEmpty
@@ -88,7 +88,6 @@ for data in config.get("texts", []):
 counter = Counter({}, pygame, screen, window_size, 1, 0)
 
 
-
 frame_count = 0
 dt_history = []
 clock = pygame.time.Clock()
@@ -102,18 +101,6 @@ bounce_sound    = pygame.mixer.Sound("media/sound/retro/SoundJump2.wav")
 bounce_sound.set_volume(0.1)
 explosion_sound = pygame.mixer.Sound("media/sound/retro/SoundLand2.wav")
 bounce_sound.set_volume(0.1)
-
-
-music_detail = config.get("music", [])
-if( music_detail.get("file") ):
-    pygame.mixer.music.load(music_detail.get("file"))
-    #pygame.mixer.music.set_volume(music_detail.get("volume", 0.2))
-    start = music_detail.get("start", 0)
-    fade_ms = music_detail.get("fade_ms", 0)
-    loops = 0
-    if( music_detail.get("loop", True) ):
-        loops = 1
-    pygame.mixer.music.play(loops=loops, start=start, fade_ms=fade_ms)
 ##pygame.mixer.music.load("media/music/Sam Gellaitry - Assumptions.mp3")
 #pygame.mixer.music.play(loops=0, start=24.0, fade_ms=200)
 
@@ -127,7 +114,7 @@ balls_block = sum(1 for obj in balls if obj.block(current_step))
 texts_block = sum(1 for obj in texts if obj.block(current_step))
 
 
-#save = ffmpeg.RecorderFFMPEG(window_size)
+save = ffmpeg.RecorderFFMPEG(window_size)
 while running:
     t0 = time.perf_counter()
 
@@ -271,6 +258,6 @@ while running:
     #print(f"FPS={clock.get_fps():.2f} | dt={dt*1000:.2f}ms")
 
 
-#save.stop()
+save.stop()
 
 pygame.quit()
