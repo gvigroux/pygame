@@ -2,27 +2,41 @@
 import colorsys
 import math
 import random
+import time as timestd
 
 import cairo
+import cv2
+from moviepy import VideoFileClip
+import numpy as np
+from PIL import Image
 
 def hsv_to_rgb(h, s, v):
     import colorsys
     return colorsys.hsv_to_rgb(h, s, v)
 
 class BaseBackground:
+    def __init__(self):
+        self.log_draw_durations = []
+
     def draw(self, ctx, time, width, height):
+        t0 = timestd.perf_counter()
+        self._draw(ctx, time, width, height)
+        self.log_draw_durations.append(timestd.perf_counter() - t0)
+
+    def stat(self):            
+        average = sum(self.log_draw_durations) / len(self.log_draw_durations)
+        print(f"AVG {type(self)} : {average*1000:.2f} ms")    
         pass
 
-
 class SolidColorBackground(BaseBackground):
-    def draw(self, ctx, time, width, height):
+    def _draw(self, ctx, time, width, height):
         ctx.set_source_rgb(0.2, 0.2, 0.2)
         ctx.rectangle(0, 0, width, height)
         ctx.fill()
 
 
 class VerticalGradientBackground(BaseBackground):
-    def draw(self, ctx, time, width, height):
+    def _draw(self, ctx, time, width, height):
         gradient = cairo.LinearGradient(0, 0, 0, height)
         gradient.add_color_stop_rgba(0.0, 0.2, 0.6, 1.0, 1)  # Bleu clair
         gradient.add_color_stop_rgba(1.0, 0.8, 0.9, 1.0, 1)  # Blanc bleuté
@@ -33,7 +47,7 @@ class VerticalGradientBackground(BaseBackground):
 
 
 class AnimatedWaveBackground(BaseBackground):
-    def draw(self, ctx, time, width, height):
+    def _draw(self, ctx, time, width, height):
         ctx.set_source_rgb(0.0, 0.0, 0.1)
         ctx.rectangle(0, 0, width, height)
         ctx.fill()
@@ -54,7 +68,7 @@ class AnimatedWaveBackground(BaseBackground):
 
 
 class GridBackground(BaseBackground):
-    def draw(self, ctx, time, width, height):
+    def _draw(self, ctx, time, width, height):
         ctx.set_source_rgb(1, 1, 1)
         ctx.rectangle(0, 0, width, height)
         ctx.fill()
@@ -72,7 +86,7 @@ class GridBackground(BaseBackground):
 
 # ... Add 16 more classes with variations (dots, stars, noise, rings, etc.)
 class StarsBackground(BaseBackground):
-    def draw(self, ctx, time, width, height):
+    def _draw(self, ctx, time, width, height):
         ctx.set_source_rgb(0.0, 0.0, 0.0)
         ctx.rectangle(0, 0, width, height)
         ctx.fill()
@@ -87,7 +101,7 @@ class StarsBackground(BaseBackground):
 
 
 class PulseBackground(BaseBackground):
-    def draw(self, ctx, time, width, height, count=5):
+    def _draw(self, ctx, time, width, height, count=5):
         cx, cy = width // 2, height // 2
         for i in range(count):
             radius = 100 + (i * 30) + 20 * math.sin(time * 0.8 + i)
@@ -100,7 +114,7 @@ class PulseBackground(BaseBackground):
 # et on les liste ici :
 
 class Wave2Background(BaseBackground):
-    def draw(self, ctx, time, width, height, layers=3):
+    def _draw(self, ctx, time, width, height, layers=3):
         for i in range(layers):
             y_offset = height / layers * i
             wave_height = 20 + 5 * math.sin(time + i)
@@ -118,7 +132,7 @@ class Wave2Background(BaseBackground):
 
 
 class FloatingGridBackground(BaseBackground):
-    def draw(self, ctx, time, width, height, spacing=80):
+    def _draw(self, ctx, time, width, height, spacing=80):
         # Dessin des points animés
         for x in range(0, width + spacing, spacing):
             for y in range(0, height + spacing, spacing):
@@ -132,7 +146,7 @@ class FloatingGridBackground(BaseBackground):
 
 
 class AnimatedBackground(BaseBackground):
-    def draw(self, ctx, time, width, height):
+    def _draw(self, ctx, time, width, height):
         # Dégradé linéaire qui se déplace horizontalement
         grad = cairo.LinearGradient((time * 0.05) % width, 0, (time * 0.05 + width) % width, height)
         grad.add_color_stop_rgb(0, 0.1, 0.1, 0.4)  # bleu foncé
@@ -144,7 +158,7 @@ class AnimatedBackground(BaseBackground):
         
 
 class ParticuleBackground(BaseBackground):
-    def draw(self, ctx, time, width, height, count=30):
+    def _draw(self, ctx, time, width, height, count=30):
         random.seed(0)  # Fixe les positions pour qu'elles soient stables d'une frame à l'autre
 
         for i in range(count):
@@ -166,7 +180,7 @@ class ParticuleBackground(BaseBackground):
             ctx.fill()
 
 class Wave3Background(BaseBackground):
-    def draw(self, ctx, time, width, height):
+    def _draw(self, ctx, time, width, height):
         ctx.set_source_rgb(0.9, 0.95, 1)
         ctx.rectangle(0, 0, width, height)
         ctx.fill()
@@ -178,7 +192,7 @@ class Wave3Background(BaseBackground):
             ctx.fill()
 
 class RipplesBackground(BaseBackground):
-    def draw(self, ctx, time, width, height):
+    def _draw(self, ctx, time, width, height):
         ctx.set_source_rgb(1, 1, 1)
         ctx.rectangle(0, 0, width, height)
         ctx.fill()
@@ -191,7 +205,7 @@ class RipplesBackground(BaseBackground):
             ctx.stroke()
 
 class Stars2Background(BaseBackground):
-    def draw(self, ctx, time, width, height):
+    def _draw(self, ctx, time, width, height):
         ctx.set_source_rgb(0, 0, 0.1)
         ctx.rectangle(0, 0, width, height)
         ctx.fill()
@@ -206,7 +220,7 @@ class Stars2Background(BaseBackground):
             ctx.fill()
 
 class RainbowBackground(BaseBackground):
-    def draw(self, ctx, time, width, height):
+    def _draw(self, ctx, time, width, height):
         grad = cairo.LinearGradient(0, 0, width, 0)
         for i in range(6):
             r, g, b = colorsys.hsv_to_rgb((i/6 + time/5) % 1, 1, 1)
@@ -216,7 +230,7 @@ class RainbowBackground(BaseBackground):
         ctx.fill()
 
 class BubblesBackground(BaseBackground):
-    def draw(self, ctx, time, width, height):
+    def _draw(self, ctx, time, width, height):
         ctx.set_source_rgb(0.95, 1, 1)
         ctx.rectangle(0, 0, width, height)
         ctx.fill()
@@ -231,7 +245,7 @@ class BubblesBackground(BaseBackground):
             ctx.fill()
 
 class TrianglesBackground(BaseBackground):
-    def draw(self, ctx, time, width, height):
+    def _draw(self, ctx, time, width, height):
         ctx.set_source_rgb(1, 1, 1)
         ctx.rectangle(0, 0, width, height)
         ctx.fill()
@@ -249,7 +263,7 @@ class TrianglesBackground(BaseBackground):
 
       
 class ConcentricWaveBackground(BaseBackground):
-    def draw(self, ctx, time, width, height):
+    def _draw(self, ctx, time, width, height):
         # Fond noir
         ctx.set_source_rgb(0, 0, 0)
         ctx.rectangle(0, 0, width, height)
@@ -277,6 +291,281 @@ class ConcentricWaveBackground(BaseBackground):
             ctx.stroke()
 
 
+
+# class Video2(BaseBackground):
+#     def __init__(self, parameters = []):
+#         super().__init__()
+#         self.parameters = parameters
+#         self.videos = list(parameters.get("list", []))
+#         self.loop   = parameters.get("loop", False)
+#         self.load_video()
+
+#     def load_video(self):
+#         if( len(self.videos) == 0 ):
+#             self.videos = list(self.parameters.get("list", []))
+#         path = self.videos.pop(0)
+#         self.cap = cv2.VideoCapture(path)
+
+#         # Lecture de FPS réel depuis la vidéo (fallback à 25 si échec)
+#         fps = self.cap.get(cv2.CAP_PROP_FPS)
+#         self.frame_interval = 1.0 / (fps if fps > 0 else 25)
+
+#         self.last_frame_surface = None
+#         self.last_update_time = 0
+
+#     def read_next_frame(self, width, height):
+#         success, frame = self.cap.read()
+#         if not success:
+#             if( self.load_video() == False ):
+#                 # Remettre sur la dernière frame
+#                 return self.last_frame
+#             return self.read_next_frame(width, height)
+
+#         # Convertir BGR (OpenCV) → RGBA
+#         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
+#         #frame = cv2.resize(frame, (width, height), interpolation=cv2.INTER_AREA)
+#         self.last_frame = frame
+#         return frame
+
+#     def numpy_to_cairo_surface(self, rgba):
+#         rgba = np.array(rgba)
+#         bgra = rgba[..., [0, 1, 2, 3]]  # B, G, R, A
+#         data = np.ascontiguousarray(bgra)
+#         h, w = rgba.shape[:2]
+#         return cairo.ImageSurface.create_for_data(data, cairo.FORMAT_ARGB32, w, h, w * 4)
+
+#     def _draw(self, ctx, current_time, width, height):
+#         if current_time - self.last_update_time >= self.frame_interval:
+#             frame = self.read_next_frame(width, height)
+#             if frame is not None:
+#                 self.last_frame_surface = self.numpy_to_cairo_surface(frame)
+#                 self.last_update_time = current_time
+
+#         if self.last_frame_surface:
+#             ctx.save()
+#             ctx.set_source_surface(self.last_frame_surface, 0, 0)
+#             ctx.paint()
+#             ctx.restore()
+        
+    
+
+""" 
+class Video(BaseBackground):
+    def __init__(self, parameters={}):
+        super().__init__()
+        self.parameters = parameters
+        self.videos = list(parameters.get("list", []))
+        self.loop = parameters.get("loop", False)
+        self.cap = None
+        self.frame_interval = 1.0 / 25  # fallback
+        self.last_frame_surface = None
+        self.last_update_time = 0
+        self.last_frame = None
+        self.target_size = None
+
+        self.load_video()
+
+    def load_video(self):
+        if not self.videos:
+            self.videos = list(self.parameters.get("list", []))
+        if not self.videos:
+            self.cap = None
+            return False
+
+        video = self.videos.pop(0)
+        self.cap = cv2.VideoCapture(video.get("path"))
+
+        if not self.cap.isOpened():
+            print(f"[Video] Failed to open video: {video.get("path")}")
+            return False
+
+        fps = video.get("fps", self.cap.get(cv2.CAP_PROP_FPS))
+        self.frame_interval = 1.0 / (fps if fps > 0 else 25)
+
+        # Lecture d'une première frame pour fixer la taille
+        success, frame = self.cap.read()
+        if success:
+            h, w = frame.shape[:2]
+            self.target_size = (w, h)
+            self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)  # retour au début
+        else:
+            print("[Video] Failed to read initial frame")
+            self.cap = None
+            return False
+
+        return True
+
+    def read_next_frame(self):
+        if not self.cap:
+            return None
+
+        success, frame = self.cap.read()
+        if not success:
+            if not self.load_video():
+                return self.last_frame  # dernier frame statique
+            return self.read_next_frame()
+
+        # Resize une seule fois si nécessaire
+        if self.target_size:
+            frame = cv2.resize(frame, self.target_size, interpolation=cv2.INTER_AREA)
+
+        # Convertir BGR → BGRA en une seule étape
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2BGRA)
+        self.last_frame = frame
+        return frame
+
+    def numpy_to_cairo_surface(self, bgra):
+        # Évite les copies si déjà OK
+        if not isinstance(bgra, np.ndarray):
+            bgra = np.array(bgra)
+        h, w = bgra.shape[:2]
+        data = np.ascontiguousarray(bgra)
+        return cairo.ImageSurface.create_for_data(data, cairo.FORMAT_ARGB32, w, h, w * 4)
+    
+  
+    def _draw(self, ctx, current_time, width, height):
+        if not self.cap:
+            return
+
+        if current_time - self.last_update_time >= self.frame_interval:
+            frame = self.read_next_frame()
+            if frame is not None:
+                self.last_frame_surface = self.numpy_to_cairo_surface(frame)
+                self.last_update_time = current_time
+
+        if self.last_frame_surface:
+            ctx.save()
+            ctx.set_source_surface(self.last_frame_surface, 0, 0)
+            ctx.paint()
+            ctx.restore()
+ """
+
+class Video(BaseBackground):
+    def __init__(self, parameters={}):
+        super().__init__()
+        self.parameters = parameters
+        self.videos = list(parameters.get("list", []))
+        self.loop = False  # défini plus tard selon chaque vidéo
+        self.reverse = False
+        self.cap = None
+        self.frame_interval = 1.0 / 25
+        self.last_frame_surface = None
+        self.last_update_time = 0
+        self.last_frame = None
+        self.target_size = None
+
+        self.frames = []  # cache mémoire si reverse
+        self.current_frame_index = 0
+
+        self.load_video()
+
+    def load_video(self):
+        if not self.videos:
+            self.videos = list(self.parameters.get("list", []))
+        if not self.videos:
+            self.cap = None
+            return False
+
+        video = self.videos.pop(0)
+        path = video.get("path")
+        self.reverse = video.get("reverse", False)
+        self.loop = video.get("loop", False)
+
+        self.cap = cv2.VideoCapture(path)
+
+        if not self.cap.isOpened():
+            print(f"[Video] Failed to open video: {path}")
+            return False
+
+        fps = video.get("fps", self.cap.get(cv2.CAP_PROP_FPS))
+        self.frame_interval = 1.0 / (fps if fps > 0 else 25)
+
+        success, frame = self.cap.read()
+        if not success:
+            print("[Video] Failed to read initial frame")
+            self.cap = None
+            return False
+
+        h, w = frame.shape[:2]
+        self.target_size = (w, h)
+        self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+
+        if self.reverse:
+            self.frames = []
+            while True:
+                success, frame = self.cap.read()
+                if not success:
+                    break
+                if self.target_size:
+                    frame = cv2.resize(frame, self.target_size, interpolation=cv2.INTER_AREA)
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2BGRA)
+                self.frames.append(frame)
+            self.cap.release()
+            self.cap = None
+            self.current_frame_index = len(self.frames) - 1
+
+        return True
+
+    def read_next_frame(self):
+        if self.reverse:
+            if not self.frames:
+                return None
+
+            frame = self.frames[self.current_frame_index]
+            self.current_frame_index -= 1
+
+            if self.current_frame_index < 0:
+                if self.loop:
+                    self.current_frame_index = len(self.frames) - 1
+                else:
+                    if not self.load_video():  # passe à la vidéo suivante
+                        return self.last_frame
+                    return self.read_next_frame()
+
+            self.last_frame = frame
+            return frame
+
+
+        if not self.cap:
+            return None
+
+        success, frame = self.cap.read()
+        if not success:
+            if not self.load_video():
+                return self.last_frame
+            return self.read_next_frame()
+
+        if self.target_size:
+            frame = cv2.resize(frame, self.target_size, interpolation=cv2.INTER_AREA)
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2BGRA)
+        self.last_frame = frame
+        return frame
+
+    def numpy_to_cairo_surface(self, bgra):
+        if not isinstance(bgra, np.ndarray):
+            bgra = np.array(bgra)
+        h, w = bgra.shape[:2]
+        data = np.ascontiguousarray(bgra)
+        return cairo.ImageSurface.create_for_data(data, cairo.FORMAT_ARGB32, w, h, w * 4)
+
+    def _draw(self, ctx, current_time, width, height):
+        if not self.cap and not self.reverse:
+            return
+
+        if current_time - self.last_update_time >= self.frame_interval:
+            frame = self.read_next_frame()
+            if frame is not None:
+                self.last_frame_surface = self.numpy_to_cairo_surface(frame)
+                self.last_update_time = current_time
+
+        if self.last_frame_surface:
+            ctx.save()
+            ctx.set_source_surface(self.last_frame_surface, 0, 0)
+            ctx.paint()
+            ctx.restore()
+
+
+
 BACKGROUND_CLASSES = {
     "solid": SolidColorBackground,
     "gradient": VerticalGradientBackground,
@@ -295,11 +584,14 @@ BACKGROUND_CLASSES = {
     "bubbles": BubblesBackground,
     "triangles": TrianglesBackground,
     "concentric_wave": ConcentricWaveBackground,
+    "video": Video,
 }
 
 
 class BackgroundFactory:
     @staticmethod
-    def create(style):
+    def create(style, p1 = None):
         cls = BACKGROUND_CLASSES.get(style, SolidColorBackground)
-        return cls()
+        if( p1 == None):
+            return cls()
+        return cls(p1)

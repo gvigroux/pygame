@@ -18,7 +18,7 @@ class Counter(Object):
         self.start_step             = self.config("start_step", 0)
         self.end_step               = self.config("end_step", 3)
         self.stop_incrementing_step = self.config("stop_incrementing_step", 2)
-        self.color      = (0.0, 0.0, 7.0, 1.0)
+        self.color      = (255, 0, 0, 255)
         self.text_width = 85
         self.text_height = 60
         self.fade_speed = 10.0 
@@ -28,7 +28,7 @@ class Counter(Object):
         if( step < self.start_step ):
             return
         if( step >= self.end_step ):
-            self.position = (227,510)
+            #self.position = (227,510)
             self.explode()
             return
         if( step >= self.stop_incrementing_step ):
@@ -53,7 +53,7 @@ class Counter(Object):
             
          ### Dessin du texte rouge principal ###
         ctx.move_to( self.position[0], self.position[1])
-        ctx.set_source_rgba(0, 0, 0.7, self.alpha)
+        ctx.set_source_rgba(0.7, 0, 0, self.alpha)
         ctx.show_text(self.text)
 
         ctx.fill()

@@ -64,7 +64,7 @@
     },
     {
       "text": {
-        "value": "Combien de doigts a un panda?",
+        "value": "Quelle est la difference entre un pinguin et un manchot ?",
         "padding": "(10, 0, 10, 0)",
         "color": "(0, 0, 0, 255)",
         "font": {
@@ -98,7 +98,29 @@
     },
     {
       "text": {
-        "value": "Six ! Il a un faux pouce en plus de ses cinq doigts.",
+        "value": "Pinguin",
+        "color": "(242, 161, 28)",
+        "font": {
+          "size": 50,
+          "family": "Anton Regular"
+        },
+        "outline": {
+          "color": "(255, 255, 255)",
+          "width": 1
+        }
+      },
+      "split": true,
+      "fade_in": 0.5,
+      "center": "middle",
+      "position": [0, 260],
+      "step_start": 2,
+      "step_duration": 8,
+      "step_delay": 0,
+      "step_block": true
+    },
+    {
+      "text": {
+        "value": "Peut voler\\nPlus petit\\nOiseau marin du nord",
         "font": {
           "bold": true,
           "size": 32,
@@ -117,6 +139,48 @@
       "step_duration": 8,
       "step_delay": "0.5 + i*0.1",
       "step_block": true
+    },
+    {
+      "text": {
+        "value": "Manchot",
+        "color": "(28, 161, 242)",
+        "font": {
+          "size": 50,
+          "family": "Anton Regular"
+        },
+        "outline": {
+          "color": "(255, 255, 255)",
+          "width": 1
+        }
+      },
+      "fade_in": 0.5,
+      "center": "middle",
+      "position": [0, 580],
+      "step_start": 2,
+      "step_duration": 8,
+      "step_delay": 0,
+      "step_block": true
+    },
+    {
+      "text": {
+        "value": "Ne peut pas voler\\nPlus grand\\nOiseau marin du sud",
+        "font": {
+          "bold": true,
+          "size": 32,
+          "family": "Roboto"
+        },
+        "outline": {
+          "color": "(50, 50, 50)",
+          "width": 1
+        }
+      },
+      "split": true,
+      "center": "middle",
+      "position": [0, "680+i*40"],
+      "fade_in": 0.5,
+      "step_start": 2,
+      "step_duration": 8,
+      "step_delay": "0.5 + i*0.1"
     },
     {
       "text": {
@@ -167,7 +231,6 @@
       "step_block": true
     }
   ],
-  "objects": [],
   "end_step": { "step": 4 },
   "fragments": {
     "max": 10
@@ -184,20 +247,9 @@
   "background": {
     "type": "video",
     "list": [
-      {
-        "path": "C:\\PYGAME\\backgrounds\\resized_608_ssstik.io_1750714961132 (online-video-cutter.com).mp4"
-      },
-      {
-        "path": "C:\\PYGAME\\backgrounds\\resized_608_ssstik.io_1750714961132 (online-video-cutter.com).mp4",
-        "reverse": true
-      },
-      {
-        "path": "C:\\PYGAME\\backgrounds\\resized_608_ssstik.io_1750714961132 (online-video-cutter.com).mp4",
-        "start": 0,
-        "end": 10,
-        "loop": true,
-        "fps": 4
-      }
+      "media/background/resized_608_9140354-hd_1080_1920_25fps.mp4",
+      "media/background/resized_608_9116193-hd_1080_1920_25fps.mp4",
+      "media/background/resized_608_9116188-hd_1080_1920_25fps.mp4"
     ]
   }
 }

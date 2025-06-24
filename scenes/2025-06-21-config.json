@@ -1,0 +1,171 @@
+{
+  "balls": [
+    {
+      "count": 4,
+      "radius": "10",
+      "position": ["random.uniform(240, 300)", "random.uniform(450, 510)"],
+      "velocity": [
+        "random.choice([-1, 1]) * random.uniform(50, 100)",
+        "random.choice([-1, 1]) * random.uniform(50, 100)"
+      ],
+      "color": "(1.0, 1.0, 1.0, 1.0)",
+      "fragments_explode": 5,
+      "fragments_touch": 5,
+      "fade_in": 0.5,
+      "fade_out": 0.5,
+      "step_delay": "0.5 + i*0.15",
+      "delay": "2 - i*0.15 - 0.5",
+      "step_block": true
+    }
+  ],
+  "arcs": [
+    {
+      "step_delay": 0,
+      "fade_in": 1,
+      "count": 12,
+      "radius": "(60 + total*15)",
+      "speed": "random.choice([-1, 1]) * random.uniform(20, 100)",
+      "angle_start": 0,
+      "angle_end": "300-total*3",
+      "width": 10,
+      "color": "(random.uniform(0.0, 1), random.uniform(0.0, 1), random.uniform(0.0, 1), 1.0)",
+      "colors9": [
+        "(random.uniform(0.0, 1), random.uniform(0.0, 1), random.uniform(0.0, 1), 1.0)",
+        "(random.uniform(0.0, 1), random.uniform(0.0, 1), random.uniform(0.0, 1), 1.0)"
+      ],
+      "fragments_explode": 5,
+      "step_block": true
+    }
+  ],
+  "texts": [
+    {
+      "text": "98% échouent",
+      "bold": false,
+      "font_size": 36,
+      "font_family": "Anton Regular",
+      "center": "middle",
+      "position": [40, 30],
+      "color": "(28, 161, 242)",
+      "bg_color": "(255, 255, 255, 0)",
+      "outline_color": "(255, 255, 255)",
+      "outline_size": 2,
+      "step_start": 0,
+      "step_stop": 2,
+      "fade_out": 0.5
+    },
+    {
+      "text": "Donne-moi 5 pays sans la lettre A…",
+      "bold": false,
+      "font_size": 28,
+      "font_family": "Anton Regular",
+      "center": "middle",
+      "position": [20, 80],
+      "color": "(1.0, 0.0, 1.0, 1.0)",
+      "bg_color": "(255, 255, 255, 0)",
+      "outline_color": "(255, 255, 255)",
+      "outline_size": 1,
+      "step_start": 0,
+      "step_stop": 2,
+      "fade_out": 0.5
+    },
+    {
+      "text": "Avant qu’il ne reste plus rien !",
+      "bold": false,
+      "font_size": 32,
+      "font_family": "lobsterregular",
+      "center": "middle",
+      "position": [20, 160],
+      "color": "(255, 255, 255, 255)",
+      "bg_color": "(255, 255, 255, 0)",
+      "outline_color": "(255, 255, 255)",
+      "outline_size": 0,
+      "step_start": 0,
+      "step_stop": 1,
+      "fade_out": 0.5
+    },
+    {
+      "text": "Bénin\\nBelize\\nChili\\nChypre\\nCôte d'Ivoire\\nComores\\nDjibouti\\nLuxembourg\\nMexique\\nNiger",
+      "font_size": 32,
+      "split": true,
+      "fade_in": 0.5,
+      "bold": true,
+      "font_family": "Roboto",
+      "position": [40, "280+i*40"],
+      "color": "(255, 255, 255, 255)",
+      "bg_color": "(0, 0, 0, 0)",
+      "step_start": 2,
+      "step_duration": 8,
+      "step_delay": "0.5 + i*0.1",
+      "step_block": true
+    },
+    {
+      "text": "Brunei\\nBurundi\\nFidji\\nGrèce\\nLesotho\\nKosovo\\nMonténégro\\nPérou\\nSeychelles\\nTogo",
+      "font_size": 32,
+      "bold": true,
+      "split": true,
+      "font_family": "Roboto",
+      "position": [300, "280+i*40"],
+      "color": "(255, 255, 255, 255)",
+      "bg_color": "(0, 0, 0, 0)",
+      "fade_in": 0.5,
+      "step_start": 2,
+      "step_duration": 8,
+      "step_delay": "0.5 + i*0.1"
+    },
+    {
+      "text": "Si tu as réussi, mets ton temps en commentaire!",
+      "font_size": 26,
+      "font_family": "lobsterregular",
+      "center": "middle",
+      "position": [300, 740],
+      "color": "(255, 255, 255, 255)",
+      "bg_color": "(0, 0, 0, 0)",
+      "fade_in": 0.5,
+      "step_start": 2,
+      "step_delay": 1.5,
+      "step_duration": 5,
+      "step_block": true
+    },
+    {
+      "text": "Tu as trouvé d'autres reponses ?",
+      "font_size": 26,
+      "font_family": "lobsterregular",
+      "center": "middle",
+      "position": [300, 800],
+      "color": "(255, 255, 255, 255)",
+      "bg_color": "(0, 0, 0, 0)",
+      "fade_in": 0.5,
+      "step_start": 2,
+      "step_duration": 5,
+      "step_delay": 1.7
+    },
+    {
+      "text": "Si t'as réussi, abonne-toi pour plus de défis !",
+      "font_size": 26,
+      "font_family": "lobsterregular",
+      "center": "middle",
+      "position": [20, 250],
+      "color": "(255, 255, 255, 255)",
+      "bg_color": "(0, 0, 0, 0)",
+      "fade_in": 0.5,
+      "step_start": 3,
+      "step_stop": 3,
+      "step_duration": 5,
+      "step_delay": 1.7,
+      "step_block": true
+    }
+  ],
+  "end_step": { "step": 4 },
+  "fragments": {
+    "max": 10
+  },
+  "window_size": [540, 960],
+  "step_end": 4,
+  "music": {
+    "file": "C:\\PYGAME\\KORDHELL - SCOPIN (Phonk).mp3",
+    "start": 1,
+    "fade_ms": 200,
+    "volume": 0.5,
+    "loop": true
+  }
+}

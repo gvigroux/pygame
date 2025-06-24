@@ -5,6 +5,8 @@ import math
 import random
 
 import cairo
+import numpy as np
+import pygame
 
 from object.object import Object
 from object.particle import Particle
@@ -27,18 +29,24 @@ class Arc(Object):
         self.end_angle      = self.start_angle + math.radians(self.angle_end-self.angle_start)
         self.visible_rad    = math.radians(self.angle_end - self.angle_start) 
 
-
+        
     def _update(self, dt, step):
         self.current_angle  = (self.speed * self.age / 1000) % 360  # Division par 1000 si total_time est en ms
         self.start_angle    = math.radians(self.current_angle)
         self.end_angle      = self.start_angle + self.visible_rad
-   
 
-    def _draw(self, ctx):
+
+    def _draw(self, ctx): 
         ctx.set_line_width(self.width)
         ctx.arc(self.position[0], self.position[1], self.radius, self.start_angle, self.end_angle)
         ctx.stroke()
 
+
+    def _draw_shadow(self, ctx):    
+        ctx.set_line_width(self.width)
+        ctx.arc(self.position[0] + self.shadow.offset, self.position[1] + self.shadow.offset, self.radius, self.start_angle, self.end_angle)
+        ctx.stroke()  
+        pass
 
     # def create_particles_center(self, count=20):
     #     for _ in range(count):
@@ -86,7 +94,3 @@ class Arc(Object):
             particle = Particle(position=(x, y), velocity=(vx, vy),
                                 radius=radius, lifetime=0.6, color=particle_color)
             self.particles.append(particle)
-
-        
-
-

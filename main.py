@@ -1,6 +1,7 @@
 import json
 import os
 import random
+from moviepy import VideoFileClip
 import pygame
 import cairo
 import math
@@ -11,11 +12,6 @@ from object.arc import Arc
 from object.ball import Ball
 from object.counter import Counter
 from object.pytext import Text
-from object.OLD_text_tiktok import TextTikTok
-from video import ffmpeg
-from video import opencv
-from video.empty import RecorderEmpty
-from video.py_save import RecorderPyGame
 
 
 # --- LOAD CONFIG ---
@@ -55,7 +51,7 @@ end_step = config.get("end_step", {})
 
 def cairo_to_pygame(surface):
     return pygame.image.frombuffer(
-        surface.get_data(), (surface.get_width(), surface.get_height()), "RGBA"
+        surface.get_data(), (surface.get_width(), surface.get_height()), "BGRA"
     ).convert_alpha()
 
 # Balls creation
@@ -78,12 +74,12 @@ for data in config["arcs"]:
 texts = []
 for data in config.get("texts", []):
     count = 1
-    parts = [data.get("text")]
+    parts = [data.get("text").get("value")]
     if( data.get("split", False) ):
-        parts = data.get("text").split('\\n')
+        parts = data.get("text").get("value").split('\\n')
         count = len(parts)
     for i in range(count):
-        data["text"] = parts[i]
+        data["text"]["value"] = parts[i]
         texts.append(Text(data, pygame, screen, window_size, count, i))
 counter = Counter({}, pygame, screen, window_size, 1, 0)
 
@@ -119,7 +115,9 @@ if( music_detail.get("file") ):
 
 
 
-background = BackgroundFactory.create("concentric_wave")
+background_config = config.get("background", [])
+#background = BackgroundFactory.create("concentric_wave")
+background = BackgroundFactory.create(background_config.get("type", "concentric_wave"), background_config)
 current_step = 0
 
 arcs_block  = sum(1 for obj in arcs if obj.block(current_step))
@@ -127,13 +125,22 @@ balls_block = sum(1 for obj in balls if obj.block(current_step))
 texts_block = sum(1 for obj in texts if obj.block(current_step))
 
 
+
+import tracemalloc
+tracemalloc.start()
+logs = []
+
 #save = ffmpeg.RecorderFFMPEG(window_size)
 while running:
     t0 = time.perf_counter()
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            running = False
+            running = False           
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_c and (pygame.key.get_mods() & pygame.KMOD_CTRL):
+                print("Ctrl+C détecté via clavier (pas SIGINT)")
+                running = False
 
     current_time = time.perf_counter()
     dt = current_time - last_time
@@ -155,6 +162,18 @@ while running:
 
     #***********************************************************************
     # Step Progression
+            
+    for obj in arcs:
+        if obj.destroyed:
+            obj.stat()
+    for obj in balls:
+        if obj.is_destroyed():
+            obj.stat()
+    for obj in texts:
+        if obj.is_destroyed():
+            obj.stat()
+
+
     
     # Remove dead objects
     a, b, t = len(arcs), len(balls), len(texts)
@@ -219,11 +238,13 @@ while running:
     for text in texts:
         text.update(dt, current_step)
 
-    t2 = time.perf_counter()
-
     if( len(arcs) == 0 ):
         for ball in balls:
             ball.explode()
+
+
+    t2 = time.perf_counter()
+
 
     # Step 2 : Cairo rendering
     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, window_size[0], window_size[1])
@@ -232,20 +253,31 @@ while running:
     ctx.set_source_rgba(0, 0, 0, 1)
     ctx.rectangle(0, 0, window_size[0], window_size[1])
     ctx.fill()
-
-    background.draw(ctx, current_time, window_size[0], window_size[1])
     ctx.set_antialias(cairo.ANTIALIAS_BEST)
 
+
+    # TODO: It's more efficient to draw the background but there are artifacts
+    #ctx.set_operator(cairo.OPERATOR_SOURCE)
+    #ctx.set_source_rgba(0, 0, 0, 1)
+    #ctx.paint()
+
+    t10 = time.perf_counter()    
+
+    background.draw(ctx, current_time, window_size[0], window_size[1])
     counter.draw(ctx)
+    t11 = time.perf_counter()
 
     for arc in arcs:
         arc.draw(ctx)
+    t12 = time.perf_counter()
 
     for ball in balls:
         ball.draw(ctx)
 
     t3 = time.perf_counter()
 
+    #for text in texts:
+    #    text.draw(ctx)
     
     # Step 3 : Cairo to Pygame
     img = cairo_to_pygame(surface)
@@ -257,20 +289,41 @@ while running:
     screen.blit(img, (0, 0))
 
 
+    t5 = time.perf_counter()
     for text in texts:
         text.draw(ctx)
 
+    t6 = time.perf_counter()
 
     pygame.display.flip()
-    t5 = time.perf_counter()
+    t7 = time.perf_counter()
     clock.tick(60)
  
     # Debug print
-    #print(f"UPDATE: {(t2 - t1)*1000:.2f} ms | DRAW: {(t3 - t2)*1000:.2f} ms | CONVERT: {(t4 - t3)*1000:.2f} ms | BLIT+DISPLAY: {(t5 - t4)*1000:.2f} ms | TOTAL: {(t5 - t0)*1000:.2f} ms")
+    logs.append(t6 - t5)
+    print(f"UPDATE: {(t2 - t1)*1000:.2f} ms | DRAW: {(t3 - t2)*1000:.2f} ms - SURFACE {(t10 - t2)*1000:.2f}/BACK {(t11 - t10)*1000:.2f}/ARCS {(t12 - t11)*1000:.2f}/BALLS {(t3 - t12)*1000:.2f}| CONVERT: {(t4 - t3)*1000:.2f} ms | BLIT+DISPLAY: {(t5 - t4)*1000:.2f} ms | TEXT DRAW: {(t6 - t5)*1000:.2f} ms | FLIP : {(t7 - t6)*1000:.2f} ms | TOTAL: {(t7 - t0)*1000:.2f} ms | dt={dt*1000:.2f}ms | FPS={clock.get_fps():.2f}")
     fps = clock.get_fps()
     #print(f"FPS={clock.get_fps():.2f} | dt={dt*1000:.2f}ms")
+
+        
+    current, peak = tracemalloc.get_traced_memory()
+    #print(f"RAM utilisée : {current/1024:.1f} Ko | Pic : {peak/1024:.1f} Ko")
 
 
 #save.stop()
 
 pygame.quit()
+
+
+# Moyenne à la fin
+average = sum(logs) / len(logs)
+print(f"Moyenne : {average*1000:.2f} ms")
+
+background.stat()
+for obj in arcs:
+    obj.stat()
+for obj in balls:
+    obj.stat()
+for obj in texts:
+    obj.stat()
+

@@ -40,25 +40,28 @@ class Ball(Object):
             bounce_sound    = self.pygame.mixer.Sound("media/sound/retro/SoundJump2.wav")
             bounce_sound.play()
     
-        #BALL GRADIENT
+        #BALL GRADIENT   
         gradient = cairo.RadialGradient(
             self.position[0], self.position[1], 0,                     # Centre du gradient
             self.position[0], self.position[1], self.radius            # Rayon du gradient
         )
-        gradient.add_color_stop_rgba(0, 0.9, 0.9, 0.9, self.alpha)  # Centre
-        gradient.add_color_stop_rgba(1, 0.3, 0.3, 0.3, self.alpha)  # Extérieur
+        r, g, b, a = self.normalize_color(self.color)
+        gradient.add_color_stop_rgba(0, min(r + 0.3, 1.0), min(g + 0.3, 1.0), min(b + 0.3, 1.0), self.alpha)
+        gradient.add_color_stop_rgba(1, r * 0.4, g * 0.4, b * 0.4, self.alpha)
+
 
         ctx.arc(self.position[0], self.position[1], self.radius, 0, 2 * math.pi)
         ctx.set_source(gradient)
         ctx.fill()
-                    
-
-
-    # def reflect_velocity(self, normal):
-    #     # v' = v - 2 * (v · n) * n
-    #     v_dot_n = self.velocity[0]*normal[0] + self.velocity[1]*normal[1]
-    #     self.velocity[0] = self.velocity[0] - 2 * v_dot_n * normal[0]
-    #     self.velocity[1] = self.velocity[1] - 2 * v_dot_n * normal[1]
+       
+    def _draw_shadow(self, ctx): 
+        ctx.arc(
+            self.position[0] + self.shadow_offset,
+            self.position[1] + self.shadow_offset,
+            self.radius - 3, 0, 2 * math.pi
+        )
+        ctx.stroke()
+        pass
         
     def reflect_velocity(self, normal):
         dot = 2 * (self.velocity[0]*normal[0] + self.velocity[1]*normal[1])
@@ -107,7 +110,9 @@ class Ball(Object):
         self.position[0] += nx * overlap * 0.5
         self.position[1] += ny * overlap * 0.5
         ball.position[0] -= nx * overlap * 0.5
-        ball.position[1] -= ny * overlap * 0.5            
+        ball.position[1] -= ny * overlap * 0.5 
+
+        self.create_particles(15, ball.color)           
 
     # def check_arc_collision(self, arc):
 
@@ -193,7 +198,7 @@ class Ball(Object):
     def create_particles(self, count=10, color=None):
         if( color is None ):
            color = self.color 
-        r, g, b, a = color
+        r, g, b, a = self.normalize_color(color)
         for _ in range(count):
             # Position initiale : au centre de la balle
             x = self.position[0]

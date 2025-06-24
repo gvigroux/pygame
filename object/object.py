@@ -1,6 +1,9 @@
 
 import math
 import random
+import time
+
+from element.shadow import eShadow
 
 
 safe_globals = {
@@ -42,7 +45,12 @@ class Object:
 
         self.lifetime   = self.config("lifetime", 1.0)
         self.timer      = self.config("timer", 1.0)
-        self.color      = self.config("color", (1.0, 0.0, 1.0, 1.0))
+        self.color      = self.config("color", (255, 255, 255, 255))
+        if( len(self.color) == 3 ):
+            self.color = (self.color[0], self.color[1], self.color[2], 255)
+        
+        self.shadow     = eShadow(**self.config("shadow", {}))
+
         self.fragments_explode = self.config("fragments_explode", 50)
         self.fragments_touch   = self.config("fragments_touch", 50)
 
@@ -58,6 +66,10 @@ class Object:
         self.destroyed  = False
         self.pygame     = pygame
         self.fade_speed = 5.0  # vitesse de disparition (1.0 = lent, 5.0 = rapide)
+
+        self.log_draw_durations = []
+        self.t0 = 0
+        self.t1 = 0
 
     def count(self):
         return self.__class__._count
@@ -144,6 +156,7 @@ class Object:
 
 
     def draw(self, ctx):
+        t0 = time.perf_counter()
 
         if( self.enable == False ):
             return
@@ -155,10 +168,33 @@ class Object:
         if( self.should_draw ):
             #r, g, b, a = self.color
             #ctx.set_source_rgba(r, g, b, self.alpha)
-            self.color = (self.color[0], self.color[1], self.color[2], self.alpha)
-            ctx.set_source_rgba(*self.color)
+            if( self.shadow.enabled() ):
+                #ctx.set_source_rgba(0, 0, 0, min(0.4, self.alpha))
+                #self.set_color(ctx, (0, 0, 0, 100))
+                self.set_color(ctx, self.shadow.color)
+                self._draw_shadow(ctx)
+            #self.color = (self.color[0], self.color[1], self.color[2], self.alpha)
+            #ctx.set_source_rgba(*self.color)
+            self.set_color(ctx, self.color)
             self._draw(ctx)
+            self.log_draw_durations.append(time.perf_counter() - t0)
+        #print(f"UPDATE: {(self.t1 - self.t0)*1000:.2f} ms | DRAW: {(self.t3 - self.t2)*1000:.2f} ms")
 
+    def set_color(self, ctx, color):
+        color = self.normalize_color(color)
+        color = (color[0], color[1], color[2], min(self.alpha, color[3]))
+        ctx.set_source_rgba(*color)
+            
+    def normalize_color(self, color):
+        return tuple(c / 255.0 for c in color)
+
+
+    def stat(self):
+        average  = 0
+        if( len(self.log_draw_durations) > 0):       
+            average = sum(self.log_draw_durations) / len(self.log_draw_durations)
+        print(f"Moyenne {type(self)} : {average*1000:.2f} ms")    
+        pass
 
     def eval_expr(self, expr):
         if isinstance(expr, str):
@@ -171,6 +207,8 @@ class Object:
         values = self.data.get(key, default)
         if( values == default ):
             return default
+        if( isinstance(values, dict) ):
+            return values
         
         safe_globals['total']   = self.count()
         safe_globals['i']       = self.index

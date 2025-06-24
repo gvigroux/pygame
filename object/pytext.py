@@ -1,146 +1,210 @@
+import cairo
 import pygame
 import pygame.gfxdraw
+from element.background import eBackground
+from element.outline import eOutline
+from element.text import eText
 from object.object import Object
+
+
 
 class Text(Object):
     def __init__(self, data, pygame, screen, window_size, count, id):
         super().__init__(data, pygame, screen, window_size, count, id)
 
-        self.position = self.config("position", (window_size[0]//2, window_size[1]//2))
-        self.radius = self.config("radius", 10)
-        self.bg_color = self.config("bg_color", (0, 0, 255, 255))  # Changé en format RGBA 0-255
-        self.bg_radius = self.config("bg_radius", 15)
-        self.bg_size    = self.config("bg_size", (0, 0))
-        self.text       = self.config("text", "")
-        self.font_family = self.config("font_family", "Noto Sans")
-        self.title      = self.config("title", "")
+        self.position   = self.config("position", (window_size[0]//2, window_size[1]//2))
         self.center      = self.config("center", "")
-        self.bold      = self.config("bold", False)
-        self.font_size   = self.config("font_size", 30)
         self.show        = True
 
-        self.outline_color = self.config("outline_color", (0, 0, 0, 0))
-        self.outline_size = self.config("outline_size", 0)
+        self.text       = eText(**self.config("text", {}))
+        self.title      = eText(**self.config("title", {}))
+        self.background = eBackground(**self.config("background", {}))
+
+        self.surfaces = []
+        self.line_height = self.text.font.point_size + 4
+        self.surface_background = None
+        self.surface_title = None
+        self._prepare()
         
-        # Initialisation des policestiming
-        self.title_font = pygame.font.SysFont("Noto Sans", 36, bold=False)
-        self.body_font = pygame.font.SysFont(self.font_family, self.font_size, bold=self.bold)
-             
-        # Convertir la couleur de fond si nécessaire
-        #if len(self.bg_color) == 4 and all(0 <= c <= 1 for c in self.bg_color):
-        #    self.bg_color = tuple(int(c * 255) for c in self.bg_color[:3]) + (self.bg_color[3],)
+
+    def _prepare(self):
+
+        max_text_width = self.screen.get_width() - 2 * self.background.radius - 5 - self.text.padding[0] - self.text.padding[2]
+        
+        # --- Préparer le texte multiligne ---
+        lines, width = self._wrap_text(self.text.value, max_text_width)
+        text_height = len(lines) * self.line_height
+        
+        # --- Calcul de la hauteur totale ---
+        padding = 5
+        if( self.title.enabled() ):
+            title_height = self.title.font.point_size
+            height = round(title_height + text_height + padding * 3)
+        else:
+            height = round(text_height + padding * 2 )
+
+
+        width += 2 * self.background.radius + 5 
+        self.background.size = (width, height)  # Met à jour la hauteur du fond dynamiquement
+        
+        # --- adjust position ---
+        self.x, self.y = self.position
+        if( self.center == "middle" ) :
+            self.x = (self.window_size[0] - self.background.size[0]) // 2
+
+        # --- Dessiner le fond arrondi ---
+        self.surface_background  = pygame.Surface((width, height), pygame.SRCALPHA)
+
+        print(str(self.background.size) + "-" + str(self.screen.get_width()) + "-" + str(self.line_height))
+        print(width)
+        print(height)
+
+        # --- background --- 
+        if( self.background.enabled() ):  
+            pygame.draw.rect(
+                self.surface_background,
+                self.background.getColor(self.alpha*255),
+                (0, 0, width, height),
+                border_radius=self.background.radius
+            )        
+
+        self.height_position = 0
+            
+        # --- Titre ---
+        if( self.title.enabled() ):
+            title_surface = self.title.font.render(self.title.value, True, (28, 161, 242)).convert_alpha()
+            title_surface.set_alpha(self.alpha * 255)
+            #self.screen.blit(title_surface, (self.x + 10, self.y ))
+            self.height_position = title_height + padding
+        
+        # --- Texte long > multiligne ---
+        for i, line in enumerate(lines):
+            surface = self.render_text_with_outline(self.text.font.sysFont, line, self.text.color, self.text.outline)
+            surface.set_alpha(self.alpha * 255)
+            self.surfaces.append(surface)
+            
+        
+
 
     def _update(self, dt, step):
         pass
 
-
     def _draw(self, ctx):
+
+        if( self.surface_background is not None):
+            self.screen.blit(self.surface_background , (self.x, self.y))
+
+        if( self.surface_title is not None):
+            self.screen.blit(self.surface_title , (self.x + 10, self.y ))
+
+        i = 0
+        for surface in self.surfaces:
+            #TODO: do the setalpha in the surface and update the surface when the value change
+            alpha = min(self.alpha*255 , self.text.color[3])
+            surface.set_alpha(alpha)
+            self.screen.blit(surface, (self.x + 10, self.y - 4 + self.height_position + i * self.line_height))
+            i += 1
+
+
+    # def draw_text_with_outline(self, ctx, text, x, y, font="Sans", size=32, fill_color=(1,1,1,1), outline_color=(0,0,0,1), outline_width=2):
+    #     ctx.select_font_face(font, cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
+    #     ctx.set_font_size(size)
+
+    #     # Génère le chemin du texte
+    #     ctx.move_to(x, y)
+    #     ctx.text_path(text)
+
+    #     # Trace le contour (outline)
+    #     ctx.set_line_width(outline_width)
+    #     ctx.set_source_rgba(*outline_color)
+    #     ctx.stroke_preserve()
+
+    #     # Remplit le texte (centre)
+    #     ctx.set_source_rgba(*fill_color)
+    #     ctx.fill()
+
+
+    def _drawold(self, ctx):
+
         
         x, y = self.position
-        if( self.center == "middle" and self.bg_size[1] > 0 ) :
-            x = (self.window_size[0] - self.bg_size[0]) // 2
+        if( self.center == "middle" and self.background.size[1] > 0 ) :
+            x = (self.window_size[0] - self.background.size[0]) // 2
         elif( self.center == "middle" ) :
-            x = (self.window_size[0] - self.bg_size[0]) // 2
+            x = (self.window_size[0] - self.background.size[0]) // 2
 
 
-
-        #width, _ = self.bg_size
-        #max_text_width = width - 2 * self.bg_radius - 5
-        max_text_width = self.screen.get_width() - 2 * self.bg_radius - 5
+        max_text_width = self.screen.get_width() - 2 * self.background.radius - 5 - self.text.padding[0] - self.text.padding[2]
         
         # --- Préparer le texte multiligne ---
-        lines, width = self._wrap_text(self.text, max_text_width)
-        line_height = self.body_font.point_size + 4
+        lines, width = self._wrap_text(self.text.value, max_text_width)
+        line_height = self.text.font.point_size + 4
         text_height = len(lines) * line_height
         
         # --- Calcul de la hauteur totale ---
-        padding = 20
-        title_height = self.title_font.point_size if len(self.title) > 0 else 0
-        height = round(title_height + text_height + padding * 1.5)
+        padding = 5
+        if( self.title.enabled() ):
+            title_height = self.title.font.point_size
+            height = round(title_height + text_height + padding * 3)
+        else:
+            height = round(text_height + padding * 2 )
 
-        width += 2 * self.bg_radius + 5 
-        self.bg_size = (width, height)  # Met à jour la hauteur du fond dynamiquement
+
+        width += 2 * self.background.radius + 5 
+        self.background.size = (width, height)  # Met à jour la hauteur du fond dynamiquement
         
         # --- Dessiner le fond arrondi ---
         bg_surface = pygame.Surface((width, height), pygame.SRCALPHA)
-        # rect = pygame.Rect(0, 0, width, height)
-        # pygame.draw.rect(bg_surface, self.bg_color, rect, border_radius=self.bg_radius)
-        # screen.blit(bg_surface, (x, y))
 
+        # Si la transparence n'est pas égale à 0, on dessine le fond
+        if( self.background.enabled() ):  
+            pygame.draw.rect(
+                bg_surface,
+                self.background.getColor(self.alpha*255),
+                (0, 0, width, height),
+                border_radius=self.background.radius
+            )        
+            self.screen.blit(bg_surface, (x, y))
 
-    
-        # Dessin avec antialiasing
-        #pygame.gfxdraw.aacircle(bg_surface, self.bg_radius, self.bg_radius, self.bg_radius, self.bg_color)        
-        #pygame.gfxdraw.aacircle(bg_surface, width - self.bg_radius - 1, self.bg_radius, self.bg_radius, self.bg_color)
-        #pygame.gfxdraw.aacircle(bg_surface, width - self.bg_radius - 1, height - self.bg_radius - 1, self.bg_radius, self.bg_color)
-        #pygame.gfxdraw.aacircle(bg_surface, self.bg_radius, height - self.bg_radius - 1, self.bg_radius, self.bg_color)
-            
-        #self.bg_color = (self.bg_color[0], self.bg_color[1], self.bg_color[2], min(self.alpha, self.bg_color[3]))
-        #self.bg_color = (self.bg_color[0], self.bg_color[1], self.bg_color[2], min(self.alpha, self.bg_color[3]))
-        # bg_color = (self.bg_color[0], self.bg_color[1], self.bg_color[2], 150)
-        
-        # # # Dessin des 4 coins arrondis
-        # for corner_x, corner_y in [(0, 0), (width - 1, 0), (width - 1, height - 1), (0, height - 1)]:
-        #     pygame.gfxdraw.aacircle(bg_surface, 
-        #                         corner_x + (self.bg_radius if corner_x == 0 else -self.bg_radius),
-        #                         corner_y + (self.bg_radius if corner_y == 0 else -self.bg_radius),
-        #                         self.bg_radius, self.bg_color)
-        #     pygame.gfxdraw.filled_circle(bg_surface, 
-        #                             corner_x + (self.bg_radius if corner_x == 0 else -self.bg_radius),
-        #                             corner_y + (self.bg_radius if corner_y == 0 else -self.bg_radius),
-        #                             self.bg_radius, self.bg_color)
-            
-        # # Remplissage des rectangles centraux
-        # pygame.draw.rect(bg_surface, self.bg_color, (self.bg_radius, 0, width - 2*self.bg_radius, height))
-        # pygame.draw.rect(bg_surface, self.bg_color, (0, self.bg_radius, width, height - 2*self.bg_radius))
-
-        pygame.draw.rect(
-            bg_surface,
-             (self.bg_color[0], self.bg_color[1], self.bg_color[2], min(self.alpha*255, self.bg_color[3])),
-            (0, 0, width, height),
-            border_radius=self.bg_radius
-        )
-        
-        self.screen.blit(bg_surface, (x, y))
+        height_position = 0
             
         # --- Titre ---
-        if( len(self.title) > 0 ):
-            title_surface = self.title_font.render(self.title, True, (28, 161, 242)).convert_alpha()
+        if( self.title.enabled() ):
+            title_surface = self.title.font.render(self.title.value, True, (28, 161, 242)).convert_alpha()
             title_surface.set_alpha(self.alpha * 255)
-            self.screen.blit(title_surface, (x + 10, y + 2 ))
+            self.screen.blit(title_surface, (x + 10, y ))
+            height_position = title_height + padding
         
-        # --- Texte multiligne ---
+        # --- Texte long > multiligne ---
         for i, line in enumerate(lines):
-            #text_surface = self.body_font.render(line, True, self.color).convert_alpha()
-            text_surface = self.render_text_with_outline(self.body_font, line, self.color, self.outline_color, self.outline_size)
+            text_surface = self.render_text_with_outline(self.text.font.sysFont, line, self.text.color, self.text.outline)
             text_surface.set_alpha(self.alpha * 255)
-            if( self.center == "middle" ) :
-                # Calcul de la position x pour centrer le texte
-                #text_width = text_surface.get_width()
-                #screen_width = self.screen.get_width()
-                #x_centered = (screen_width - text_width) // 2  # Centrage horizontal
-                #self.screen.blit(text_surface, (x_centered, y + 2 + padding/2 + title_height + i * line_height))
-                self.screen.blit(text_surface, (x + 10, y + 2 + padding/2 + title_height + i * line_height))
-                pass
-            else :
-                self.screen.blit(text_surface, (x + 10, y + 2 + padding/2 + title_height + i * line_height))
+            self.screen.blit(text_surface, (x + 10, y - 4 + height_position + i * line_height))
 
-    def render_text_with_outline(self, font, text, text_color, outline_color, outline_size=2):
+
+    def render_text_with_outline(self, font, text, text_color, outline):
         """Render text with outline effect"""
         # Render the outline (multiple passes)
-        outline_surface = pygame.Surface((font.size(text)[0] + outline_size*2, 
-                                        font.size(text)[1] + outline_size*2), pygame.SRCALPHA)
+        outline_surface = pygame.Surface((font.size(text)[0] + outline.width*2, 
+                                        font.size(text)[1] + outline.width*2), pygame.SRCALPHA)
         
         # Draw outline in all directions
-        for dx in [-outline_size, 0, outline_size]:
-            for dy in [-outline_size, 0, outline_size]:
-                if dx != 0 or dy != 0:  # Skip the center position
-                    text_outline = font.render(text, True, outline_color)
-                    outline_surface.blit(text_outline, (outline_size + dx, outline_size + dy))
-        
+        if( outline.width > 0 ):
+             for dx in [-outline.width, 0, outline.width]:
+                 for dy in [-outline.width, 0, outline.width]:
+                     if dx != 0 or dy != 0:  # Skip the center position
+                         text_outline = font.render(text, True, outline.color)
+                         outline_surface.blit(text_outline, (outline.width + dx, outline.width + dy))
+
+
+        #if( outline.width > 0 ):
+        #    for dx, dy in [(1, 0), (0, 1), (1, 1)]:  # au lieu de 8 directions
+        #       text_outline = font.render(text, True, outline.color)
+        #        outline_surface.blit(text_outline, (outline.width + dx, outline.width + dy))
+                    
         # Draw main text (centered over outline)
         text_surface = font.render(text, True, text_color)
-        outline_surface.blit(text_surface, (outline_size, outline_size))
+        outline_surface.blit(text_surface, (outline.width, outline.width))
         
         return outline_surface
 
@@ -162,19 +226,19 @@ class Text(Object):
             
             for word in words:
                 test_line = current_line + (" " if current_line else "") + word
-                test_width = self.body_font.size(test_line)[0]
+                test_width = self.text.font.sysFont.size(test_line)[0]
                 
                 if test_width <= max_width:
                     current_line = test_line
                 else:
                     if current_line:
-                        current_width = self.body_font.size(current_line)[0]
+                        current_width = self.text.font.sysFont.size(current_line)[0]
                         max_line_width = max(max_line_width, current_width)
                         lines.append(current_line)
                     current_line = word
             
             if current_line:
-                current_width = self.body_font.size(current_line)[0]
+                current_width = self.text.font.sysFont.size(current_line)[0]
                 max_line_width = max(max_line_width, current_width)
                 lines.append(current_line)
             
