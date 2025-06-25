@@ -7,7 +7,7 @@ import random
 import cairo
 
 from object.object import Object
-from object.particle import Particle
+from object.inner_particle import InnerParticle
 
 
 class Counter(Object):
@@ -96,6 +96,6 @@ class Counter(Object):
                 1.0
             )
 
-            particle = Particle(position=(px, py), velocity=(vx, vy),
+            particle = InnerParticle(position=(px, py), velocity=(vx, vy),
                                 radius=radius, lifetime=5, color=particle_color)
             self.particles.append(particle)

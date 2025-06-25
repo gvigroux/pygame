@@ -9,14 +9,13 @@ import numpy as np
 import pygame
 
 from object.object import Object
-from object.particle import Particle
+from object.inner_particle import InnerParticle
 
 
 class Arc(Object):
     def __init__(self, data, pygame, screen,window_size, count, id):
         super().__init__(data, pygame, screen,window_size, count, id)
 
-        self.position    = self.config("position", (window_size[0]//2, window_size[1]//2))
         self.radius      = self.config("radius", 10)
         self.angle_start = self.config("angle_start", 0)
         self.angle_end   = self.config("angle_end", 330)
@@ -38,13 +37,13 @@ class Arc(Object):
 
     def _draw(self, ctx): 
         ctx.set_line_width(self.width)
-        ctx.arc(self.position[0], self.position[1], self.radius, self.start_angle, self.end_angle)
+        ctx.arc(self.position.x, self.position.y, self.radius, self.start_angle, self.end_angle)
         ctx.stroke()
 
 
     def _draw_shadow(self, ctx):    
         ctx.set_line_width(self.width)
-        ctx.arc(self.position[0] + self.shadow.offset, self.position[1] + self.shadow.offset, self.radius, self.start_angle, self.end_angle)
+        ctx.arc(self.position.x + self.shadow.offset, self.position.y + self.shadow.offset, self.radius, self.start_angle, self.end_angle)
         ctx.stroke()  
         pass
 
@@ -64,8 +63,8 @@ class Arc(Object):
             theta = random.uniform(self.start_angle, self.end_angle)
 
             # Position sur l’arc (bord visible)
-            x = self.position[0] + math.cos(theta) * self.radius
-            y = self.position[1] + math.sin(theta) * self.radius
+            x = self.position.x + math.cos(theta) * self.radius
+            y = self.position.y + math.sin(theta) * self.radius
 
             # Grand angle de dispersion : ±90° autour du theta
             spread_angle = random.uniform(-math.pi / 2, math.pi / 2)
@@ -91,6 +90,6 @@ class Arc(Object):
             )
 
             # Créer la particule
-            particle = Particle(position=(x, y), velocity=(vx, vy),
+            particle = InnerParticle(position=(x, y), velocity=(vx, vy),
                                 radius=radius, lifetime=0.6, color=particle_color)
             self.particles.append(particle)

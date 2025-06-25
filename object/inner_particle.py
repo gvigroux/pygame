@@ -1,7 +1,7 @@
 import math
 
 
-class Particle:
+class InnerParticle:
     def __init__(self, position, velocity, lifetime=0.5, radius=2, color=(1, 1, 1, 1)):
         self.position = list(position)
         self.velocity = velocity  # (vx, vy)

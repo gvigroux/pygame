@@ -5,21 +5,20 @@ import math
 
 
 from object.object import Object
-from object.particle import Particle
+from object.inner_particle import InnerParticle
 
 class Ball(Object):
     def __init__(self, data, pygame, screen,window_size, count, id):
         super().__init__(data, pygame, screen,window_size, count, id)
         self.radius     = self.config("radius", 8)
-        self.position   = self.config("position", [random.uniform(250, 290), random.uniform(460, 500)])
         self.velocity   = self.config("velocity", [random.uniform(-150, 150), random.uniform(-150, 150)])
         self.collision_margin = 1.5
         self.first_draw = False
 
     def _update(self, dt, step):
     
-        self.position[0] += self.velocity[0] * dt
-        self.position[1] += self.velocity[1] * dt
+        self.position.x += self.velocity[0] * dt
+        self.position.y += self.velocity[1] * dt
 
         # Rebond sur les bords
         #if self.position[0] - self.radius < 0 or self.position[0] + self.radius > self.window_width:
@@ -42,22 +41,22 @@ class Ball(Object):
     
         #BALL GRADIENT   
         gradient = cairo.RadialGradient(
-            self.position[0], self.position[1], 0,                     # Centre du gradient
-            self.position[0], self.position[1], self.radius            # Rayon du gradient
+            self.position.x, self.position.y, 0,                     # Centre du gradient
+            self.position.x, self.position.y, self.radius            # Rayon du gradient
         )
         r, g, b, a = self.normalize_color(self.color)
         gradient.add_color_stop_rgba(0, min(r + 0.3, 1.0), min(g + 0.3, 1.0), min(b + 0.3, 1.0), self.alpha)
         gradient.add_color_stop_rgba(1, r * 0.4, g * 0.4, b * 0.4, self.alpha)
 
 
-        ctx.arc(self.position[0], self.position[1], self.radius, 0, 2 * math.pi)
+        ctx.arc(self.position.x, self.position.y, self.radius, 0, 2 * math.pi)
         ctx.set_source(gradient)
         ctx.fill()
        
     def _draw_shadow(self, ctx): 
         ctx.arc(
-            self.position[0] + self.shadow_offset,
-            self.position[1] + self.shadow_offset,
+            self.position.x + self.shadow_offset,
+            self.position.y + self.shadow_offset,
             self.radius - 3, 0, 2 * math.pi
         )
         ctx.stroke()
@@ -78,8 +77,8 @@ class Ball(Object):
         if ball.exploded:
             return False
         
-        dx = self.position[0] - ball.position[0]
-        dy = self.position[1] - ball.position[1]
+        dx = self.position.x - ball.position.x
+        dy = self.position.y - ball.position.y
         dist_squared = dx*dx + dy*dy
         radius_sum = self.radius + ball.radius
         return dist_squared <= radius_sum * radius_sum
@@ -94,8 +93,8 @@ class Ball(Object):
         self.velocity, ball.velocity = ball.velocity, self.velocity
         
         # 2. Séparation physique pour éviter le collage
-        dx = self.position[0] - ball.position[0]
-        dy = self.position[1] - ball.position[1]
+        dx = self.position.x - ball.position.x
+        dy = self.position.y - ball.position.y
         distance = math.sqrt(dx*dx + dy*dy)
         
         # Vecteur de direction normalisé
@@ -107,10 +106,10 @@ class Ball(Object):
         
         # Ajustement des positions
         overlap = min_separation - distance
-        self.position[0] += nx * overlap * 0.5
-        self.position[1] += ny * overlap * 0.5
-        ball.position[0] -= nx * overlap * 0.5
-        ball.position[1] -= ny * overlap * 0.5 
+        self.position.x += nx * overlap * 0.5
+        self.position.y += ny * overlap * 0.5
+        ball.position.x -= nx * overlap * 0.5
+        ball.position.y -= ny * overlap * 0.5 
 
         self.create_particles(15, ball.color)           
 
@@ -141,11 +140,14 @@ class Ball(Object):
         
 
     def check_arc_collision(self, arc):
-        if arc.exploded:
+
+        if(not arc.is_alive(self.current_step)):
             return False
+        #if arc.exploded:
+        #    return False
         
-        dx = self.position[0] - arc.position[0]
-        dy = self.position[1] - arc.position[1]
+        dx = self.position.x - arc.position.x
+        dy = self.position.y - arc.position.y
         dist_sq = dx*dx + dy*dy
         
         # Calcul des rayons critiques
@@ -172,8 +174,8 @@ class Ball(Object):
 
     def arc_collision(self, arc):
         # 1. Calcul vectoriel sécurisé
-        dx = self.position[0] - arc.position[0]
-        dy = self.position[1] - arc.position[1]
+        dx = self.position.x - arc.position.x
+        dy = self.position.y - arc.position.y
         dist = max(math.sqrt(dx*dx + dy*dy), 0.001)
         
         # 2. Vecteurs normal/tangentiel
@@ -201,8 +203,8 @@ class Ball(Object):
         r, g, b, a = self.normalize_color(color)
         for _ in range(count):
             # Position initiale : au centre de la balle
-            x = self.position[0]
-            y = self.position[1]
+            x = self.position.x
+            y = self.position.y
 
             # Angle aléatoire (360°)
             angle = random.uniform(0, 2 * math.pi)
@@ -227,54 +229,9 @@ class Ball(Object):
             )
 
             # Créer la particule
-            particle = Particle(position=(x, y), velocity=(vx, vy),
+            particle = InnerParticle(position=(x, y), velocity=(vx, vy),
                                 radius=radius, lifetime=0.6, color=particle_color)
             self.particles.append(particle)
-
-            
-    # def check_arc_collision2(self, arc):
-
-    #     if( arc.exploded):
-    #         return False
-        
-    #     dx = self.position[0] - arc.position[0]
-    #     dy = self.position[1] - arc.position[1]
-    #     dist = math.sqrt(dx*dx + dy*dy)
-        
-    #     arc_dist = arc.radius - arc.width/2 - self.collision_margin
-
-    #     # Vérifie si la balle est proche du cercle (arc)
-    #     if dist < arc_dist - self.radius:
-    #         # Dans le "trou" central
-    #         return False
-    #     dy = self.position[1] - arc.position[1]
-    #     dist = math.sqrt(dx*dx + dy*dy)
-        
-    #     # Vérifie si la balle est proche du cercle (arc)
-    #     if dist < arc_dist - self.radius:
-    #         # Dans le "trou" central
-    #         return False
-    #     if dist > arc_dist + self.radius:
-    #         # Trop loin pour toucher
-    #         return False
-                
-    #     # Calcul angle balle par rapport au centre arc
-    #     angle = math.atan2(dy, dx)
-        
-    #     if angle < 0:
-    #         angle += 2 * math.pi
-        
-    #     if self.angle_in_arc(angle, arc.start_angle, arc.visible_rad ):
-                
-    #         # Calcul normale (direction du centre vers la balle)
-    #         # Rebond
-    #         normal = (dx / dist, dy / dist)
-    #         self.reflect_velocity(normal)
-    #         return "hit_arc"
-    #     else:
-    #         arc.explode()
-    #         return "hit_hole"
-        
 
         
     def normalize_angle(self, angle):

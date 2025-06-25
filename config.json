@@ -1,47 +1,5 @@
 {
-  "balls": [
-    {
-      "count": 4,
-      "radius": "10",
-      "position": ["random.uniform(264, 344)", "random.uniform(500, 580)"],
-      "velocity": [
-        "random.choice([-1, 1]) * random.uniform(50, 100)",
-        "random.choice([-1, 1]) * random.uniform(50, 100)"
-      ],
-      "color": "(random.uniform(0, 255), random.uniform(0, 255), random.uniform(0, 255), 255)",
-      "fragments_explode": 5,
-      "fragments_touch": 5,
-      "fade_in": 0.5,
-      "fade_out": 0.5,
-      "step_delay": "0.5 + i*0.15",
-      "delay": "2 - i*0.15 - 0.5",
-      "step_block": true
-    }
-  ],
-  "arcs": [
-    {
-      "step_delay": 0,
-      "fade_in": 1,
-      "count": 10,
-      "radius": "(230 - total*15)",
-      "speed": "random.choice([-1, 1]) * random.uniform(20, 100)",
-      "angle_start": 0,
-      "angle_end": "300-total*3",
-      "width": 10,
-      "color": "(random.uniform(0, 255), random.uniform(0, 255), random.uniform(0, 255), 255)",
-      "shadow": {
-        "offset": 5,
-        "color": "(0, 0, 0, 30)"
-      },
-      "colors9": [
-        "(random.uniform(0.0, 1), random.uniform(0.0, 1), random.uniform(0.0, 1), 1.0)",
-        "(random.uniform(0.0, 1), random.uniform(0.0, 1), random.uniform(0.0, 1), 1.0)"
-      ],
-      "fragments_explode": 5,
-      "step_block": true
-    }
-  ],
-  "texts": [
+  "texts2": [
     {
       "text": {
         "value": "98% échouent",
@@ -167,20 +125,132 @@
       "step_block": true
     }
   ],
-  "objects": [],
+  "texts": [
+    {
+      "text": {
+        "value": "98% échouent",
+        "color": "( 28,161, 242)",
+        "font": {
+          "bold": false,
+          "size": 50,
+          "family": "Anton Regular"
+        },
+        "outline": {
+          "color": "(255, 255, 255, 255)",
+          "width": 1
+        }
+      },
+      "center_": "middle",
+      "position_": [0, 60],
+      "step_start": 0,
+      "step_stop": 2,
+      "fade_out": 0.5
+    }
+  ],
+  "objects": [
+    {
+      "type": "text",
+      "text": {
+        "value": "98% échouent",
+        "color": "( 28,161, 242)",
+        "font": {
+          "bold": false,
+          "size": 50,
+          "family": "Anton Regular"
+        },
+        "outline": {
+          "color": "(255, 255, 255, 255)",
+          "width": 1
+        }
+      },
+      "position_": { "y": 60, "x": "50%" },
+      "step": {
+        "start": 0,
+        "stop": 2
+      }
+    },
+    {
+      "type": "ball",
+      "step": {
+        "start": 0,
+        "fade_in": 0.2,
+        "duration": 10,
+        "delay": "i*1",
+        "update_delay": "5 - i*1",
+        "block": true
+      },
+      "count": 3,
+      "radius": "10",
+      "position": {
+        "x": "random.uniform(264, 344)",
+        "y": "random.uniform(500, 580)"
+      },
+      "velocity": [
+        "random.choice([-1, 1]) * random.uniform(50, 100)",
+        "random.choice([-1, 1]) * random.uniform(50, 100)"
+      ],
+      "color": "(random.uniform(0, 255), random.uniform(0, 255), random.uniform(0, 255), 255)",
+      "fragments_explode": 5,
+      "fragments_touch": 5
+    },
+    {
+      "type": "arc",
+      "step": {
+        "start": 0,
+        "fade_in": 1,
+        "fade_out": 5,
+        "duration": 6,
+        "block": true
+      },
+      "count": 1,
+      "radius": "(230 - total*15)",
+      "speed": "random.choice([-1, 1]) * random.uniform(20, 100)",
+      "angle_start": 0,
+      "angle_end": "300-total*3",
+      "width": 10,
+      "color": "(random.uniform(0, 255), random.uniform(0, 255), random.uniform(0, 255), 255)",
+      "shadow": {
+        "offset": 5,
+        "color": "(0, 0, 0, 30)"
+      },
+      "colors9": [
+        "(random.uniform(0.0, 1), random.uniform(0.0, 1), random.uniform(0.0, 1), 1.0)",
+        "(random.uniform(0.0, 1), random.uniform(0.0, 1), random.uniform(0.0, 1), 1.0)"
+      ],
+      "fragments_explode": 5
+    },
+    {
+      "type": "arc",
+      "step": {
+        "start": 1,
+        "duration": 10,
+        "block": true
+      },
+      "count": 1,
+      "radius": "(230 - total*15)",
+      "speed": "random.choice([-1, 1]) * random.uniform(20, 100)",
+      "angle_start": 0,
+      "angle_end": "300-total*3",
+      "width": 10,
+      "color": "(random.uniform(0, 255), random.uniform(0, 255), random.uniform(0, 255), 255)",
+      "shadow": {
+        "offset": 5,
+        "color": "(0, 0, 0, 30)"
+      },
+      "colors9": [
+        "(random.uniform(0.0, 1), random.uniform(0.0, 1), random.uniform(0.0, 1), 1.0)",
+        "(random.uniform(0.0, 1), random.uniform(0.0, 1), random.uniform(0.0, 1), 1.0)"
+      ],
+      "step_start": 1,
+      "fragments_explode": 5
+    }
+  ],
   "end_step": { "step": 4 },
   "fragments": {
     "max": 10
   },
   "window_size": [608, 1080],
   "step_end": 4,
-  "music": {
-    "file": "C:\\PYGAME\\music\\WizTheMc, bees & honey - Show Me Love (Official Music Video).mp3",
-    "start": 40,
-    "fade_ms": 200,
-    "volume": 0.5,
-    "loop": true
-  },
   "background": {
     "type": "video",
     "list": [
@@ -193,10 +263,11 @@
       },
       {
         "path": "C:\\PYGAME\\backgrounds\\resized_608_ssstik.io_1750714961132 (online-video-cutter.com).mp4",
-        "start": 0,
-        "end": 10,
-        "loop": true,
-        "fps": 4
+        "fps": 10
+      },
+      {
+        "path": "C:\\PYGAME\\backgrounds\\resized_608_5913483-hd_1080_1920_30fps.mp4",
+        "loop": true
       }
     ]
   }

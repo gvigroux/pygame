@@ -3,7 +3,9 @@ import math
 import random
 import time
 
+from element.position import ePosition
 from element.shadow import eShadow
+from element.step import eStep
 
 
 safe_globals = {
@@ -26,30 +28,36 @@ class Object:
         self.index      = i
         self.amount     = amount
 
-        # Timing management
-        self.enable     = self.config("enable", True)
-        self.step_block = self.config("step_block", False)
-        self.step_delay = self.config("step_delay", 0)
-        self.fade_in    = self.config("fade_in", 0)
-        self.fade_out   = self.config("fade_out", 2)
-        self.step       = self.config("step_start", 0)
-        self.step_stop  = self.config("step_stop", -1)
-        self.delay      = self.config("delay", 0)
-        self.step_duration  = self.config("step_duration", -1)
-        self.current_step = -1
-        self.start_time = 0
-        self.should_draw = False
-        self.current_fade_in_time = 0.0
-        self.current_fade_out_time = self.fade_out
-
-
+        self.position   = self.config("position", (window_size[0]//2, window_size[1]//2))
         self.lifetime   = self.config("lifetime", 1.0)
         self.timer      = self.config("timer", 1.0)
         self.color      = self.config("color", (255, 255, 255, 255))
         if( len(self.color) == 3 ):
             self.color = (self.color[0], self.color[1], self.color[2], 255)
         
+        self.position   = ePosition(window_size, **self.config("position", {"x": "50%","y": "50%"}))       
         self.shadow     = eShadow(**self.config("shadow", {}))
+        self.step       = eStep(self, **self.config("step", {}))
+        self.delay      = 0 #TODO: rebuild
+
+
+        # Timing management
+        self.enable     = self.config("enable", True)
+        self.current_step = -1
+        self.start_time = 0
+        self.should_draw = False
+        self.current_fade_in_time = 0.0
+        self.current_fade_out_time = self.step.fade_out
+
+        #self.step_block = self.config("step_block", False)
+        #self.step_delay = self.config("step_delay", 0)
+        #self.fade_in    = self.config("fade_in", 0)
+        #self.fade_out   = self.config("fade_out", 2)
+        #self.step_start = self.config("step_start", 0)
+        #self.step_stop  = self.config("step_stop", -1)
+        #self.delay      = self.config("delay", 0)
+        #self.step_duration  = self.config("step_duration", -1)
+
 
         self.fragments_explode = self.config("fragments_explode", 50)
         self.fragments_touch   = self.config("fragments_touch", 50)
@@ -76,7 +84,7 @@ class Object:
     
     @property
     def age(self):
-        return self.pygame.time.get_ticks() - self.start_time - self.step_delay * 1000
+        return self.pygame.time.get_ticks() - self.start_time - self.step.delay * 1000
     
     def is_destroyed(self):
         return self.destroyed and len(self.particles) == 0
@@ -84,14 +92,14 @@ class Object:
     def is_alive(self, step):
         if( self.is_destroyed() ):
             return False
-        return self.step <= step and (self.step_stop >= step or self.step_stop == -1)
+        return self.step.start <= step and (self.step.stop >= step or self.step.stop == -1)
 
     def block(self, step):
         if( self.is_destroyed() ):
             return False
-        if(( self.step <= step and (self.step_stop >= step or self.step_stop == -1)) == False ):
+        if(( self.step.start <= step and (self.step.stop >= step or self.step.stop == -1)) == False ):
             return False
-        if( self.step_block ):
+        if( self.step.block ):
             return True
         return False
     
@@ -106,35 +114,37 @@ class Object:
             particle.update(dt)
         self.particles = [p for p in self.particles if p.alpha > 0]
 
-        if( self.step > step ):
+        if( self.step.start > step ):
             return
         
-        if( self.current_step != self.step ):
+        if( self.current_step != self.step.start ):
             self.start_time     = self.pygame.time.get_ticks()
-            self.current_step   = self.step
+            self.current_step   = self.step.start
 
         # Delay
-        if( (self.pygame.time.get_ticks() - self.start_time)/1000 < self.step_delay ): 
+        if( (self.pygame.time.get_ticks() - self.start_time)/1000 < self.step.delay ): 
             return
         
         phase_out = False
-        if( self.step_duration > 0 and self.age/1000 > self.step_duration ):
+        if( self.step.duration > 0 and self.age/1000 > self.step.duration ):
             phase_out = True
         
         self.should_draw    = True
         
         # Fade in
-        if self.current_fade_in_time < self.fade_in:
+        if self.current_fade_in_time < self.step.fade_in:
             self.current_fade_in_time += dt
-            self.alpha = min(self.current_fade_in_time / self.fade_in, 1.0)
+            self.alpha = min(self.current_fade_in_time / self.step.fade_in, 1.0)
 
-        if( self.step_stop >= 0 and self.step_stop < step and self.fade_out > 0):
+        if( self.step.stop >= 0 and self.step.stop < step and self.step.fade_out > 0):
             phase_out = True
 
         if( phase_out ):
-            if self.current_fade_out_time <= self.fade_out:
+            if( self.step.fade_out <= 0 ):
+                self.destroyed = True
+            elif self.current_fade_out_time <= self.step.fade_out:
                 self.current_fade_out_time -= dt
-                self.alpha = max(self.current_fade_out_time / self.fade_out, 0.0) 
+                self.alpha = max(self.current_fade_out_time / self.step.fade_out, 0.0) 
 
             if( self.alpha <= 0.0 ):
                 self.destroyed = True
@@ -150,7 +160,7 @@ class Object:
                 self.destroyed = True
                 self.should_draw = False
 
-        if( self.age/1000 >= self.delay ):
+        if( self.age/1000 >= self.step.update_delay ):
             self._update(dt, step)
         
 
@@ -160,7 +170,7 @@ class Object:
 
         if( self.enable == False ):
             return
-        
+
         for particle in self.particles:
             particle.draw(ctx)
 
@@ -179,6 +189,23 @@ class Object:
             self._draw(ctx)
             self.log_draw_durations.append(time.perf_counter() - t0)
         #print(f"UPDATE: {(self.t1 - self.t0)*1000:.2f} ms | DRAW: {(self.t3 - self.t2)*1000:.2f} ms")
+
+
+
+    def draw_surface(self, ctx):
+        t0 = time.perf_counter()
+
+        if( self.enable == False ):
+            return
+        
+        # Draw
+        if( self.should_draw ):
+            self.set_color(ctx, self.color)
+            self._draw_surface(ctx)
+            self.log_draw_durations.append(time.perf_counter() - t0)
+
+    def _draw_surface(self, ctx):
+        pass
 
     def set_color(self, ctx, color):
         color = self.normalize_color(color)

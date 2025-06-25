@@ -12,7 +12,7 @@ class Text(Object):
     def __init__(self, data, pygame, screen, window_size, count, id):
         super().__init__(data, pygame, screen, window_size, count, id)
 
-        self.position   = self.config("position", (window_size[0]//2, window_size[1]//2))
+        #self.position   = self.config("position", (window_size[0]//2, window_size[1]//2))
         self.center      = self.config("center", "")
         self.show        = True
 
@@ -43,21 +43,20 @@ class Text(Object):
         else:
             height = round(text_height + padding * 2 )
 
-
         width += 2 * self.background.radius + 5 
         self.background.size = (width, height)  # Met à jour la hauteur du fond dynamiquement
         
         # --- adjust position ---
-        self.x, self.y = self.position
-        if( self.center == "middle" ) :
-            self.x = (self.window_size[0] - self.background.size[0]) // 2
+        if( self.position.justify == "middle" ) :
+            self.position.x = (self.window_size[0] - self.background.size[0]) // 2   
+
+
+        #self.x, self.y = self.position
+        #if( self.center == "middle" ) :
+        #    self.x = (self.window_size[0] - self.background.size[0]) // 2
 
         # --- Dessiner le fond arrondi ---
         self.surface_background  = pygame.Surface((width, height), pygame.SRCALPHA)
-
-        print(str(self.background.size) + "-" + str(self.screen.get_width()) + "-" + str(self.line_height))
-        print(width)
-        print(height)
 
         # --- background --- 
         if( self.background.enabled() ):  
@@ -90,19 +89,23 @@ class Text(Object):
         pass
 
     def _draw(self, ctx):
+        #self._draw_surface(ctx)
+        pass
+
+    def _draw_surface(self, ctx):
 
         if( self.surface_background is not None):
-            self.screen.blit(self.surface_background , (self.x, self.y))
+            self.screen.blit(self.surface_background , (self.position.x, self.position.y))
 
         if( self.surface_title is not None):
-            self.screen.blit(self.surface_title , (self.x + 10, self.y ))
+            self.screen.blit(self.surface_title , (self.position.x + 10, self.position.y ))
 
         i = 0
         for surface in self.surfaces:
             #TODO: do the setalpha in the surface and update the surface when the value change
             alpha = min(self.alpha*255 , self.text.color[3])
             surface.set_alpha(alpha)
-            self.screen.blit(surface, (self.x + 10, self.y - 4 + self.height_position + i * self.line_height))
+            self.screen.blit(surface, (self.position.x + 10, self.position.y - 4 + self.height_position + i * self.line_height))
             i += 1
 
 
@@ -123,7 +126,7 @@ class Text(Object):
     #     ctx.set_source_rgba(*fill_color)
     #     ctx.fill()
 
-
+    """ 
     def _drawold(self, ctx):
 
         
@@ -181,6 +184,7 @@ class Text(Object):
             text_surface.set_alpha(self.alpha * 255)
             self.screen.blit(text_surface, (x + 10, y - 4 + height_position + i * line_height))
 
+        """
 
     def render_text_with_outline(self, font, text, text_color, outline):
         """Render text with outline effect"""

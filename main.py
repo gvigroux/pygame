@@ -7,10 +7,11 @@ import cairo
 import math
 import time
 
-from backgrounds import BackgroundFactory
+from background.backgrounds import BackgroundFactory
 from object.arc import Arc
 from object.ball import Ball
 from object.counter import Counter
+from object.object_factory import ObjectFactory
 from object.pytext import Text
 
 
@@ -56,7 +57,7 @@ def cairo_to_pygame(surface):
 
 # Balls creation
 balls = []
-for data in config["balls"]:
+for data in config.get("balls", []):
     count = data.get("count", 1)
     while( len(balls) < count ):
         ball = Ball( data, pygame, screen, window_size, count, len(balls))
@@ -65,7 +66,7 @@ for data in config["balls"]:
 
 # Arcs creation
 arcs = []
-for data in config["arcs"]:
+for data in config.get("arcs", []):
     count = data.get("count", 1)
     for i in range(count):
         arcs.append(Arc(data, pygame, screen, window_size, count, i))
@@ -100,8 +101,8 @@ explosion_sound = pygame.mixer.Sound("media/sound/retro/SoundLand2.wav")
 bounce_sound.set_volume(0.1)
 
 
-music_detail = config.get("music", [])
-if( music_detail.get("file") ):
+music_detail = config.get("music", {})
+if( music_detail.get("file", False) ):
     pygame.mixer.music.load(music_detail.get("file"))
     #pygame.mixer.music.set_volume(music_detail.get("volume", 0.2))
     start = music_detail.get("start", 0)
@@ -125,6 +126,16 @@ balls_block = sum(1 for obj in balls if obj.block(current_step))
 texts_block = sum(1 for obj in texts if obj.block(current_step))
 
 
+
+objects = []
+for data in config.get("objects", []):
+    count = data.get("count", 1)
+    for i in range(count):
+        objects.append(ObjectFactory.create(data, pygame, screen, window_size, count, i))
+
+
+
+obj_block = sum(1 for obj in objects if obj.block(current_step))
 
 import tracemalloc
 tracemalloc.start()
@@ -154,17 +165,15 @@ while running:
 
     elapsed_time = time.perf_counter() - start_time
 
-
     # End of game
     if( current_step >= end_step.get("step", -1) ): 
         running = False
-
 
     #***********************************************************************
     # Step Progression
             
     for obj in arcs:
-        if obj.destroyed:
+        if obj.is_destroyed():
             obj.stat()
     for obj in balls:
         if obj.is_destroyed():
@@ -172,28 +181,34 @@ while running:
     for obj in texts:
         if obj.is_destroyed():
             obj.stat()
+    for obj in objects:
+        if obj.is_destroyed():
+            obj.stat()
+
 
 
     
     # Remove dead objects
     a, b, t = len(arcs), len(balls), len(texts)
-    arcs    = [obj for obj in arcs  if not obj.destroyed]
+    arcs    = [obj for obj in arcs  if not obj.is_destroyed()]
     balls   = [obj for obj in balls if not obj.is_destroyed()]
     texts   = [obj for obj in texts if not obj.is_destroyed()]
+    objects = [obj for obj in objects if not obj.is_destroyed()]
     
     # List of object groups and their corresponding block counts
     object_groups = [
         (arcs, arcs_block),
         (balls, balls_block),
-        (texts, texts_block)
+        (texts, texts_block),
+        (objects, obj_block)
     ]
 
     # Temporary storage for new block counts
     new_block_counts = []
 
     # Check each group for blocking objects and update current_step if needed
-    for objects, prev_block_count in object_groups:
-        current_blocks = sum(1 for obj in objects if obj.block(current_step))
+    for objs, prev_block_count in object_groups:
+        current_blocks = sum(1 for obj in objs if obj.block(current_step))
         new_block_counts.append(current_blocks)
         
         # Increment step if previously blocked and now clear
@@ -201,9 +216,7 @@ while running:
             current_step += 1
 
     # Update block counts for next iteration
-    arcs_block, balls_block, texts_block = new_block_counts
-
-
+    arcs_block, balls_block, texts_block, obj_block = new_block_counts
 
     #***********************************************************************
     # Update objects
@@ -213,7 +226,6 @@ while running:
             if( balls[i].check_ball_collision(balls[j]) ):
                 balls[i].ball_collision(balls[j])
                 bounce_sound.play()
-                
 
     # Step 1 : Update logique
     t1 = time.perf_counter()
@@ -237,6 +249,9 @@ while running:
     
     for text in texts:
         text.update(dt, current_step)
+
+    for object in objects:
+        object.update(dt, current_step)
 
     if( len(arcs) == 0 ):
         for ball in balls:
@@ -274,6 +289,9 @@ while running:
     for ball in balls:
         ball.draw(ctx)
 
+    for object in objects:
+        object.draw(ctx)
+
     t3 = time.perf_counter()
 
     #for text in texts:
@@ -291,7 +309,10 @@ while running:
 
     t5 = time.perf_counter()
     for text in texts:
-        text.draw(ctx)
+        text.draw_surface(ctx)
+
+    for object in objects:
+        object.draw_surface(ctx)
 
     t6 = time.perf_counter()
 
@@ -301,14 +322,14 @@ while running:
  
     # Debug print
     logs.append(t6 - t5)
-    print(f"UPDATE: {(t2 - t1)*1000:.2f} ms | DRAW: {(t3 - t2)*1000:.2f} ms - SURFACE {(t10 - t2)*1000:.2f}/BACK {(t11 - t10)*1000:.2f}/ARCS {(t12 - t11)*1000:.2f}/BALLS {(t3 - t12)*1000:.2f}| CONVERT: {(t4 - t3)*1000:.2f} ms | BLIT+DISPLAY: {(t5 - t4)*1000:.2f} ms | TEXT DRAW: {(t6 - t5)*1000:.2f} ms | FLIP : {(t7 - t6)*1000:.2f} ms | TOTAL: {(t7 - t0)*1000:.2f} ms | dt={dt*1000:.2f}ms | FPS={clock.get_fps():.2f}")
+    #print(f"UPDATE: {(t2 - t1)*1000:.2f} ms | DRAW: {(t3 - t2)*1000:.2f} ms - SURFACE {(t10 - t2)*1000:.2f}/BACK {(t11 - t10)*1000:.2f}/ARCS {(t12 - t11)*1000:.2f}/BALLS {(t3 - t12)*1000:.2f}| CONVERT: {(t4 - t3)*1000:.2f} ms | BLIT+DISPLAY: {(t5 - t4)*1000:.2f} ms | TEXT DRAW: {(t6 - t5)*1000:.2f} ms | FLIP : {(t7 - t6)*1000:.2f} ms | TOTAL: {(t7 - t0)*1000:.2f} ms | dt={dt*1000:.2f}ms | FPS={clock.get_fps():.2f}")
     fps = clock.get_fps()
     #print(f"FPS={clock.get_fps():.2f} | dt={dt*1000:.2f}ms")
 
         
     current, peak = tracemalloc.get_traced_memory()
     #print(f"RAM utilisée : {current/1024:.1f} Ko | Pic : {peak/1024:.1f} Ko")
-
+    #print(f"STEP: {current_step}")
 
 #save.stop()
 
