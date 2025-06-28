@@ -13,8 +13,8 @@ from object.inner_particle import InnerParticle
 
 
 class Arc(Object):
-    def __init__(self, data, pygame, screen,window_size, count, id):
-        super().__init__(data, pygame, screen,window_size, count, id)
+    def __init__(self, data, pygame, clock, window_size, count, id):
+        super().__init__(data, pygame, clock, window_size, count, id)
 
         self.radius      = self.config("radius", 10)
         self.angle_start = self.config("angle_start", 0)
@@ -56,7 +56,21 @@ class Arc(Object):
     #         particle = Particle(self.position, (vx, vy))
     #         self.particles.append(particle)
 
-    def create_particles(self, count=100):
+    def get_points(self, fragment):
+        points = []
+        for i in range(fragment.count):
+            theta = random.uniform(self.start_angle, self.end_angle)
+            # Angle aléatoire sur l’arc visible
+            theta = random.uniform(self.start_angle, self.end_angle)
+
+            # Position sur l’arc (bord visible)
+            x = self.position.x + math.cos(theta) * self.radius
+            y = self.position.y + math.sin(theta) * self.radius
+
+            points.append((x, y))
+        return points
+
+    def create_particles_DELETE(self, count=100):
         r, g, b, a = self.color  # Couleur de base de l'arc
         for _ in range(count):
             # Angle aléatoire sur l’arc visible

@@ -11,8 +11,8 @@ from object.inner_particle import InnerParticle
 
 
 class Counter(Object):
-    def __init__(self, data, pygame, screen, window_size, count, id):
-        super().__init__(data, pygame, screen, window_size, count, id) 
+    def __init__(self, data, pygame,clock, screen, window_size, count, id):
+        super().__init__(data, pygame, clock, screen, window_size, count, id) 
         self.position   = (-1, -1)
         self.text       = "00"
         self.start_step             = self.config("start_step", 0)
@@ -34,7 +34,7 @@ class Counter(Object):
         if( step >= self.stop_incrementing_step ):
             return
         minutes, self.seconds = divmod(int(self.age/1000), 60)
-        self.text = f"{self.seconds:02d}"   
+        self.text = f"{self.seconds:02d}"
 
     def _draw(self, ctx):
            

@@ -3,9 +3,13 @@ import math
 import random
 import time
 
+from element.event import  eEvent
+from element.fragment import eFragment
 from element.position import ePosition
 from element.shadow import eShadow
+from element.sound import eSound
 from element.step import eStep
+from object.inner_particle import InnerParticle
 
 
 safe_globals = {
@@ -17,12 +21,12 @@ safe_globals = {
 
 
 class Object:
-    def __init__(self, data, pygame, screen, window_size, amount =1, i = 1):
+    def __init__(self, data, pygame, clock, window_size, amount =1, i = 1):
         cls = self.__class__
         if not hasattr(cls, "_count"):
             cls._count = 0
         cls._count += 1
-        self.screen     = screen
+        self.clock      = clock
         self.window_size = window_size
         self.data       = data
         self.index      = i
@@ -38,8 +42,14 @@ class Object:
         self.position   = ePosition(window_size, **self.config("position", {"x": "50%","y": "50%"}))       
         self.shadow     = eShadow(**self.config("shadow", {}))
         self.step       = eStep(self, **self.config("step", {}))
-        self.delay      = 0 #TODO: rebuild
+   
+        #self.sound_spawn        = eSound(pygame, **self.config("sound_spawn", {}))
+        #self.sound_destroy      = eSound(pygame, **self.config("sound_destroy", {}))
+        #self.collision          = eCollision(pygame, **self.config("collision", {}))
 
+        self.spawn              = eEvent(pygame, **self.config("on_spawn", {}))
+        self.collision          = eEvent(pygame, **self.config("on_collision", {}))
+        self.destroy            = eEvent(pygame, **self.config("on_destroy", {}))
 
         # Timing management
         self.enable     = self.config("enable", True)
@@ -48,19 +58,6 @@ class Object:
         self.should_draw = False
         self.current_fade_in_time = 0.0
         self.current_fade_out_time = self.step.fade_out
-
-        #self.step_block = self.config("step_block", False)
-        #self.step_delay = self.config("step_delay", 0)
-        #self.fade_in    = self.config("fade_in", 0)
-        #self.fade_out   = self.config("fade_out", 2)
-        #self.step_start = self.config("step_start", 0)
-        #self.step_stop  = self.config("step_stop", -1)
-        #self.delay      = self.config("delay", 0)
-        #self.step_duration  = self.config("step_duration", -1)
-
-
-        self.fragments_explode = self.config("fragments_explode", 50)
-        self.fragments_touch   = self.config("fragments_touch", 50)
 
         colors = self.config("colors", None)
         if( colors is not None ):
@@ -72,6 +69,7 @@ class Object:
         self.alpha      = 1.0
         self.exploded   = False
         self.destroyed  = False
+        self.first_draw = True
         self.pygame     = pygame
         self.fade_speed = 5.0  # vitesse de disparition (1.0 = lent, 5.0 = rapide)
 
@@ -175,36 +173,41 @@ class Object:
             particle.draw(ctx)
 
         # Draw
-        if( self.should_draw ):
-            #r, g, b, a = self.color
-            #ctx.set_source_rgba(r, g, b, self.alpha)
-            if( self.shadow.enabled() ):
-                #ctx.set_source_rgba(0, 0, 0, min(0.4, self.alpha))
-                #self.set_color(ctx, (0, 0, 0, 100))
-                self.set_color(ctx, self.shadow.color)
-                self._draw_shadow(ctx)
-            #self.color = (self.color[0], self.color[1], self.color[2], self.alpha)
-            #ctx.set_source_rgba(*self.color)
-            self.set_color(ctx, self.color)
-            self._draw(ctx)
-            self.log_draw_durations.append(time.perf_counter() - t0)
+        if( not self.should_draw ):
+            return
+    
+        #r, g, b, a = self.color
+        #ctx.set_source_rgba(r, g, b, self.alpha)
+        if( self.shadow.enabled() ):
+            #ctx.set_source_rgba(0, 0, 0, min(0.4, self.alpha))
+            #self.set_color(ctx, (0, 0, 0, 100))
+            self.set_color(ctx, self.shadow.color)
+            self._draw_shadow(ctx)
+        #self.color = (self.color[0], self.color[1], self.color[2], self.alpha)
+        #ctx.set_source_rgba(*self.color)
+        self.set_color(ctx, self.color)
+        self._draw(ctx)
+        self.log_draw_durations.append(time.perf_counter() - t0)
         #print(f"UPDATE: {(self.t1 - self.t0)*1000:.2f} ms | DRAW: {(self.t3 - self.t2)*1000:.2f} ms")
 
 
 
-    def draw_surface(self, ctx):
+    def draw_surface(self, screen):
         t0 = time.perf_counter()
 
-        if( self.enable == False ):
+        if( self.enable == False ) or ( not self.should_draw ):
             return
         
         # Draw
-        if( self.should_draw ):
-            self.set_color(ctx, self.color)
-            self._draw_surface(ctx)
-            self.log_draw_durations.append(time.perf_counter() - t0)
+        self._draw_surface(screen)
+        self.log_draw_durations.append(time.perf_counter() - t0)
+            
+        if( self.first_draw ):
+            self.first_draw = False
+            self.create_particles(self.spawn.fragment)
+            self.spawn.sound.play()
 
-    def _draw_surface(self, ctx):
+    def _draw_surface(self, screen):
         pass
 
     def set_color(self, ctx, color):
@@ -220,8 +223,8 @@ class Object:
         average  = 0
         if( len(self.log_draw_durations) > 0):       
             average = sum(self.log_draw_durations) / len(self.log_draw_durations)
-        print(f"Moyenne {type(self)} : {average*1000:.2f} ms")    
-        pass
+        print(f"{type(self)} : {average*1000:.2f} ms")    
+        return average
 
     def eval_expr(self, expr):
         if isinstance(expr, str):
@@ -240,7 +243,6 @@ class Object:
         safe_globals['total']   = self.count()
         safe_globals['i']       = self.index
         if isinstance(values, str):
-            #values = values.replace('\\n', '\n')
             try:
                 return eval(values, {"__builtins__": {}}, safe_globals)
             except NameError as e:
@@ -257,6 +259,33 @@ class Object:
     def explode(self):
         if not self.exploded:
             self.exploded = True
-            #self.start_time = self.age
-            #self.end_time = self.age + self.lifetime
-            self.create_particles()
+            self.create_particles(self.destroy.fragment)
+            self.destroy.sound.play()
+
+
+    def get_points(self, fragment):
+        points = []
+        for i in range(fragment.count):
+            x = self.position.x
+            y = self.position.y
+            points.append((x, y))
+        return points
+    
+
+    def create_particles(self, fragment):
+        
+        points = self.get_points(fragment)
+        for i, point in enumerate(points):
+            
+           # Angle aléatoire (360°)
+            angle = random.uniform(0, 2 * math.pi)
+
+            # Vitesse aléatoire dans cette direction
+            speed = random.uniform(30, 70)
+            vx = math.cos(angle) * speed
+            vy = math.sin(angle) * speed
+
+            # Créer la particule
+            particle = InnerParticle(position=(point[0], point[1]), velocity=(vx, vy),
+                                radius=fragment.get_radius(), lifetime=fragment.lifetime, color=fragment.get_color(self.color))
+            self.particles.append(particle)

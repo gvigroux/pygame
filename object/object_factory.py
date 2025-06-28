@@ -12,6 +12,6 @@ OBJECT_CLASSES = {
 
 class ObjectFactory:
     @staticmethod
-    def create(data, pygame, screen,window_size, count, id):
+    def create(data, pygame, clock, window_size, count, id):
         cls = OBJECT_CLASSES.get(data.get("type")) 
-        return cls(data, pygame, screen,window_size, count, id)
+        return cls(data, pygame, clock, window_size, count, id)

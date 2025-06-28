@@ -4,19 +4,24 @@ import cairo
 import math
 
 
+from object.arc import Arc
 from object.object import Object
 from object.inner_particle import InnerParticle
 
 class Ball(Object):
-    def __init__(self, data, pygame, screen,window_size, count, id):
-        super().__init__(data, pygame, screen,window_size, count, id)
+    def __init__(self, data, pygame, clock, window_size, count, id):
+        super().__init__(data, pygame, clock, window_size, count, id)
         self.radius     = self.config("radius", 8)
         self.velocity   = self.config("velocity", [random.uniform(-150, 150), random.uniform(-150, 150)])
         self.collision_margin = 1.5
-        self.first_draw = False
+        self.bounce_sound    = self.pygame.mixer.Sound("media/sound/retro/SoundJump2.wav")
+        self.explosion_sound = self.pygame.mixer.Sound("media/sound/retro/SoundLand2.wav")
+        self.bounce_sound.set_volume(0.1)
+        self.explosion_sound.set_volume(0.1)
+          
 
     def _update(self, dt, step):
-    
+
         self.position.x += self.velocity[0] * dt
         self.position.y += self.velocity[1] * dt
 
@@ -34,10 +39,9 @@ class Ball(Object):
         #ctx.arc(self.position[0], self.position[1], self.radius, 0, 2 * math.pi)
         #ctx.fill()
         #return 
-        if(  self.first_draw == False ):
-            self.first_draw = True
-            bounce_sound    = self.pygame.mixer.Sound("media/sound/retro/SoundJump2.wav")
-            bounce_sound.play()
+        #if(  self.first_draw == False ):
+            #bounce_sound    = self.pygame.mixer.Sound("media/sound/retro/SoundJump2.wav")
+        #    self.bounce_sound.play()
     
         #BALL GRADIENT   
         gradient = cairo.RadialGradient(
@@ -60,22 +64,38 @@ class Ball(Object):
             self.radius - 3, 0, 2 * math.pi
         )
         ctx.stroke()
-        pass
         
     def reflect_velocity(self, normal):
         dot = 2 * (self.velocity[0]*normal[0] + self.velocity[1]*normal[1])
         self.velocity[0] -= dot * normal[0]
         self.velocity[1] -= dot * normal[1]
 
+
     def accelerate(self):
         self.velocity[0] *= 1.08
         self.velocity[1] *= 1.08
 
 
+    def check_collision(self, object):
+        if( isinstance(object, Ball) ):
+            if( self.check_ball_collision(object) ):
+                self.ball_collision(object)
+        elif( isinstance(object, Arc) ):            
+            zone = self.check_arc_collision(object)
+            if( zone == "hit_hole" ):
+                print("Hit & explose arc")
+                object.explode()
+            elif( zone == "hit_arc" ):
+                self.arc_collision(object)
+
+
+
+
+
     def check_ball_collision(self,ball):
 
         if ball.exploded:
-            return False
+            return False        
         
         dx = self.position.x - ball.position.x
         dy = self.position.y - ball.position.y
@@ -111,40 +131,22 @@ class Ball(Object):
         ball.position.x -= nx * overlap * 0.5
         ball.position.y -= ny * overlap * 0.5 
 
-        self.create_particles(15, ball.color)           
 
-    # def check_arc_collision(self, arc):
 
-    #     if arc.exploded:
-    #         return False
-        
-    #     dx = self.position[0] - arc.position[0]
-    #     dy = self.position[1] - arc.position[1]
-    #     dist = math.sqrt(dx*dx + dy*dy)
-    #     arc_dist = arc.radius - arc.width/2 - self.collision_margin
+        self.create_particles(ball.collision.fragment)
 
-    #     # Vérification des collisions
-    #     if dist < arc_dist - self.radius or dist > arc_dist + self.radius:
-    #         return False
-        
-    #     # Calcul de l'angle
-    #     angle = math.atan2(dy, dx)
-    #     if angle < 0:
-    #         angle += 2 * math.pi
-        
-    #     if self.angle_in_arc(angle, arc.start_angle, arc.visible_rad):
-    #         return "hit_arc"
-    #     else:
-    #         return "hit_hole"
-        
+
+        #self.create_particles(ball.collision.fragment.count, ball.collision.fragment.get_color(ball.color))
+        ball.collision.play()
         
 
     def check_arc_collision(self, arc):
 
+        if(arc.exploded):
+            return False
+        
         if(not arc.is_alive(self.current_step)):
             return False
-        #if arc.exploded:
-        #    return False
         
         dx = self.position.x - arc.position.x
         dy = self.position.y - arc.position.y
@@ -195,9 +197,11 @@ class Ball(Object):
         
         # 5. Effets secondaires
         self.accelerate()
-        self.create_particles(15, arc.color)
+        self.create_particles(arc.collision.fragment)
+        #self.create_particles(arc.collision.fragment.count, arc.collision.fragment.get_color(arc.color))
+        arc.collision.play()
 
-    def create_particles(self, count=10, color=None):
+    def create_particles_DELETE(self, count=20, color=None):
         if( color is None ):
            color = self.color 
         r, g, b, a = self.normalize_color(color)

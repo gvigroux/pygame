@@ -8,11 +8,11 @@ import math
 import time
 
 from background.backgrounds import BackgroundFactory
+from game import Game
 from object.arc import Arc
 from object.ball import Ball
-from object.counter import Counter
 from object.object_factory import ObjectFactory
-from object.pytext import Text
+
 
 
 # --- LOAD CONFIG ---
@@ -44,61 +44,70 @@ except Exception as e:
 window_size = config.get("window_size", [540, 960])
 
 
-pygame.init()
-screen = pygame.display.set_mode((window_size[0], window_size[1]), pygame.DOUBLEBUF | pygame.HWSURFACE | pygame.SRCALPHA, vsync=1)
+
         
+############### Background ###############
+background_config = config.get("background", [])
+background_backup = BackgroundFactory.create("concentric_wave")
+#background = BackgroundFactory.create(background_config.get("type", "concentric_wave"), background_config)
+
+background = BackgroundFactory.create("solid")
+
+# Cairo surface et contexte réutilisables
+surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, *window_size)
+ctx = cairo.Context(surface)
+
+while not background.ready:
+    time.sleep(0.01)
+
+
+pygame.init()
+game = Game(pygame, config, window_size)
+game.load()
+
+screen = pygame.display.set_mode((window_size[0], window_size[1]), pygame.DOUBLEBUF | pygame.SRCALPHA)
+        
+
+
+
+# 1) Cairo → rouge
+ctx.save()
+ctx.set_source_rgb(1, 0, 0)  # Rouge
+ctx.paint()
+ctx.restore()
+
+# 2) Convertis vers Pygame
+raw_buf = surface.get_data()
+img = pygame.image.frombuffer(raw_buf, window_size, "BGRA").convert_alpha()
+screen.blit(img, (0, 0))
+pygame.display.flip()
+
+# 3) Maintenant, fais une mini boucle pour traiter les events jusqu’à ce que tout soit prêt :
+while not background.ready:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            exit()
+    time.sleep(0.01)
+
+
+
+
+
 end_step = config.get("end_step", {})
-
-
-def cairo_to_pygame(surface):
-    return pygame.image.frombuffer(
-        surface.get_data(), (surface.get_width(), surface.get_height()), "BGRA"
-    ).convert_alpha()
-
-# Balls creation
-balls = []
-for data in config.get("balls", []):
-    count = data.get("count", 1)
-    while( len(balls) < count ):
-        ball = Ball( data, pygame, screen, window_size, count, len(balls))
-        if not any(ball.check_ball_collision(other) for other in balls):
-            balls.append(ball)
-
-# Arcs creation
-arcs = []
-for data in config.get("arcs", []):
-    count = data.get("count", 1)
-    for i in range(count):
-        arcs.append(Arc(data, pygame, screen, window_size, count, i))
-
-# Texts creation
-texts = []
-for data in config.get("texts", []):
-    count = 1
-    parts = [data.get("text").get("value")]
-    if( data.get("split", False) ):
-        parts = data.get("text").get("value").split('\\n')
-        count = len(parts)
-    for i in range(count):
-        data["text"]["value"] = parts[i]
-        texts.append(Text(data, pygame, screen, window_size, count, i))
-counter = Counter({}, pygame, screen, window_size, 1, 0)
-
-
 
 frame_count = 0
 dt_history = []
 clock = pygame.time.Clock()
-start_time = time.perf_counter()
+
+
 last_time = time.perf_counter()
 running = True
 
 pygame.mixer.init()
 pygame.mixer.music.set_volume(0.2)  # 50% du volume
-bounce_sound    = pygame.mixer.Sound("media/sound/retro/SoundJump2.wav")
-bounce_sound.set_volume(0.1)
-explosion_sound = pygame.mixer.Sound("media/sound/retro/SoundLand2.wav")
-bounce_sound.set_volume(0.1)
+#bounce_sound    = pygame.mixer.Sound("media/sound/retro/SoundJump2.wav")
+#explosion_sound = pygame.mixer.Sound("media/sound/retro/SoundLand2.wav")
 
 
 music_detail = config.get("music", {})
@@ -116,32 +125,42 @@ if( music_detail.get("file", False) ):
 
 
 
-background_config = config.get("background", [])
-#background = BackgroundFactory.create("concentric_wave")
-background = BackgroundFactory.create(background_config.get("type", "concentric_wave"), background_config)
+
 current_step = 0
 
-arcs_block  = sum(1 for obj in arcs if obj.block(current_step))
-balls_block = sum(1 for obj in balls if obj.block(current_step))
-texts_block = sum(1 for obj in texts if obj.block(current_step))
+# objects = []
+# for data in config.get("objects", []):
 
+#     count = data.get("count", 1) 
 
+#     # Automatically split text
+#     if( data.get("type") == "text" ) and data.get("split", False):
+#         if( count > 1 ):
+#             print(f"\033[38;5;208mWarning (Text): The count property is ignored for text objects!\033[0m")
+#         parts = data.get("text").get("value").split('\\n')
+#         count = len(parts)
+        
+#     for i in range(count):
 
-objects = []
-for data in config.get("objects", []):
-    count = data.get("count", 1)
-    for i in range(count):
-        objects.append(ObjectFactory.create(data, pygame, screen, window_size, count, i))
+#         # Update text value
+#         if( data.get("type") == "text" ) and data.get("split", False):
+#             data["text"]["value"] = parts[i]
 
+#         object = ObjectFactory.create(data, pygame, clock, screen, window_size, count, i)
+#         if( isinstance(object, Ball) ):
+#             if not any(object.check_ball_collision(other) for other in objects if isinstance(other, Ball)):
+#                 objects.append(object)
+#         else:
+#             objects.append(object)
 
+# obj_block = sum(1 for obj in objects if obj.block(current_step))
 
-obj_block = sum(1 for obj in objects if obj.block(current_step))
-
-import tracemalloc
-tracemalloc.start()
 logs = []
+total_draw_average = 0 
 
-#save = ffmpeg.RecorderFFMPEG(window_size)
+
+
+
 while running:
     t0 = time.perf_counter()
 
@@ -163,142 +182,85 @@ while running:
         dt_history.pop(0)
     dt = sum(dt_history) / len(dt_history)
 
-    elapsed_time = time.perf_counter() - start_time
-
     # End of game
     if( current_step >= end_step.get("step", -1) ): 
         running = False
 
     #***********************************************************************
-    # Step Progression
-            
-    for obj in arcs:
+    # Destroyed objects
+             
+    for obj in game.objects:
         if obj.is_destroyed():
-            obj.stat()
-    for obj in balls:
-        if obj.is_destroyed():
-            obj.stat()
-    for obj in texts:
-        if obj.is_destroyed():
-            obj.stat()
-    for obj in objects:
-        if obj.is_destroyed():
-            obj.stat()
+            total_draw_average += obj.stat()
 
+    # Nettoyage des objets détruits
+    #objects = [obj for obj in objects if not obj.is_destroyed()]
 
+    game.clean()
 
+    # Comptage des objets bloquants avant mise à jour
+    prev_block_count = obj_block
+    obj_block = sum(1 for obj in game.objects if obj.block(current_step))
+
+    # Avancement du step si plus de blocage
+    if prev_block_count > 0 and obj_block == 0:
+        current_step += 1
+
+    #***********************************************************************
+    # Check collisions 
     
-    # Remove dead objects
-    a, b, t = len(arcs), len(balls), len(texts)
-    arcs    = [obj for obj in arcs  if not obj.is_destroyed()]
-    balls   = [obj for obj in balls if not obj.is_destroyed()]
-    texts   = [obj for obj in texts if not obj.is_destroyed()]
-    objects = [obj for obj in objects if not obj.is_destroyed()]
-    
-    # List of object groups and their corresponding block counts
-    object_groups = [
-        (arcs, arcs_block),
-        (balls, balls_block),
-        (texts, texts_block),
-        (objects, obj_block)
-    ]
+    for i, obj in enumerate(game.objects):
+        for j, other in enumerate(game.objects):
+            if i != j and isinstance(obj, Ball):
+                obj.check_collision(other)
 
-    # Temporary storage for new block counts
-    new_block_counts = []
-
-    # Check each group for blocking objects and update current_step if needed
-    for objs, prev_block_count in object_groups:
-        current_blocks = sum(1 for obj in objs if obj.block(current_step))
-        new_block_counts.append(current_blocks)
-        
-        # Increment step if previously blocked and now clear
-        if prev_block_count > 0 and current_blocks == 0:
-            current_step += 1
-
-    # Update block counts for next iteration
-    arcs_block, balls_block, texts_block, obj_block = new_block_counts
 
     #***********************************************************************
     # Update objects
 
-    for i in range(len(balls)):
-        for j in range(i + 1, len(balls)):
-            if( balls[i].check_ball_collision(balls[j]) ):
-                balls[i].ball_collision(balls[j])
-                bounce_sound.play()
-
-    # Step 1 : Update logique
     t1 = time.perf_counter()
-    for ball in balls:
-        for arc in arcs:
-            zone = ball.check_arc_collision(arc)
-            if( zone == "hit_hole" ):
-                arc.explode()
-                explosion_sound.play()
-            elif( zone == "hit_arc" ):
-                ball.arc_collision(arc)
-                bounce_sound.play()
-
-    for ball in balls:
-        ball.update(dt, current_step)
-
-    for arc in arcs:
-        arc.update(dt, current_step)
-
-    counter.update(dt, current_step)
     
-    for text in texts:
-        text.update(dt, current_step)
-
-    for object in objects:
+    for object in game.objects:
         object.update(dt, current_step)
 
-    if( len(arcs) == 0 ):
-        for ball in balls:
-            ball.explode()
+    # Check if we need to explose balls
+    arcs_count = sum(1 for obj in game.objects if isinstance(obj, Arc) and obj.is_alive(current_step))
+    if( arcs_count == 0 ):        
+        for i, obj in enumerate(game.objects):
+            if isinstance(obj, Ball):
+                obj.explode()
 
+    if( background.is_done() ):
+        background = BackgroundFactory.create("concentric_wave")
+
+    #***********************************************************************
+    # Cairo rendering
 
     t2 = time.perf_counter()
 
-
-    # Step 2 : Cairo rendering
-    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, window_size[0], window_size[1])
-    ctx = cairo.Context(surface)    
-    
-    ctx.set_source_rgba(0, 0, 0, 1)
-    ctx.rectangle(0, 0, window_size[0], window_size[1])
-    ctx.fill()
-    ctx.set_antialias(cairo.ANTIALIAS_BEST)
-
-
-    # TODO: It's more efficient to draw the background but there are artifacts
-    #ctx.set_operator(cairo.OPERATOR_SOURCE)
-    #ctx.set_source_rgba(0, 0, 0, 1)
-    #ctx.paint()
+    ctx.save()
+    ctx.set_operator(cairo.OPERATOR_CLEAR)
+    ctx.paint()
+    ctx.restore()
 
     t10 = time.perf_counter()    
 
+
+    #***********************************************************************
+    # Draw
+
     background.draw(ctx, current_time, window_size[0], window_size[1])
-    counter.draw(ctx)
+  
     t11 = time.perf_counter()
 
-    for arc in arcs:
-        arc.draw(ctx)
-    t12 = time.perf_counter()
-
-    for ball in balls:
-        ball.draw(ctx)
-
-    for object in objects:
+    for object in game.objects:
         object.draw(ctx)
 
     t3 = time.perf_counter()
-
-    #for text in texts:
-    #    text.draw(ctx)
     
     # Step 3 : Cairo to Pygame
-    img = cairo_to_pygame(surface)
+    raw_buf = surface.get_data()
+    img = pygame.image.frombuffer(raw_buf, window_size, "BGRA").convert_alpha()
     t4 = time.perf_counter()
 
     frame_count += 1
@@ -306,13 +268,10 @@ while running:
     # Step 4 : Affichage
     screen.blit(img, (0, 0))
 
-
     t5 = time.perf_counter()
-    for text in texts:
-        text.draw_surface(ctx)
 
-    for object in objects:
-        object.draw_surface(ctx)
+    for object in game.objects:
+        object.draw_surface(screen)
 
     t6 = time.perf_counter()
 
@@ -321,17 +280,12 @@ while running:
     clock.tick(60)
  
     # Debug print
-    logs.append(t6 - t5)
-    #print(f"UPDATE: {(t2 - t1)*1000:.2f} ms | DRAW: {(t3 - t2)*1000:.2f} ms - SURFACE {(t10 - t2)*1000:.2f}/BACK {(t11 - t10)*1000:.2f}/ARCS {(t12 - t11)*1000:.2f}/BALLS {(t3 - t12)*1000:.2f}| CONVERT: {(t4 - t3)*1000:.2f} ms | BLIT+DISPLAY: {(t5 - t4)*1000:.2f} ms | TEXT DRAW: {(t6 - t5)*1000:.2f} ms | FLIP : {(t7 - t6)*1000:.2f} ms | TOTAL: {(t7 - t0)*1000:.2f} ms | dt={dt*1000:.2f}ms | FPS={clock.get_fps():.2f}")
+    logs.append(t3 - t2)
     fps = clock.get_fps()
-    #print(f"FPS={clock.get_fps():.2f} | dt={dt*1000:.2f}ms")
-
-        
-    current, peak = tracemalloc.get_traced_memory()
-    #print(f"RAM utilisée : {current/1024:.1f} Ko | Pic : {peak/1024:.1f} Ko")
+    #print(f"UPDATE: {(t2 - t1)*1000:.2f} ms | DRAW: {(t3 - t2)*1000:.2f} ms - SURFACE {(t10 - t2)*1000:.2f}/BACK {(t11 - t10)*1000:.2f}/OBJECTS {(t3 - t11)*1000:.2f}| CONVERT: {(t4 - t3)*1000:.2f} ms | BLIT+DISPLAY: {(t5 - t4)*1000:.2f} ms | TEXT DRAW: {(t6 - t5)*1000:.2f} ms | FLIP : {(t7 - t6)*1000:.2f} ms | TOTAL: {(t7 - t0)*1000:.2f} ms | dt={dt*1000:.2f}ms | FPS={fps:.2f}")
+    #print(f"FPS={fps:.2f} | dt={dt*1000:.2f}ms")
     #print(f"STEP: {current_step}")
 
-#save.stop()
 
 pygame.quit()
 
@@ -341,10 +295,8 @@ average = sum(logs) / len(logs)
 print(f"Moyenne : {average*1000:.2f} ms")
 
 background.stat()
-for obj in arcs:
-    obj.stat()
-for obj in balls:
-    obj.stat()
-for obj in texts:
-    obj.stat()
+total_draw_average += background.stat()
+for obj in game.objects:
+    total_draw_average += obj.stat()
+print(f"Total Obj Draw : {total_draw_average*1000:.2f} ms")
 

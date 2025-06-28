@@ -18,6 +18,10 @@ def hsv_to_rgb(h, s, v):
     return colorsys.hsv_to_rgb(h, s, v)
 
 class SolidColorBackground(BaseBackground):
+    def __init__(self):
+        super().__init__()
+        self.ready = True 
+        
     def _draw(self, ctx, time, width, height):
         ctx.set_source_rgb(0.2, 0.2, 0.2)
         ctx.rectangle(0, 0, width, height)

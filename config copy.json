@@ -263,6 +263,8 @@
       "step": {
         "start": 0,
         "fade_in": 0.2,
+        "delay": "6+i*0.5",
+        "update_delay": "3- i*0.5",
         "block": true
       },
       "sound_spawn": {
@@ -298,15 +300,17 @@
       "type": "arc",
       "step": {
         "start": 0,
+        "delay": 6,
         "fade_in": 1,
         "fade_out": 5,
         "block": true
       },
       "on_collision": {
         "fragment": {
-          "count": 20,
-          "radius": 5,
-          "lifetime": 0.6
+          "count": 200,
+          "radius": 10,
+          "lifetime": 0.6,
+          "color": "(0, 0, 255, 255)"
         },
         "sound": {
           "path": "media/sound/retro/SoundJump2.wav"

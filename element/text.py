@@ -3,7 +3,7 @@ from element.outline import eOutline
 
 
 class eText:
-    def __init__(self, value= "", color = (255, 255, 255, 255), font= {}, outline = {}, padding= (0,0,0,0)):
+    def __init__(self, value= "", color = (255, 255, 255, 255), font= {}, outline = {}, padding= (0,0,0,0), update= ""):
         self.value = value
         self.color = color
         if( isinstance(color, str) ):
@@ -13,6 +13,7 @@ class eText:
         self.padding   = padding
         if( isinstance(padding, str) ):
             self.padding = eval(padding)
+        self.update     = update 
         self.font       = eFont(**font)
         self.outline    = eOutline(**outline)
 
