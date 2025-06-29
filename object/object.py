@@ -21,12 +21,11 @@ safe_globals = {
 
 
 class Object:
-    def __init__(self, data, pygame, clock, window_size, amount =1, i = 1):
+    def __init__(self, data, pygame, window_size, amount =1, i = 1):
         cls = self.__class__
         if not hasattr(cls, "_count"):
             cls._count = 0
         cls._count += 1
-        self.clock      = clock
         self.window_size = window_size
         self.data       = data
         self.index      = i
@@ -48,8 +47,8 @@ class Object:
         #self.collision          = eCollision(pygame, **self.config("collision", {}))
 
         self.spawn              = eEvent(pygame, **self.config("on_spawn", {}))
-        self.collision          = eEvent(pygame, **self.config("on_collision", {}))
         self.destroy            = eEvent(pygame, **self.config("on_destroy", {}))
+        self.collision          = eEvent(pygame, **self.config("on_collision", {}))
 
         # Timing management
         self.enable     = self.config("enable", True)
@@ -102,7 +101,7 @@ class Object:
         return False
     
 
-    def update(self, dt, step):
+    def update(self, dt, step, clock):
 
         if( self.enable == False ):
             return
@@ -139,16 +138,20 @@ class Object:
 
         if( phase_out ):
             if( self.step.fade_out <= 0 ):
-                self.destroyed = True
+                self.alpha = 0.0
             elif self.current_fade_out_time <= self.step.fade_out:
                 self.current_fade_out_time -= dt
                 self.alpha = max(self.current_fade_out_time / self.step.fade_out, 0.0) 
 
             if( self.alpha <= 0.0 ):
                 self.destroyed = True
+                if( type(self).__name__ == "Arc" ):
+                    self.explode()
 
         if self.destroyed:
             self.should_draw = False
+            if( type(self).__name__ == "Arc" ):
+                self.explode()
             return
         
         if self.exploded:
@@ -159,8 +162,10 @@ class Object:
                 self.should_draw = False
 
         if( self.age/1000 >= self.step.update_delay ):
-            self._update(dt, step)
+            self._update(dt, step, clock)
         
+    def _update(self, dt, step, clock):
+        pass
 
 
     def draw(self, ctx):
@@ -223,7 +228,7 @@ class Object:
         average  = 0
         if( len(self.log_draw_durations) > 0):       
             average = sum(self.log_draw_durations) / len(self.log_draw_durations)
-        print(f"{type(self)} : {average*1000:.2f} ms")    
+        #print(f"{type(self)} : {average*1000:.2f} ms")    
         return average
 
     def eval_expr(self, expr):
@@ -272,7 +277,7 @@ class Object:
         return points
     
 
-    def create_particles(self, fragment):
+    def create_particles(self, fragment, color = None):
         
         points = self.get_points(fragment)
         for i, point in enumerate(points):
@@ -287,5 +292,5 @@ class Object:
 
             # Créer la particule
             particle = InnerParticle(position=(point[0], point[1]), velocity=(vx, vy),
-                                radius=fragment.get_radius(), lifetime=fragment.lifetime, color=fragment.get_color(self.color))
+                                radius=fragment.get_radius(), lifetime=fragment.lifetime, color=fragment.get_color(color, self.color))
             self.particles.append(particle)

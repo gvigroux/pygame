@@ -11,8 +11,8 @@ from object.inner_particle import InnerParticle
 
 
 class Counter(Object):
-    def __init__(self, data, pygame,clock, screen, window_size, count, id):
-        super().__init__(data, pygame, clock, screen, window_size, count, id) 
+    def __init__(self, data, pygame, screen, window_size, count, id):
+        super().__init__(data, pygame, screen, window_size, count, id) 
         self.position   = (-1, -1)
         self.text       = "00"
         self.start_step             = self.config("start_step", 0)

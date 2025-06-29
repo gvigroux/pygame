@@ -13,8 +13,8 @@ from object.inner_particle import InnerParticle
 
 
 class Arc(Object):
-    def __init__(self, data, pygame, clock, window_size, count, id):
-        super().__init__(data, pygame, clock, window_size, count, id)
+    def __init__(self, data, pygame, window_size, count, id):
+        super().__init__(data, pygame, window_size, count, id)
 
         self.radius      = self.config("radius", 10)
         self.angle_start = self.config("angle_start", 0)
@@ -29,7 +29,7 @@ class Arc(Object):
         self.visible_rad    = math.radians(self.angle_end - self.angle_start) 
 
         
-    def _update(self, dt, step):
+    def _update(self, dt, step, clock):
         self.current_angle  = (self.speed * self.age / 1000) % 360  # Division par 1000 si total_time est en ms
         self.start_angle    = math.radians(self.current_angle)
         self.end_angle      = self.start_angle + self.visible_rad

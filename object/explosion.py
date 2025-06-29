@@ -11,11 +11,9 @@ from object.object import Object
 
 
 class Explosion(Object):
-    def __init__(self, data, pygame, clock, window_size, count, id):
-        super().__init__(data, pygame, clock, window_size, count, id)
+    def __init__(self, data, pygame, window_size, count, id):
+        super().__init__(data, pygame, window_size, count, id)
         
-    def _update(self, dt, step):
-        pass
 
     def _draw(self, ctx):
         if( self.first_draw ):

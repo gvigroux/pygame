@@ -49,9 +49,8 @@ window_size = config.get("window_size", [540, 960])
 ############### Background ###############
 background_config = config.get("background", [])
 background_backup = BackgroundFactory.create("concentric_wave")
-#background = BackgroundFactory.create(background_config.get("type", "concentric_wave"), background_config)
-
-background = BackgroundFactory.create("solid")
+background = BackgroundFactory.create(background_config.get("type", "concentric_wave"), background_config)
+#background = BackgroundFactory.create("solid")
 
 # Cairo surface et contexte réutilisables
 surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, *window_size)
@@ -70,44 +69,34 @@ screen = pygame.display.set_mode((window_size[0], window_size[1]), pygame.DOUBLE
 
 
 
-# 1) Cairo → rouge
-ctx.save()
-ctx.set_source_rgb(1, 0, 0)  # Rouge
-ctx.paint()
-ctx.restore()
+# # 1) Cairo → rouge
+# ctx.save()
+# ctx.set_source_rgb(1, 0, 0)  # Rouge
+# ctx.paint()
+# ctx.restore()
 
-# 2) Convertis vers Pygame
-raw_buf = surface.get_data()
-img = pygame.image.frombuffer(raw_buf, window_size, "BGRA").convert_alpha()
-screen.blit(img, (0, 0))
-pygame.display.flip()
+# # 2) Convertis vers Pygame
+# raw_buf = surface.get_data()
+# img = pygame.image.frombuffer(raw_buf, window_size, "BGRA").convert_alpha()
+# screen.blit(img, (0, 0))
+# pygame.display.flip()
 
-# 3) Maintenant, fais une mini boucle pour traiter les events jusqu’à ce que tout soit prêt :
-while not background.ready:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame.quit()
-            exit()
-    time.sleep(0.01)
-
-
+# # 3) Maintenant, fais une mini boucle pour traiter les events jusqu’à ce que tout soit prêt :
+# while not background.ready:
+#     for event in pygame.event.get():
+#         if event.type == pygame.QUIT:
+#             pygame.quit()
+#             exit()
+#     time.sleep(0.01)
 
 
 
-end_step = config.get("end_step", {})
-
-frame_count = 0
-dt_history = []
-clock = pygame.time.Clock()
 
 
-last_time = time.perf_counter()
-running = True
+
 
 pygame.mixer.init()
 pygame.mixer.music.set_volume(0.2)  # 50% du volume
-#bounce_sound    = pygame.mixer.Sound("media/sound/retro/SoundJump2.wav")
-#explosion_sound = pygame.mixer.Sound("media/sound/retro/SoundLand2.wav")
 
 
 music_detail = config.get("music", {})
@@ -126,35 +115,14 @@ if( music_detail.get("file", False) ):
 
 
 
+end_step = config.get("end_step", {})
+frame_count = 0
+dt_history = []
+clock = pygame.time.Clock()
+last_time = time.perf_counter()
+running = True
 current_step = 0
-
-# objects = []
-# for data in config.get("objects", []):
-
-#     count = data.get("count", 1) 
-
-#     # Automatically split text
-#     if( data.get("type") == "text" ) and data.get("split", False):
-#         if( count > 1 ):
-#             print(f"\033[38;5;208mWarning (Text): The count property is ignored for text objects!\033[0m")
-#         parts = data.get("text").get("value").split('\\n')
-#         count = len(parts)
-        
-#     for i in range(count):
-
-#         # Update text value
-#         if( data.get("type") == "text" ) and data.get("split", False):
-#             data["text"]["value"] = parts[i]
-
-#         object = ObjectFactory.create(data, pygame, clock, screen, window_size, count, i)
-#         if( isinstance(object, Ball) ):
-#             if not any(object.check_ball_collision(other) for other in objects if isinstance(other, Ball)):
-#                 objects.append(object)
-#         else:
-#             objects.append(object)
-
-# obj_block = sum(1 for obj in objects if obj.block(current_step))
-
+obj_block = game.block_count(0)
 logs = []
 total_draw_average = 0 
 
@@ -194,13 +162,11 @@ while running:
             total_draw_average += obj.stat()
 
     # Nettoyage des objets détruits
-    #objects = [obj for obj in objects if not obj.is_destroyed()]
-
     game.clean()
 
     # Comptage des objets bloquants avant mise à jour
     prev_block_count = obj_block
-    obj_block = sum(1 for obj in game.objects if obj.block(current_step))
+    obj_block = game.block_count(current_step)
 
     # Avancement du step si plus de blocage
     if prev_block_count > 0 and obj_block == 0:
@@ -208,12 +174,8 @@ while running:
 
     #***********************************************************************
     # Check collisions 
-    
-    for i, obj in enumerate(game.objects):
-        for j, other in enumerate(game.objects):
-            if i != j and isinstance(obj, Ball):
-                obj.check_collision(other)
 
+    game.check_collisions()
 
     #***********************************************************************
     # Update objects
@@ -221,7 +183,7 @@ while running:
     t1 = time.perf_counter()
     
     for object in game.objects:
-        object.update(dt, current_step)
+        object.update(dt, current_step, clock)
 
     # Check if we need to explose balls
     arcs_count = sum(1 for obj in game.objects if isinstance(obj, Arc) and obj.is_alive(current_step))
@@ -282,7 +244,7 @@ while running:
     # Debug print
     logs.append(t3 - t2)
     fps = clock.get_fps()
-    #print(f"UPDATE: {(t2 - t1)*1000:.2f} ms | DRAW: {(t3 - t2)*1000:.2f} ms - SURFACE {(t10 - t2)*1000:.2f}/BACK {(t11 - t10)*1000:.2f}/OBJECTS {(t3 - t11)*1000:.2f}| CONVERT: {(t4 - t3)*1000:.2f} ms | BLIT+DISPLAY: {(t5 - t4)*1000:.2f} ms | TEXT DRAW: {(t6 - t5)*1000:.2f} ms | FLIP : {(t7 - t6)*1000:.2f} ms | TOTAL: {(t7 - t0)*1000:.2f} ms | dt={dt*1000:.2f}ms | FPS={fps:.2f}")
+    #print(f"FIRST: {(t1 - t0)*1000:.2f} ms | UPDATE: {(t2 - t1)*1000:.2f} ms | DRAW: {(t3 - t2)*1000:.2f} ms - SURFACE {(t10 - t2)*1000:.2f}/BACK {(t11 - t10)*1000:.2f}/OBJECTS {(t3 - t11)*1000:.2f}| CONVERT: {(t4 - t3)*1000:.2f} ms | BLIT+DISPLAY: {(t5 - t4)*1000:.2f} ms | TEXT DRAW: {(t6 - t5)*1000:.2f} ms | FLIP : {(t7 - t6)*1000:.2f} ms | TOTAL: {(t7 - t0)*1000:.2f} ms | dt={dt*1000:.2f}ms | FPS={fps:.2f}")
     #print(f"FPS={fps:.2f} | dt={dt*1000:.2f}ms")
     #print(f"STEP: {current_step}")
 

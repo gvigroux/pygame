@@ -9,8 +9,8 @@ from object.object import Object
 from object.inner_particle import InnerParticle
 
 class Ball(Object):
-    def __init__(self, data, pygame, clock, window_size, count, id):
-        super().__init__(data, pygame, clock, window_size, count, id)
+    def __init__(self, data, pygame, window_size, count, id):
+        super().__init__(data, pygame, window_size, count, id)
         self.radius     = self.config("radius", 8)
         self.velocity   = self.config("velocity", [random.uniform(-150, 150), random.uniform(-150, 150)])
         self.collision_margin = 1.5
@@ -20,7 +20,7 @@ class Ball(Object):
         self.explosion_sound.set_volume(0.1)
           
 
-    def _update(self, dt, step):
+    def _update(self, dt, step, clock):
 
         self.position.x += self.velocity[0] * dt
         self.position.y += self.velocity[1] * dt
@@ -71,11 +71,6 @@ class Ball(Object):
         self.velocity[1] -= dot * normal[1]
 
 
-    def accelerate(self):
-        self.velocity[0] *= 1.08
-        self.velocity[1] *= 1.08
-
-
     def check_collision(self, object):
         if( isinstance(object, Ball) ):
             if( self.check_ball_collision(object) ):
@@ -87,8 +82,6 @@ class Ball(Object):
                 object.explode()
             elif( zone == "hit_arc" ):
                 self.arc_collision(object)
-
-
 
 
 
@@ -133,7 +126,8 @@ class Ball(Object):
 
 
 
-        self.create_particles(ball.collision.fragment)
+        self.create_particles(self.collision.fragment, self.color)
+        ball.create_particles(ball.collision.fragment, ball.color)
 
 
         #self.create_particles(ball.collision.fragment.count, ball.collision.fragment.get_color(ball.color))
@@ -195,47 +189,12 @@ class Ball(Object):
         #     self.position[0] += nx * push_distance
         #     self.position[1] += ny * push_distance
         
-        # 5. Effets secondaires
-        self.accelerate()
-        self.create_particles(arc.collision.fragment)
-        #self.create_particles(arc.collision.fragment.count, arc.collision.fragment.get_color(arc.color))
+        # 5. Effets secondaires        
+        self.velocity[0] *= arc.collision.acceleration[0]
+        self.velocity[1] *= arc.collision.acceleration[1]
+
+        self.create_particles(arc.collision.fragment, arc.color)
         arc.collision.play()
-
-    def create_particles_DELETE(self, count=20, color=None):
-        if( color is None ):
-           color = self.color 
-        r, g, b, a = self.normalize_color(color)
-        for _ in range(count):
-            # Position initiale : au centre de la balle
-            x = self.position.x
-            y = self.position.y
-
-            # Angle aléatoire (360°)
-            angle = random.uniform(0, 2 * math.pi)
-
-            # Vitesse aléatoire dans cette direction
-            speed = random.uniform(30, 70)
-            vx = math.cos(angle) * speed
-            vy = math.sin(angle) * speed
-
-            # Taille aléatoire
-            radius = random.uniform(1.5, 4.0)
-
-            # Variation légère de couleur
-            dr = random.uniform(-0.1, 0.1)
-            dg = random.uniform(-0.1, 0.1)
-            db = random.uniform(-0.1, 0.1)
-            particle_color = (
-                min(max(r + dr, 0.0), 1.0),
-                min(max(g + dg, 0.0), 1.0),
-                min(max(b + db, 0.0), 1.0),
-                1.0
-            )
-
-            # Créer la particule
-            particle = InnerParticle(position=(x, y), velocity=(vx, vy),
-                                radius=radius, lifetime=0.6, color=particle_color)
-            self.particles.append(particle)
 
         
     def normalize_angle(self, angle):

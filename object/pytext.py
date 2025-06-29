@@ -22,8 +22,8 @@ safe_globals = {
 }
 
 class Text(Object):
-    def __init__(self, data, pygame, clock, window_size, count, id):
-        super().__init__(data, pygame, clock, window_size, count, id)
+    def __init__(self, data, pygame, window_size, count, id):
+        super().__init__(data, pygame, window_size, count, id)
 
         self.text       = eText(**self.config("text", {}))
         self.title      = eText(**self.config("title", {}))
@@ -93,7 +93,7 @@ class Text(Object):
             self.surfaces.append(surface)
             
         
-    def _update(self, dt, step):
+    def _update(self, dt, step, clock):
 
         if( step >= self.step.stop and self.step.explode ):
             self.explode()
@@ -101,7 +101,7 @@ class Text(Object):
 
         if( len(self.text.update) > 0 ):
             safe_globals["seconds"] = int(self.age/1000)
-            safe_globals["fps"] = int(self.clock.get_fps())
+            safe_globals["fps"] = int(clock.get_fps())
             safe_globals["step"] = int(step)
             val = str(eval(self.text.update, {"__builtins__": {}}, safe_globals))
             if( val != self.text.value ):

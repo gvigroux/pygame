@@ -11,7 +11,7 @@ safe_globals = {
 }
 
 class eFragment:
-    def __init__(self, count = 0, radius = 4, radius_range = 2, lifetime = 1, color = (255, 255, 255, 255), color_range = 0.1):
+    def __init__(self, count = 0, radius = 4, radius_range = 2, lifetime = 1, color = None, color_range = 0.1):
         self.count = count
         self.radius = radius
         self.lifetime = lifetime
@@ -23,16 +23,17 @@ class eFragment:
         if isinstance(self.color, str):
             self.color = eval(self.color, {"__builtins__": {}}, safe_globals)
 
-    
-        if len(self.color) == 3:
+        if self.color is not None and len(self.color) == 3:
             self.color = self.color + (255,)  # 255 = opaque
       
     def enabled(self):
         return self.count > 0
     
-    def get_color(self, backup_color = None):
+    def get_color(self, main_color = None, backup_color = None):
         if( self.color is not None ):
             return self.interpolate_color(self.color)
+        if( main_color is not None ):
+            return self.interpolate_color(main_color)
         return self.interpolate_color(backup_color)
         
     def interpolate_color(self, color):
