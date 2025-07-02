@@ -24,7 +24,7 @@ class eStep:
         self.block = block
         self.explode = explode
 
-        if( self.fade_out > 0 ):   
+        if( self.fade_out > 0 ) and ( self.duration != -1):   
             self.duration -= self.fade_out
 
               
@@ -35,9 +35,9 @@ class eStep:
         if isinstance(self.update_delay, str):
             self.update_delay = eval(self.update_delay, {"__builtins__": {}}, safe_globals)
         
-        if( self.duration <= 0 ):
+        if( self.duration <= 0 ) and ( self.duration != -1):
             print(f"\033[38;5;208mWarning ({object}): Invalid duration or fade_out!\033[0m")
-        if( self.fade_in + self.fade_out > self.duration ):
+        if( self.fade_in + self.fade_out > self.duration ) and ( self.duration != -1):
             print(f"\033[38;5;208mWarning ({object}): Invalid fade_in & fade_out!\033[0m")
 
 

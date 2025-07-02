@@ -17,7 +17,10 @@
           "path": "media/sound/kenney/impact/footstep_snow_001.ogg"
         }
       },
-      "position": { "x": "65%", "y": "20%" }
+      "position": { "x": "65%", "y": "20%" },
+      "step": {
+        "delay": 1
+      }
     },
     {
       "label": "######################### EXPLOSION FOOT 0 ########################",
@@ -33,12 +36,12 @@
           "color_range": 0.1
         },
         "sound": {
-          "path": "media/sound/kenney/impact/footstep_snow_001.ogg"
+          "path": "media/sound/kenney/impact/footstep_snow_000.ogg"
         }
       },
       "position": { "x": "35%", "y": "65%" },
       "step": {
-        "delay": 0.5
+        "delay": 1.5
       }
     },
     {
@@ -55,12 +58,26 @@
           "color_range": 0.1
         },
         "sound": {
-          "path": "media/sound/kenney/impact/footstep_snow_001.ogg"
+          "path": "media/sound/kenney/impact/footstep_snow_003.ogg"
         }
       },
-      "position": { "x": "70%", "y": "79%" },
+      "position": { "x": "70%", "y": "80%" },
       "step": {
-        "delay": 1.5
+        "delay": 2.5
+      }
+    },
+    {
+      "label": "######################### REWIND ########################",
+      "type": "explosion",
+      "count": 1,
+      "on_spawn": {
+        "sound": {
+          "path": "C:\\PYGAME\\awesome-rewind-351984.mp3",
+          "volume": 0.8
+        }
+      },
+      "step": {
+        "delay": 3
       }
     },
     {
@@ -81,41 +98,20 @@
           "width": 1
         }
       },
+      "on_destroy": {
+        "fragment": {
+          "count": 100,
+          "radius": 4,
+          "lifetime": 2
+        }
+      },
       "position": { "justify": "HV" },
       "step": {
-        "delay": 5,
+        "delay": 9,
         "stop": 1,
         "fade_in": 1,
         "explode": true
       }
-    },
-    {
-      "label": "######################### STEP COUNTER ########################",
-      "type": "text",
-      "text": {
-        "value": "00",
-        "update": "f'{step:02d}'",
-        "color": "(255, 0, 0, 255)",
-        "font": {
-          "size": 40,
-          "family": "Wumpus Mono Pro"
-        }
-      },
-      "position": { "x": "30%", "y": "90%", "justify": "none" }
-    },
-    {
-      "label": "######################### FPS COUNTER ########################",
-      "type": "text",
-      "text": {
-        "value": "00",
-        "update": "f'{fps:02d}'",
-        "color": "(255, 0, 0, 255)",
-        "font": {
-          "size": 40,
-          "family": "Wumpus Mono Pro"
-        }
-      },
-      "position": { "x": "10%", "y": "90%", "justify": "none" }
     },
     {
       "label": "######################### TITLE ########################",
@@ -136,8 +132,8 @@
       "position": { "y": 60 },
       "step": {
         "start": 0,
-        "delay": 5,
-        "stop": 3
+        "delay": 6,
+        "stop": 2
       }
     },
     {
@@ -158,8 +154,9 @@
       "position": { "y": 160 },
       "step": {
         "start": 0,
-        "delay": 5,
-        "fade_in": 1
+        "delay": 6,
+        "fade_in": 1,
+        "stop": 2
       }
     },
     {
@@ -173,9 +170,9 @@
       },
       "position": { "y": 850 },
       "step": {
-        "delay": 5.5,
-        "fade_in": 0.5,
-        "fade_out": 0.5,
+        "delay": 6.5,
+        "fade_in": 1,
+        "fade_out": 1,
         "stop": 0.5
       }
     },
@@ -219,24 +216,8 @@
         "start": 1,
         "duration": 5,
         "delay": 5,
-        "fade_in": 0.5
-      }
-    },
-    {
-      "type": "text",
-      "text": {
-        "value": "Tu as trouvé d'autres reponses ?",
-        "font": {
-          "size": 26,
-          "family": "lobsterregular"
-        }
-      },
-      "position": { "y": 900 },
-      "step": {
-        "start": 2,
-        "duration": 5,
-        "delay": 5,
-        "fade_in": 0.5
+        "fade_in": 0.5,
+        "block": true
       }
     },
     {
@@ -248,47 +229,58 @@
           "family": "lobsterregular"
         }
       },
-      "position": { "y": 250 },
+      "position": { "y": "50%" },
       "step": {
-        "start": 3,
+        "start": 2,
         "stop": 3,
-        "duration": 5,
+        "duration": 8,
         "delay": 1.7,
         "fade_in": 0.5,
+        "fade_out": 0.5,
         "block": true
       }
     },
     {
+      "label": "######################### BALLS  ########################",
       "type": "ball",
       "step": {
         "start": 0,
         "fade_in": 0.2,
-        "delay": "6+i*0.5",
+        "delay": "9+i*0.5",
         "update_delay": "3- i*0.5",
         "block": true
       },
-      "sound_spawn": {
-        "path": "media/sound/kenney/impact/footstep_snow_000.ogg"
-      },
-      "sound_destroy": {
-        "path": "media/sound/kenney/impact/footstep_snow_000.ogg"
-      },
-      "collision": {
+      "on_collision": {
         "fragment": {
-          "count": 200,
-          "radius": 10,
-          "lifetime": 0.6,
-          "color": "(0, 0, 255, 255)"
+          "count": 20,
+          "radius": 2,
+          "lifetime": 0.4
         },
+        "sound": {
+          "path": "media/sound/retro/SoundJump2.wav"
+        },
+        "acceleration": "(1.02, 1.02)"
+      },
+      "on_destroy": {
+        "fragment": {
+          "count": 20,
+          "radius": 3,
+          "lifetime": 0.4
+        },
+        "sound": {
+          "path": "media/sound/retro/SoundLand2.wav"
+        }
+      },
+      "on_spawn": {
         "sound": {
           "path": "media/sound/retro/SoundJump2.wav"
         }
       },
-      "count": 10,
+      "count": 3,
       "radius": "10",
       "position": {
-        "x": "random.uniform(264, 344)",
-        "y": "random.uniform(500, 580)"
+        "x": "275 + i*30",
+        "y": "50%"
       },
       "velocity": [
         "random.choice([-1, 1]) * random.uniform(50, 100)",
@@ -297,46 +289,40 @@
       "color": "(random.uniform(0, 255), random.uniform(0, 255), random.uniform(0, 255), 255)"
     },
     {
+      "label": "######################### ARCS  ########################",
       "type": "arc",
       "step": {
         "start": 0,
-        "delay": 6,
-        "fade_in": 1,
-        "fade_out": 5,
-        "block": true
+        "fade_in": 2,
+        "delay": 7,
+        "block": true,
+        "duration": 28
       },
       "on_collision": {
         "fragment": {
-          "count": 200,
-          "radius": 10,
-          "lifetime": 0.6,
-          "color": "(0, 0, 255, 255)"
+          "count": 20,
+          "radius": 2,
+          "lifetime": 0.4
         },
         "sound": {
           "path": "media/sound/retro/SoundJump2.wav"
         }
       },
-      "on_spawn": {
-        "sound": {
-          "path": "media/sound/kenney/impact/footstep_snow_000.ogg"
-        }
-      },
-      "on_explode": {
+      "on_destroy": {
         "fragment": {
-          "count": 200,
-          "radius": 10,
-          "lifetime": 0.6,
-          "color": "(0, 0, 255, 255)"
+          "count": 50,
+          "radius": 3,
+          "lifetime": 0.4
         },
         "sound": {
-          "path": "media/sound/retro/SoundJump2.wav"
+          "path": "media/sound/retro/SoundLand2.wav"
         }
       },
-      "count": 1,
-      "radius": "(240 - total*12)",
+      "count": 12,
+      "radius": "(300 - total*20)",
       "speed": "random.choice([-1, 1]) * random.uniform(20, 100)",
       "angle_start": 0,
-      "angle_end": "300-total*3",
+      "angle_end": "290",
       "width": 10,
       "color": "(random.uniform(0, 255), random.uniform(0, 255), random.uniform(0, 255), 255)",
       "shadow": {
@@ -349,12 +335,25 @@
       ]
     }
   ],
-  "end_step": { "step": 4 },
+  "end_step": { "step": 3 },
   "window_size": [608, 1080],
-  "step_end": 4,
+  "step_end": 3,
+  "music": {
+    "file": "C:\\PYGAME\\music\\KORDHELL - SCOPIN (Phonk).mp3",
+    "start": 0,
+    "fade_ms": 200,
+    "volume": 0.2,
+    "loop": true,
+    "delay": 7
+  },
   "background": {
     "type": "video",
     "list": [
+      {
+        "path": "C:\\PYGAME\\backgrounds\\resized_608_ssstik.io_1750714961132 (online-video-cutter.com).mp4",
+        "freeze_frame": 0,
+        "freeze_duration": 1
+      },
       {
         "path": "C:\\PYGAME\\backgrounds\\resized_608_ssstik.io_1750714961132 (online-video-cutter.com).mp4"
       },
@@ -369,7 +368,7 @@
       },
       {
         "path": "C:\\PYGAME\\backgrounds\\resized_608_ssstik.io_1750714961132 (online-video-cutter.com).mp4",
-        "fps": 4
+        "fps": 2
       },
       {
         "path": "C:\\PYGAME\\backgrounds\\resized_608_ssstik.io_1750714961132 (online-video-cutter.com).mp4",

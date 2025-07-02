@@ -67,27 +67,6 @@
       }
     },
     {
-      "label": "######################### QUESTION ########################",
-      "type": "text",
-      "text": {
-        "value": "Combien d’oreilles a un âne ?",
-        "color": "(0, 0, 0, 255)",
-        "font": {
-          "size": 38,
-          "family": "Anton Regular"
-        },
-        "outline": {
-          "color": "(255, 255, 255)",
-          "width": 2
-        }
-      },
-      "background": { "color": "( 28,161, 242,255)" },
-      "position": { "x": 0, "y": 0 },
-      "step": {
-        "stop": 2
-      }
-    },
-    {
       "label": "######################### SECONDS COUNTER ########################",
       "type": "text",
       "surface_draw": false,
@@ -140,6 +119,29 @@
       "step": {
         "start": 0,
         "delay": 15,
+        "stop": 2
+      }
+    },
+    {
+      "label": "######################### QUESTION ########################",
+      "type": "text",
+      "text": {
+        "value": "Combien d’oreilles a un âne ?",
+        "color": "(0, 0, 0, 255)",
+        "font": {
+          "size": 38,
+          "family": "Anton Regular"
+        },
+        "outline": {
+          "color": "(255, 255, 255)",
+          "width": 2
+        }
+      },
+      "position": { "y": 160 },
+      "step": {
+        "start": 0,
+        "delay": 15,
+        "fade_in": 1,
         "stop": 2
       }
     },
@@ -421,6 +423,13 @@
   "end_step": { "step": 3 },
   "window_size": [608, 1080],
   "step_end": 3,
+  "music": {
+    "file": "C:\\PYGAME\\music\\Best Day of My Life-American Authors.mp3",
+    "start": 2.5,
+    "fade_ms": 200,
+    "volume": 0.2,
+    "loop": true
+  },
   "background": {
     "type": "video",
     "list": [

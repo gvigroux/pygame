@@ -1,4 +1,8 @@
 import json
+import os
+import time
+from background.backgrounds import BackgroundFactory
+from object.arc import Arc
 from object.ball import Ball
 from object.pytext import Text
 from object.object_factory import ObjectFactory
@@ -7,40 +11,111 @@ from object.object_factory import ObjectFactory
 data_fps = json.loads('''{
       "type": "text",
       "text": {
-        "update": "f'{fps:02d}'",
+        "update": "f'F{fps:02d}'",
         "color": "(255, 0, 0, 255)",
-        "font": { "size": 40, "family": "Wumpus Mono"}
-      }, "position": { "x": "20%", "y": "90%", "justify": "none" }}''')
-
+        "font": { "size": 30, "family": "Wumpus Mono"}
+      }, "position": { "x": "10%", "y": "90%", "justify": "none" }}''')
 
 data_step = json.loads('''{
       "type": "text",
       "text": {
-        "update": "f'{step:02d}'",
+        "update": "f'S{step:02d}'",
         "color": "(255, 0, 0, 255)",
-        "font": { "size": 40, "family": "Wumpus Mono"}
-      }, "position": { "x": "80%", "y": "90%", "justify": "none" }}''')
+        "font": { "size": 30, "family": "Wumpus Mono"}
+      }, "position": { "x": "35%", "y": "90%", "justify": "none" }}''')
+
+
+data_blocked = json.loads('''{
+      "type": "text",
+      "text": {
+        "update": "f'B{blocked:02d}'",
+        "color": "(255, 0, 0, 255)",
+        "font": { "size": 30, "family": "Wumpus Mono"}
+      }, "position": { "x": "55%", "y": "90%", "justify": "none" }}''')
+
+data_timing = json.loads('''{
+      "type": "text",
+      "text": {
+        "update": "f'{timing:.3f}s'",
+        "color": "(255, 0, 0, 255)",
+        "font": { "size": 30, "family": "Wumpus Mono"}
+      }, "position": { "x": "75%", "y": "90%", "justify": "none" }}''')
+
+data_mouse = json.loads('''{
+      "type": "text",
+      "text": {
+        "update": "f'{mouse}'",
+        "color": "(255, 0, 0, 255)",
+        "font": { "size": 30, "family": "Wumpus Mono"}
+      }, "position": { "x": "50%", "y": "70%", "justify": "H" }}''')
+
 
 
 class Game:
-    def __init__(self, pygame, config , window_size): 
+    def __init__(self, pygame): 
         self.pygame = pygame
-        self.config = config
-        self.window_size = window_size
-        self.debug = True
+
+        self.start_delay = 0
+                
+        pygame.mixer.init()
+        pygame.mixer.music.set_volume(0.2)  # 50% du volume
+
         self.objects = []
+        self.has_music  = False
 
-            
-    def load(self):
-
-        if( self.debug ):
+    
+    def debug(self, value = False):        
+        if( value ):
             self.objects.append(Text(data_fps, self.pygame, self.window_size,0,0))
             self.objects.append(Text(data_step,self.pygame, self.window_size,0,0))
+            self.objects.append(Text(data_blocked,self.pygame, self.window_size,0,0))
+            self.objects.append(Text(data_timing,self.pygame, self.window_size,0,0))
+            self.objects.append(Text(data_mouse,self.pygame, self.window_size,0,0))
+            
+    def load(self, filename = "config.json"):
 
+        file_path = os.path.dirname(os.path.realpath(__file__))
+        file = os.path.join(file_path, filename)
+        if( os.path.isfile(file) == False ):
+            exit()
+
+        # Lecture avec encodage UTF-8 explicite et gestion d'erreur
+        with open(file, 'r', encoding='utf-8') as f:
+            self.config = json.load(f)
+
+        self._load_params()
+        self._load_objects()
+        self.start_delay = self.pygame.time.get_ticks()
+
+
+    def _load_params(self):
+        self.window_size = self.config.get("window_size", [540, 960])
+        self.end_step = self.config.get("end_step", {}).get("step", -1)
+        
+        ############### Background ###############
+        background_config = self.config.get("background", [])
+        self.background = BackgroundFactory.create(self.pygame, background_config.get("type", "concentric_wave"),*self.window_size, background_config)
+
+        while not self.background.ready:
+            time.sleep(0.01)
+
+        ############### Music ###############
+        self.music_stated = False
+        self.music_delay = self.config.get("music", {}).get("delay", 0)
+        music_detail = self.config.get("music", {})
+        if( music_detail.get("file", False) ):
+            self.has_music  = True
+            self.pygame.mixer.music.load(music_detail.get("file"))
+            self.music_start = music_detail.get("start", 0)
+            self.music_fade_ms = music_detail.get("fade_ms", 0)
+            self.music_loops = 0
+            if( music_detail.get("loop", True) ):
+                self.music_loops = 1
+
+
+    def _load_objects(self):
         for data in self.config.get("objects", []):
-
             count = data.get("count", 1) 
-
             # Automatically split text
             if( data.get("type") == "text" ) and data.get("split", False):
                 if( count > 1 ):
@@ -61,17 +136,50 @@ class Game:
                 else:
                     self.objects.append(object)
 
+    @property
+    def age(self):
+        return (self.pygame.time.get_ticks() - self.start_delay)/ 1000
+
+    def update(self, dt, current_step, clock, obj_block):
+
+        for object in self.objects: 
+            object.update(dt, current_step, clock, obj_block)
+
+        # Start music
+        if self.has_music and ( self.age >= self.music_delay ) and ( not self.music_stated ): 
+            self.pygame.mixer.music.play(loops=self.music_loops, start=self.music_start, fade_ms=self.music_fade_ms)
+            self.music_stated = True
+
+        # New background if needed
+        if( self.background.is_done() ):
+            self.background = BackgroundFactory.create("concentric_wave")
+                
+        # Check if we need to explose balls
+        arcs_count = sum(1 for obj in self.objects if isinstance(obj, Arc) and obj.is_alive(current_step))
+        if( arcs_count == 0 ):        
+            for i, obj in enumerate(self.objects):
+                if isinstance(obj, Ball):
+                    obj.explode()
 
 
+    def draw_on_context(self, ctx, current_time):
 
+        self.background.draw(ctx, current_time)
+        
+        for object in self.objects:
+            object.draw(ctx)
+
+        
 
     def block_count(self, step):
-        return sum(1 for obj in self.objects if obj.block(0))
+        return sum(1 for obj in self.objects if obj.block(step))
     
     def clean(self):
         # Nettoyage des objets détruits
         self.objects = [obj for obj in self.objects if not obj.is_destroyed()]
 
+    def is_finished(self,current_step):
+        return current_step >= self.end_step
 
     def check_collisions(self):
         for i, obj in enumerate(self.objects):
@@ -79,3 +187,5 @@ class Game:
                 for j, other in enumerate(self.objects):
                     if i != j:
                         obj.check_collision(other)
+
+ 

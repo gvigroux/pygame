@@ -14,13 +14,9 @@ class Ball(Object):
         self.radius     = self.config("radius", 8)
         self.velocity   = self.config("velocity", [random.uniform(-150, 150), random.uniform(-150, 150)])
         self.collision_margin = 1.5
-        self.bounce_sound    = self.pygame.mixer.Sound("media/sound/retro/SoundJump2.wav")
-        self.explosion_sound = self.pygame.mixer.Sound("media/sound/retro/SoundLand2.wav")
-        self.bounce_sound.set_volume(0.1)
-        self.explosion_sound.set_volume(0.1)
           
 
-    def _update(self, dt, step, clock):
+    def _update(self, dt, step, clock, blocked):
 
         self.position.x += self.velocity[0] * dt
         self.position.y += self.velocity[1] * dt
@@ -39,9 +35,6 @@ class Ball(Object):
         #ctx.arc(self.position[0], self.position[1], self.radius, 0, 2 * math.pi)
         #ctx.fill()
         #return 
-        #if(  self.first_draw == False ):
-            #bounce_sound    = self.pygame.mixer.Sound("media/sound/retro/SoundJump2.wav")
-        #    self.bounce_sound.play()
     
         #BALL GRADIENT   
         gradient = cairo.RadialGradient(
@@ -78,7 +71,6 @@ class Ball(Object):
         elif( isinstance(object, Arc) ):            
             zone = self.check_arc_collision(object)
             if( zone == "hit_hole" ):
-                print("Hit & explose arc")
                 object.explode()
             elif( zone == "hit_arc" ):
                 self.arc_collision(object)
@@ -96,10 +88,7 @@ class Ball(Object):
         radius_sum = self.radius + ball.radius
         return dist_squared <= radius_sum * radius_sum
     
-    # def ball_collision2(self, ball):
-    #         v = self.velocity
-    #         self.velocity = ball.velocity
-    #         ball.velocity = v
+
 
     def ball_collision(self, ball):
         # 1. Échange des vitesses (conservation de l'énergie cinétique)
@@ -124,17 +113,14 @@ class Ball(Object):
         ball.position.x -= nx * overlap * 0.5
         ball.position.y -= ny * overlap * 0.5 
 
-
-
         self.create_particles(self.collision.fragment, self.color)
         ball.create_particles(ball.collision.fragment, ball.color)
 
-
-        #self.create_particles(ball.collision.fragment.count, ball.collision.fragment.get_color(ball.color))
+        self.accelerate(ball.collision.acceleration)
         ball.collision.play()
         
 
-    def check_arc_collision(self, arc):
+    def check_arc_collision2(self, arc):
 
         if(arc.exploded):
             return False
@@ -167,6 +153,40 @@ class Ball(Object):
         return "hit_arc" if in_arc else "hit_hole"
 
 
+    def check_arc_collision(self, arc):
+        if arc.exploded:
+            return False
+
+        if not arc.is_alive(self.current_step):
+            return False
+
+        dx = self.position.x - arc.position.x
+        dy = self.position.y - arc.position.y
+        dist_sq = dx * dx + dy * dy
+
+        inner = (arc.radius - arc.width / 2) - self.radius
+        outer = (arc.radius + arc.width / 2) + self.radius
+
+        if dist_sq < inner * inner or dist_sq > outer * outer:
+            return False
+
+        angle = self.normalize_angle(math.atan2(dy, dx))
+
+        arc_start = self.normalize_angle(arc.start_angle)
+        arc_end = self.normalize_angle(arc.start_angle + arc.visible_rad)
+
+        in_arc = self.is_angle_in_arc(angle, arc_start, arc_end)
+
+        return "hit_arc" if in_arc else "hit_hole"
+
+
+    def is_angle_in_arc(self, angle, arc_start, arc_end):
+        """Retourne True si angle est dans l'arc [arc_start, arc_end] en gérant le passage par 0°."""
+        if arc_start <= arc_end:
+            return arc_start <= angle <= arc_end
+        else:
+            return angle >= arc_start or angle <= arc_end
+
 
     def arc_collision(self, arc):
         # 1. Calcul vectoriel sécurisé
@@ -174,27 +194,21 @@ class Ball(Object):
         dy = self.position.y - arc.position.y
         dist = max(math.sqrt(dx*dx + dy*dy), 0.001)
         
-        # 2. Vecteurs normal/tangentiel
+        # 2. Vecteurs normal
         nx, ny = dx/dist, dy/dist  # Normal vers l'extérieur
-        tx, ty = -ny, nx           # Tangentiel
         
-        # 3. Réflexion physique réaliste (votre méthode conservée)
+        # 3. Réflexion physique réaliste
         self.reflect_velocity((nx, ny))
-        
-        # 4. Correction de position ANTI-TRAVERSEMENT (version corrigée)
-        # collision_depth = (arc.radius + self.radius) - dist
-        # if collision_depth > 0:
-        #     # Pousse dans la direction NORMALE (nx, ny) uniquement
-        #     push_distance = collision_depth * 1.05  # 5% de marge
-        #     self.position[0] += nx * push_distance
-        #     self.position[1] += ny * push_distance
-        
-        # 5. Effets secondaires        
-        self.velocity[0] *= arc.collision.acceleration[0]
-        self.velocity[1] *= arc.collision.acceleration[1]
 
+        # 4. Effets secondaires       
+        self.accelerate(arc.collision.acceleration)
         self.create_particles(arc.collision.fragment, arc.color)
         arc.collision.play()
+
+    def accelerate(self, acceleration):
+        self.velocity[0] *= acceleration[0]
+        self.velocity[1] *= acceleration[1]
+
 
         
     def normalize_angle(self, angle):
@@ -202,16 +216,3 @@ class Ball(Object):
         return angle % (2 * math.pi)
     
     
-    def angle_in_arc(self, angle, start, extent):
-        # angle = position de la balle
-        # start = angle de départ de l'arc
-        # extent = taille visible de l’arc en radians
-        angle   = self.normalize_angle(angle)
-        start   = self.normalize_angle(start)
-        end     = self.normalize_angle(start + extent)
-
-        if start < end:
-            return start <= angle <= end
-        else:
-            # Cas où l’arc traverse 0°
-            return angle >= start or angle <= end

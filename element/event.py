@@ -7,6 +7,8 @@ class eEvent:
         self.fragment = eFragment(**fragment)
         self.sound    = eSound(pygame, **sound)
         self.acceleration = acceleration
+        if isinstance(self.acceleration, str):
+            self.acceleration = eval(self.acceleration)
 
     def enabled(self):
         return self.fragment.enabled() or self.sound.enabled()

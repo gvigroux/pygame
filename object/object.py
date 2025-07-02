@@ -31,20 +31,16 @@ class Object:
         self.index      = i
         self.amount     = amount
 
-        self.position   = self.config("position", (window_size[0]//2, window_size[1]//2))
         self.lifetime   = self.config("lifetime", 1.0)
         self.timer      = self.config("timer", 1.0)
         self.color      = self.config("color", (255, 255, 255, 255))
         if( len(self.color) == 3 ):
             self.color = (self.color[0], self.color[1], self.color[2], 255)
         
-        self.position   = ePosition(window_size, **self.config("position", {"x": "50%","y": "50%"}))       
-        self.shadow     = eShadow(**self.config("shadow", {}))
-        self.step       = eStep(self, **self.config("step", {}))
+        self.position       = ePosition(window_size, amount, i, **self.config("position", {"x": "50%","y": "50%"}))   
+        self.shadow         = eShadow(**self.config("shadow", {}))
+        self.step           = eStep(self, **self.config("step", {}))
    
-        #self.sound_spawn        = eSound(pygame, **self.config("sound_spawn", {}))
-        #self.sound_destroy      = eSound(pygame, **self.config("sound_destroy", {}))
-        #self.collision          = eCollision(pygame, **self.config("collision", {}))
 
         self.spawn              = eEvent(pygame, **self.config("on_spawn", {}))
         self.destroy            = eEvent(pygame, **self.config("on_destroy", {}))
@@ -62,7 +58,7 @@ class Object:
         if( colors is not None ):
             # Update data object for next iteration
             data["colors"] = colors
-            self.color = self.interpolate_color(colors[0], colors[1], (self.index) / (self.amount-1))
+            self.color = self.gradient_color(colors[0], colors[1], (self.index) / (self.amount-1))
 
         self.particles  = []
         self.alpha      = 1.0
@@ -75,6 +71,14 @@ class Object:
         self.log_draw_durations = []
         self.t0 = 0
         self.t1 = 0
+
+    def gradient_color(self,color1, color2, t):
+        """Retourne une couleur intermédiaire entre color1 et color2 selon t ∈ [0.0, 1.0]"""
+        return tuple(
+            (1 - t) * c1 + t * c2
+            for c1, c2 in zip(color1, color2)
+        )
+
 
     def count(self):
         return self.__class__._count
@@ -101,7 +105,7 @@ class Object:
         return False
     
 
-    def update(self, dt, step, clock):
+    def update(self, dt, step, clock, blocked):
 
         if( self.enable == False ):
             return
@@ -145,13 +149,12 @@ class Object:
 
             if( self.alpha <= 0.0 ):
                 self.destroyed = True
-                if( type(self).__name__ == "Arc" ):
-                    self.explode()
+                #if( type(self).__name__ == "Arc" ):
+                self.explode()
 
         if self.destroyed:
             self.should_draw = False
-            if( type(self).__name__ == "Arc" ):
-                self.explode()
+            self.explode()
             return
         
         if self.exploded:
@@ -162,9 +165,9 @@ class Object:
                 self.should_draw = False
 
         if( self.age/1000 >= self.step.update_delay ):
-            self._update(dt, step, clock)
+            self._update(dt, step, clock, blocked)
         
-    def _update(self, dt, step, clock):
+    def _update(self, dt, step, clock, blocked):
         pass
 
 

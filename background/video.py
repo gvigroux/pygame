@@ -6,11 +6,12 @@ import cv2
 import numpy as np  
 
 from background.base import BaseBackground
+from element.sound import eSound
 
 
 class Video(BaseBackground):
-    def __init__(self, parameters={}):
-        super().__init__()
+    def __init__(self, pygame, width, height, parameters={}):
+        super().__init__(pygame, width, height)
         self.parameters = parameters
         self.videos = list(parameters.get("list", []))
         self.loop = False
@@ -49,6 +50,8 @@ class Video(BaseBackground):
 
     def load_video(self):
         if not self.videos:
+            print("[Video] No more videos.")
+            self.ready = True
             return False
 
         video = self.videos.pop(0)
@@ -57,6 +60,8 @@ class Video(BaseBackground):
         self.loop = video.get("loop", False)
         freeze_frame = video.get("freeze_frame", None)
         freeze_duration = video.get("freeze_duration", 0)
+
+        
 
         cap = cv2.VideoCapture(path)
         if not cap.isOpened():
@@ -79,6 +84,10 @@ class Video(BaseBackground):
         if self.handle_freeze_frame(cap, freeze_frame, freeze_duration):
             self.last_frame_surface = self.numpy_to_cairo_surface(self.last_freeze_frame)
             self.force_next_frame = True
+
+            #TODO: sound can slow doawn the launch of the app when on first video (so desynchronized)
+            self.play_sound(video)
+            self.ready = True 
             self.queue_next_video()
             return True
 
@@ -103,9 +112,15 @@ class Video(BaseBackground):
         # ✅ Marque prêt maintenant
         self.ready = True
 
+        self.play_sound(video)
         self.queue_next_video()
         return True
 
+    def play_sound(self, video):
+        sound    = eSound(self.pygame, **video.get("sound", {}))
+        if( not sound.enabled() ):
+            return
+        sound.play()
 
     def handle_freeze_frame(self, cap, freeze_frame, freeze_duration):
         if freeze_frame is None or cap is None:
@@ -157,7 +172,8 @@ class Video(BaseBackground):
             "frame_interval": 1.0 / (fps or 25),
             "preloaded": True,
             "freeze_frame": freeze_frame,
-            "freeze_duration": freeze_duration
+            "freeze_duration": freeze_duration,
+            "sound": video_dict.get("sound", {})    
         }
 
 
@@ -176,11 +192,14 @@ class Video(BaseBackground):
 
     def apply_preloaded_video(self, video_data):
         with self.lock:
+            print("[Video] apply_preloaded_video")
             self.surface_frames = video_data.get("surface_frames", [])
             self.current_frame_index = 0
             self.reverse = video_data.get("reverse", False)
             self.loop = video_data.get("loop", False)
             self.frame_interval = video_data.get("frame_interval", self.frame_interval)
+            
+            self.play_sound(video_data)
 
             self.freeze_surface = None
             self.freeze_frame_duration = 0

@@ -11,10 +11,12 @@ safe_globals = {
 }
 
 class ePosition:
-    def __init__(self, window_size, x = "50%" , y = "50%", justify = "H"):
+    def __init__(self, window_size, total = 0, i=0, x = "50%" , y = "50%", justify = "H"):
         self.window_size = window_size
         self.raw_x = x
         self.raw_y = y
+        safe_globals["total"] = total
+        safe_globals["i"] = i
         self.x = self._resolve_coord(x, window_size[0])
         self.y = self._resolve_coord(y, window_size[1])
         self.justify = justify
