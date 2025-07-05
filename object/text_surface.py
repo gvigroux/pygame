@@ -94,6 +94,7 @@ class TextSurface(Object):
             
 
     def render_text_with_outline(self, text, text_color, outline):
+   
         # Polices : self.text.font.sysFont = police normale
         #           self.font_emoji       = police emoji
         font_normal = self.text.font.sysFont
@@ -133,6 +134,8 @@ class TextSurface(Object):
         # Rendu du texte avec outline
         x_cursor = outline.width + self.text.padding[3]
         for part, font in surfaces:
+            if part== '️':
+                continue
             part_surface = font.render(part, True, text_color)
             text_x = x_cursor
             text_y = (surf_height - part_surface.get_height()) // 2
@@ -148,49 +151,6 @@ class TextSurface(Object):
             x_cursor += part_surface.get_width()
 
         return outline_surface
-
-    # def render_text_with_outline(self, font, text, text_color, outline):
-       
-    #     # La surface comprend le fond
-    #     #surf_width  = self.background.size[0]
-    #     #surf_height = self.background.size[1]
-
-    #     surf_width  = self.text.font.sysFont.size(text)[0] + self.text.padding[1] + self.text.padding[3]
-    #     surf_height = self.line_height + self.text.padding[0] + self.text.padding[2] + self.text.outline.width*2
-
-    #     outline_surface = pygame.Surface((surf_width, surf_height), pygame.SRCALPHA)
-    
-    #     # Background per line
-    #     if( self.text.background.enabled() ):
-    #         background_surface = pygame.Surface((surf_width, surf_height), pygame.SRCALPHA)
-    #         pygame.draw.rect(
-    #             background_surface,
-    #             self.text.background.getColor(self.alpha*255),
-    #             (0, 0, surf_width, surf_height),
-    #             border_radius=self.text.background.radius
-    #         )
-    #         self.background_surfaces.append(background_surface)
-        
-
-    #     # Texte + outline
-    #     text_surface = font.render(text, True, text_color)
-
-    #     # Position du texte centrée sur la zone "background"
-    #     text_x = (surf_width - text_surface.get_width()) // 2
-    #     text_y = (surf_height - text_surface.get_height()) // 2
-
-    #     # Outline = copies décalées autour
-    #     if outline.width > 0:
-    #         for dx in [-outline.width, 0, outline.width]:
-    #             for dy in [-outline.width, 0, outline.width]:
-    #                 if dx != 0 or dy != 0:
-    #                     outline_text = font.render(text, True, outline.color)
-    #                     outline_surface.blit(outline_text, (text_x + dx, text_y + dy))
-
-    #     # Texte principal
-    #     outline_surface.blit(text_surface, (text_x, text_y))
-
-    #     return outline_surface
 
 
     def _wrap_text(self, text, max_width):
@@ -254,8 +214,13 @@ class TextSurface(Object):
                 self.text.value = val
                 self._prepare()
 
+
     def is_emoji(self, char):
-        return ord(char) >= 0x1F300  # approximation pour emoji communs
+        code = ord(char)
+        return (
+            code >= 0x1F300  # emojis modernes
+            or 0x2600 <= code <= 0x27BF  # symboles divers : flake, heart, ☀️, ☂️ etc.
+        )
 
     def render_mixed_text(self, text):
         surfaces = []

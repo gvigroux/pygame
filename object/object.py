@@ -155,6 +155,7 @@ class Object:
         if self.destroyed:
             self.should_draw = False
             self.explode()
+            self.spawn.sound.stop()
             return
         
         if self.exploded:
@@ -163,6 +164,7 @@ class Object:
                 self.alpha = 0.0
                 self.destroyed = True
                 self.should_draw = False
+                self.spawn.sound.stop()
 
         if( self.age/1000 >= self.step.update_delay ):
             self._update(dt, step, clock, blocked)
@@ -177,26 +179,20 @@ class Object:
         if( self.enable == False ):
             return
 
+        # Draw
+        if( self.should_draw ):
+        
+            if( self.shadow.enabled() ):
+                self.set_color(ctx, self.shadow.color)
+                self._draw_shadow(ctx)
+                
+            self.set_color(ctx, self.color)
+            self._draw(ctx)
+        
         for particle in self.particles:
             particle.draw(ctx)
-
-        # Draw
-        if( not self.should_draw ):
-            return
-    
-        #r, g, b, a = self.color
-        #ctx.set_source_rgba(r, g, b, self.alpha)
-        if( self.shadow.enabled() ):
-            #ctx.set_source_rgba(0, 0, 0, min(0.4, self.alpha))
-            #self.set_color(ctx, (0, 0, 0, 100))
-            self.set_color(ctx, self.shadow.color)
-            self._draw_shadow(ctx)
-        #self.color = (self.color[0], self.color[1], self.color[2], self.alpha)
-        #ctx.set_source_rgba(*self.color)
-        self.set_color(ctx, self.color)
-        self._draw(ctx)
         self.log_draw_durations.append(time.perf_counter() - t0)
-        #print(f"UPDATE: {(self.t1 - self.t0)*1000:.2f} ms | DRAW: {(self.t3 - self.t2)*1000:.2f} ms")
+        
 
 
 
@@ -223,6 +219,7 @@ class Object:
         color = (color[0], color[1], color[2], min(self.alpha, color[3]))
         ctx.set_source_rgba(*color)
             
+
     def normalize_color(self, color):
         return tuple(c / 255.0 for c in color)
 

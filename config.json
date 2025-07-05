@@ -1,48 +1,26 @@
 {
   "objects": [
     {
-      "label": "######################### TITLE ########################",
-      "type": "text",
-      "text": {
-        "value": "🐰 Tu sais pourquoi ?",
-        "color": "(255, 255, 255, 255)",
-        "font": {
-          "bold": false,
-          "size": 50,
-          "family": "Anton Regular"
-        },
-        "outline": {
-          "color": "(0, 0, 0, 255)",
-          "width": 2
-        }
-      },
-      "position": { "y": 100 },
-      "step": {
-        "start": 0,
-        "block": false
-      }
-    },
-    {
       "label": "######################### QUESTION ########################",
       "type": "text",
       "text": {
-        "value": "Pourquoi les lapins ont de grandes oreilles ?",
+        "value": "🐰 Combien de dents a un lapin ? ",
         "color": "(255, 255, 255, 255)",
         "font": {
-          "size": 38,
-          "family": "Anton Regular"
+          "size": 50,
+          "family": "lobsterregular"
         },
         "outline": {
           "color": "(0, 0, 0, 255)",
           "width": 2
         },
         "margin": "(0, 20, 0, 20)",
-        "padding": "(10, 10, 10, 10)"
+        "padding": "(10, 10, 10, 10)",
+        "background": { "color": "(200, 20, 20,255)", "radius": 10 }
       },
-      "position": { "x": 0, "y": "20%" },
+      "position": { "x": 0, "y": "18%" },
       "step": {
-        "delay": 4,
-        "fade_in": 0.1,
+        "delay": 0.5,
         "block": false
       }
     },
@@ -50,19 +28,33 @@
       "label": "######################### TIMER ########################",
       "type": "timer",
       "duration": 5,
-      "size": "(300,20)",
+      "size": "(300,15)",
       "color": "(200, 0, 0, 255)",
       "background": { "color": "(50, 250, 50, 255)" },
       "position": { "x": "50%", "y": "50%" },
       "shadow": { "offset": 10 },
       "step": {
         "stop": 0.9,
-        "delay": 6,
+        "delay": 3.5,
         "fade_in": 0.1,
         "duration": 6,
         "update_delay": 1,
         "explode": true
       },
+      "fragment": {
+        "count": 1,
+        "radius": 1.5,
+        "radius_range": 2,
+        "lifetime": "random.choice([1.5, 3, 4])",
+        "color": "(random.choice([150, 225]),random.choice([150, 225]),random.choice([150, 225]),255)",
+        "color_range": 1
+      },
+      "on_spawn": {
+        "sound": {
+          "path": "C:\\PYGAME\\effects\\Cierge etincelant.mp3"
+        }
+      },
+
       "on_destroy": {
         "fragment": {
           "count": 100,
@@ -86,11 +78,11 @@
       "type": "text",
       "color": "(0, 255, 255, 255)",
       "text": {
-        "value": "Pour réguler leur température ! ❄️🔥",
+        "value": "Un lapin a 28 dents !",
         "font": {
           "bold": true,
           "size": 32,
-          "family": "Segoe UI Emoji"
+          "family": "Roboto"
         },
         "outline": {
           "color": "(0, 0, 0, 255)",
@@ -100,7 +92,7 @@
       },
       "step": {
         "duration": 5,
-        "delay": 12,
+        "delay": 9.5,
         "fade_in": 0.2,
         "fade_out": 0.2,
         "block": true
@@ -111,10 +103,10 @@
       "label": "######################### CTA ########################",
       "type": "text",
       "text": {
-        "value": "Qui avait deviné ? Écris MOI 👇🐰 ",
+        "value": "Et toi, t’as déjà eu un lapin ? 🐰 Raconte !",
         "font": {
           "size": 40,
-          "family": "Segoe UI Emoji"
+          "family": "Anton Regular"
         },
         "outline": {
           "color": "(0, 0, 0, 255)",
@@ -127,7 +119,7 @@
         "start": 0,
         "stop": 0.9,
         "duration": 6,
-        "delay": 13,
+        "delay": 10.5,
         "fade_in": 0.2,
         "fade_out": 0.2,
         "block": true
@@ -138,15 +130,16 @@
     "type": "video",
     "list": [
       {
-        "path": "C:\\PYGAME\\backgrounds\\OUTPUT\\download\\clip_0.mp4",
-        "freeze_frame": 0,
-        "freeze_duration": 3
+        "path": "C:\\PYGAME\\backgrounds\\OUTPUT\\download\\clip_2.mp4",
+        "freeze_frame": 80,
+        "freeze_duration": 0.5
       },
       {
-        "path": "C:\\PYGAME\\backgrounds\\OUTPUT\\download\\clip_0.mp4"
+        "path": "C:\\PYGAME\\backgrounds\\OUTPUT\\download\\clip_2.mp4",
+        "start_frame": 80
       },
       {
-        "path": "C:\\PYGAME\\backgrounds\\OUTPUT\\download\\clip_0.mp4",
+        "path": "C:\\PYGAME\\backgrounds\\OUTPUT\\download\\clip_2.mp4",
         "reverse": true,
         "sound": {
           "path": "C:\\PYGAME\\effects\\awesome-rewind-351984.mp3",
@@ -154,21 +147,25 @@
         }
       },
       {
-        "path": "C:\\PYGAME\\backgrounds\\OUTPUT\\download\\clip_0.mp4"
+        "path": "C:\\PYGAME\\backgrounds\\OUTPUT\\download\\clip_2.mp4"
       },
       {
-        "path": "C:\\PYGAME\\backgrounds\\OUTPUT\\download\\clip_0.mp4",
+        "path": "C:\\PYGAME\\backgrounds\\OUTPUT\\download\\clip_2.mp4",
+        "reverse": true,
+        "sound": {
+          "path": "C:\\PYGAME\\effects\\awesome-rewind-351984.mp3",
+          "volume": 0.8
+        }
+      },
+      {
+        "path": "C:\\PYGAME\\backgrounds\\OUTPUT\\download\\clip_2.mp4"
+      },
+      {
+        "path": "C:\\PYGAME\\backgrounds\\OUTPUT\\download\\clip_2.mp4",
         "reverse": true
       },
       {
-        "path": "C:\\PYGAME\\backgrounds\\OUTPUT\\download\\clip_0.mp4"
-      },
-      {
-        "path": "C:\\PYGAME\\backgrounds\\OUTPUT\\download\\clip_0.mp4",
-        "reverse": true
-      },
-      {
-        "path": "C:\\PYGAME\\backgrounds\\OUTPUT\\download\\clip_0.mp4",
+        "path": "C:\\PYGAME\\backgrounds\\OUTPUT\\download\\clip_2.mp4",
         "loop": true
       }
     ]

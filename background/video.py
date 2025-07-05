@@ -3,7 +3,7 @@ import threading
 
 import cairo
 import cv2
-import numpy as np  
+import numpy as np
 
 from background.base import BaseBackground
 from element.sound import eSound
@@ -34,10 +34,11 @@ class Video(BaseBackground):
         self.skip_after_freeze = False
         self.force_next_frame = False
         self.last_freeze_frame = None
+
+        self.prepared_videos = []
         self.ready = False
 
         self.load_video()
-
 
     def show_freeze_frame(self, frame, duration):
         h, w = frame.shape[:2]
@@ -47,11 +48,10 @@ class Video(BaseBackground):
         self.freeze_frame_duration = duration
         self.freeze_frame_start_time = None
 
-
     def load_video(self):
         if not self.videos:
             print("[Video] No more videos.")
-            self.ready = True
+            self.ready = False
             return False
 
         video = self.videos.pop(0)
@@ -61,7 +61,9 @@ class Video(BaseBackground):
         freeze_frame = video.get("freeze_frame", None)
         freeze_duration = video.get("freeze_duration", 0)
 
-        
+        # ✅ Nouveaux paramètres
+        start_frame = video.get("start_frame", 0)
+        end_frame = video.get("end_frame", None)
 
         cap = cv2.VideoCapture(path)
         if not cap.isOpened():
@@ -71,6 +73,9 @@ class Video(BaseBackground):
         fps = video.get("fps", cap.get(cv2.CAP_PROP_FPS))
         self.frame_interval = 1.0 / (fps if fps > 0 else 25)
 
+        # Position au start_frame
+        cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
+
         success, frame = cap.read()
         if not success:
             print("[Video] Failed to read initial frame")
@@ -79,27 +84,30 @@ class Video(BaseBackground):
 
         h, w = frame.shape[:2]
         self.target_size = (w, h)
-        cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
 
         if self.handle_freeze_frame(cap, freeze_frame, freeze_duration):
             self.last_frame_surface = self.numpy_to_cairo_surface(self.last_freeze_frame)
             self.force_next_frame = True
-
-            #TODO: sound can slow down the launch of the app when on first video (so desynchronized)
             self.play_sound(video)
-            self.ready = True 
-
+            self.prepared_videos.append("main")
+            self.check_ready()
             self.queue_next_video()
             return True
 
         frames = []
         while True:
-            success, frame = cap.read()
+            current_pos = int(cap.get(cv2.CAP_PROP_POS_FRAMES))
+            if end_frame is not None and current_pos > end_frame:
+                break
+
             if not success:
                 break
+
             frame = cv2.resize(frame, self.target_size, interpolation=cv2.INTER_AREA)
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2BGRA)
             frames.append(frame)
+
+            success, frame = cap.read()
 
         cap.release()
 
@@ -110,16 +118,15 @@ class Video(BaseBackground):
             self.surface_frames = [self.numpy_to_cairo_surface(f) for f in frames]
             self.current_frame_index = 0
 
-        # ✅ Marque prêt maintenant
-        self.ready = True
-
         self.play_sound(video)
+        self.prepared_videos.append("main")
+        self.check_ready()
         self.queue_next_video()
         return True
 
     def play_sound(self, video):
-        sound    = eSound(self.pygame, **video.get("sound", {}))
-        if( not sound.enabled() ):
+        sound = eSound(self.pygame, **video.get("sound", {}))
+        if not sound.enabled():
             return
         sound.play()
 
@@ -134,9 +141,7 @@ class Video(BaseBackground):
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2BGRA)
             self.show_freeze_frame(frame, freeze_duration)
             self.skip_after_freeze = True
-        cap.release()
         return success
-
 
     def preload_video(self, video_dict):
         path = video_dict.get("path")
@@ -145,20 +150,35 @@ class Video(BaseBackground):
         freeze_frame = video_dict.get("freeze_frame")
         freeze_duration = video_dict.get("freeze_duration", 0)
 
+        # ✅ Nouveaux paramètres
+        start_frame = video_dict.get("start_frame", 0)
+        end_frame = video_dict.get("end_frame", None)
+
         cap = cv2.VideoCapture(path)
         if not cap.isOpened():
             return None
 
         fps = video_dict.get("fps", cap.get(cv2.CAP_PROP_FPS))
         target_size = self.target_size
+
+        cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
+
         frames = []
+        success, frame = cap.read()
+
         while True:
-            success, frame = cap.read()
+            current_pos = int(cap.get(cv2.CAP_PROP_POS_FRAMES))
+            if end_frame is not None and current_pos > end_frame:
+                break
+
             if not success:
                 break
+
             frame = cv2.resize(frame, target_size, interpolation=cv2.INTER_AREA)
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2BGRA)
             frames.append(frame)
+
+            success, frame = cap.read()
 
         cap.release()
         if reverse:
@@ -174,9 +194,8 @@ class Video(BaseBackground):
             "preloaded": True,
             "freeze_frame": freeze_frame,
             "freeze_duration": freeze_duration,
-            "sound": video_dict.get("sound", {})    
+            "sound": video_dict.get("sound", {})
         }
-
 
     def queue_next_video(self):
         if self.videos and self.preload_thread is None:
@@ -186,10 +205,12 @@ class Video(BaseBackground):
                 next_video = self.preload_video(next_video_dict)
                 if next_video:
                     self.video_queue.put(next_video)
+                    with self.lock:
+                        self.prepared_videos.append("preload")
+                        self.check_ready()
 
             self.preload_thread = threading.Thread(target=task)
             self.preload_thread.start()
-
 
     def apply_preloaded_video(self, video_data):
         with self.lock:
@@ -199,7 +220,7 @@ class Video(BaseBackground):
             self.reverse = video_data.get("reverse", False)
             self.loop = video_data.get("loop", False)
             self.frame_interval = video_data.get("frame_interval", self.frame_interval)
-            
+
             self.play_sound(video_data)
 
             self.freeze_surface = None
@@ -222,6 +243,11 @@ class Video(BaseBackground):
 
         self.queue_next_video()
 
+    def check_ready(self):
+        if len(self.prepared_videos) >= 2:
+            self.ready = True
+        else:
+            self.ready = False
 
     def switch_to_next_video(self):
         with self.lock:
@@ -229,7 +255,6 @@ class Video(BaseBackground):
             self.current_frame_index = 0
 
             try:
-                #video_data = self.video_queue.get(timeout=10)
                 video_data = self.video_queue.get_nowait()
                 self.preload_thread = None
                 self.apply_preloaded_video(video_data)
@@ -242,7 +267,6 @@ class Video(BaseBackground):
                     return False
         return True
 
-
     def read_next_frame(self):
         with self.lock:
             if not self.surface_frames or self.current_frame_index >= len(self.surface_frames):
@@ -254,20 +278,17 @@ class Video(BaseBackground):
             self.current_frame_index += 1
             return surface
 
-
     def numpy_to_cairo_surface(self, bgra):
         h, w = bgra.shape[:2]
         data = np.ascontiguousarray(bgra)
         return cairo.ImageSurface.create_for_data(data, cairo.FORMAT_ARGB32, w, h, w * 4)
 
-
     def _draw(self, ctx, current_time, width, height):
         if not self.ready:
-            # Fallback = écran noir ou image fixe
-            ctx.set_source_rgb(255, 255, 0)  # Noir
+            ctx.set_source_rgb(1, 1, 0)
             ctx.paint()
             return
-    
+
         if self.freeze_surface:
             if self.freeze_frame_start_time is None:
                 self.freeze_frame_start_time = current_time

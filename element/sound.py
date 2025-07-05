@@ -16,3 +16,8 @@ class eSound:
         if( not self.enabled() ):
             return
         self.sound.play(loops=self.loop)
+
+    def stop(self):
+        if( not self.enabled() ):
+            return
+        self.sound.stop()
