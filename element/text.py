@@ -1,9 +1,10 @@
+from element.background import eBackground
 from element.font import eFont
 from element.outline import eOutline
 
 
 class eText:
-    def __init__(self, value= "", color = (255, 255, 255, 255), font= {}, outline = {}, padding= (0,0,0,0), update= ""):
+    def __init__(self, value= "", color = (255, 255, 255, 255), font= {}, outline = {}, padding= (0,0,0,0), margin= (0,0,0,0), background = {}, update= ""):
         self.value = value
         self.color = color
         if( isinstance(color, str) ):
@@ -13,9 +14,13 @@ class eText:
         self.padding   = padding
         if( isinstance(padding, str) ):
             self.padding = eval(padding)
+        self.margin   = margin
+        if( isinstance(margin, str) ):
+            self.margin = eval(margin)
         self.update     = update 
         self.font       = eFont(**font)
         self.outline    = eOutline(**outline)
+        self.background = eBackground(**background)
 
 
     def enabled(self):

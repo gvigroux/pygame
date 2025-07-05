@@ -1,0 +1,177 @@
+{
+  "objects": [
+    {
+      "label": "######################### TITLE ########################",
+      "type": "text",
+      "text": {
+        "value": "🐰 Tu sais pourquoi ?",
+        "color": "(255, 255, 255, 255)",
+        "font": {
+          "bold": false,
+          "size": 50,
+          "family": "Segoe UI Emoji"
+        },
+        "outline": {
+          "color": "(0, 0, 0, 255)",
+          "width": 2
+        }
+      },
+      "position": { "y": 100 },
+      "step": {
+        "start": 0,
+        "block": false
+      }
+    },
+    {
+      "label": "######################### QUESTION ########################",
+      "type": "text",
+      "text": {
+        "value": "Pourquoi les lapins ont de grandes oreilles ?",
+        "color": "(255, 255, 255, 255)",
+        "font": {
+          "size": 38,
+          "family": "Anton Regular"
+        },
+        "outline": {
+          "color": "(0, 0, 0, 255)",
+          "width": 2
+        },
+        "margin": "(0, 20, 0, 20)",
+        "padding": "(10, 10, 10, 10)"
+      },
+      "position": { "x": 0, "y": "20%" },
+      "step": {
+        "delay": 4,
+        "fade_in": 0.1,
+        "block": false
+      }
+    },
+    {
+      "label": "######################### TIMER ########################",
+      "type": "timer",
+      "duration": 5,
+      "size": "(300,20)",
+      "color": "(200, 0, 0, 255)",
+      "background": { "color": "(50, 250, 50, 255)" },
+      "position": { "x": "50%", "y": "50%" },
+      "shadow": { "offset": 10 },
+      "step": {
+        "stop": 0.9,
+        "delay": 6,
+        "fade_in": 0.1,
+        "duration": 6,
+        "update_delay": 1,
+        "explode": true
+      },
+      "on_destroy": {
+        "fragment": {
+          "count": 100,
+          "radius": 1.5,
+          "radius_range": 2,
+          "lifetime": "random.choice([1.5, 3, 4])",
+          "color": "(0,random.choice([150, 225]),0,255)",
+          "color_range": 0.1
+        },
+        "sound": {
+          "path": "C:\\PYGAME\\effects\\k95s743qd0j-bomb-sfx-9.mp3"
+        }
+      },
+      "border": {
+        "color": "(0, 0, 0, 255)",
+        "width": 2
+      }
+    },
+    {
+      "label": "######################### RESPONSE TEXT ########################",
+      "type": "text",
+      "color": "(0, 255, 255, 255)",
+      "text": {
+        "value": "Pour réguler leur température ! ❄️🔥",
+        "font": {
+          "bold": true,
+          "size": 32,
+          "family": "Segoe UI Emoji"
+        },
+        "outline": {
+          "color": "(0, 0, 0, 255)",
+          "width": 2
+        },
+        "padding": "(0, 20, 0, 20)"
+      },
+      "step": {
+        "duration": 5,
+        "delay": 12,
+        "fade_in": 0.2,
+        "fade_out": 0.2,
+        "block": true
+      },
+      "position": { "y": "50%" }
+    },
+    {
+      "label": "######################### CTA ########################",
+      "type": "text",
+      "text": {
+        "value": "Qui avait deviné ? Écris MOI 👇🐰 ",
+        "font": {
+          "size": 40,
+          "family": "Segoe UI Emoji"
+        },
+        "outline": {
+          "color": "(0, 0, 0, 255)",
+          "width": 2
+        },
+        "padding": "(0, 20, 0, 20)"
+      },
+      "position": { "y": "70%" },
+      "step": {
+        "start": 0,
+        "stop": 0.9,
+        "duration": 6,
+        "delay": 13,
+        "fade_in": 0.2,
+        "fade_out": 0.2,
+        "block": true
+      }
+    }
+  ],
+  "background": {
+    "type": "video",
+    "list": [
+      {
+        "path": "C:\\PYGAME\\backgrounds\\OUTPUT\\download\\clip_0.mp4",
+        "freeze_frame": 0,
+        "freeze_duration": 3
+      },
+      {
+        "path": "C:\\PYGAME\\backgrounds\\OUTPUT\\download\\clip_0.mp4"
+      },
+      {
+        "path": "C:\\PYGAME\\backgrounds\\OUTPUT\\download\\clip_0.mp4",
+        "reverse": true,
+        "sound": {
+          "path": "C:\\PYGAME\\effects\\awesome-rewind-351984.mp3",
+          "volume": 0.8
+        }
+      },
+      {
+        "path": "C:\\PYGAME\\backgrounds\\OUTPUT\\download\\clip_0.mp4"
+      },
+      {
+        "path": "C:\\PYGAME\\backgrounds\\OUTPUT\\download\\clip_0.mp4",
+        "reverse": true
+      },
+      {
+        "path": "C:\\PYGAME\\backgrounds\\OUTPUT\\download\\clip_0.mp4"
+      },
+      {
+        "path": "C:\\PYGAME\\backgrounds\\OUTPUT\\download\\clip_0.mp4",
+        "reverse": true
+      },
+      {
+        "path": "C:\\PYGAME\\backgrounds\\OUTPUT\\download\\clip_0.mp4",
+        "loop": true
+      }
+    ]
+  },
+  "settings": { "end_step": 1, "debug": false, "window_size": [608, 1080] }
+}

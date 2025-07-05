@@ -85,9 +85,10 @@ class Video(BaseBackground):
             self.last_frame_surface = self.numpy_to_cairo_surface(self.last_freeze_frame)
             self.force_next_frame = True
 
-            #TODO: sound can slow doawn the launch of the app when on first video (so desynchronized)
+            #TODO: sound can slow down the launch of the app when on first video (so desynchronized)
             self.play_sound(video)
             self.ready = True 
+
             self.queue_next_video()
             return True
 

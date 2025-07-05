@@ -1,17 +1,9 @@
-import json
-import os
-import random
-from moviepy import VideoFileClip
+
 import pygame
 import cairo
-import math
 import time
 
-from background.backgrounds import BackgroundFactory
 from game import Game
-from object.arc import Arc
-from object.ball import Ball
-from object.object_factory import ObjectFactory
 
 
 

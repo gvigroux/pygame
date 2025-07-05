@@ -257,8 +257,8 @@ class TrianglesBackground(BaseBackground):
       
 
 class ConcentricWaveBackground(BaseBackground):
-    def __init__(self, width, height):
-        super().__init__(width, height)
+    def __init__(self, pygame, width, height, parameters={}):
+        super().__init__(pygame, width, height)
         self.width = width
         self.height = height
 

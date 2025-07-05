@@ -9,7 +9,7 @@ from object.object_factory import ObjectFactory
 
 
 data_fps = json.loads('''{
-      "type": "text",
+      "type": "textDraw",
       "text": {
         "update": "f'F{fps:02d}'",
         "color": "(255, 0, 0, 255)",
@@ -17,7 +17,7 @@ data_fps = json.loads('''{
       }, "position": { "x": "10%", "y": "90%", "justify": "none" }}''')
 
 data_step = json.loads('''{
-      "type": "text",
+      "type": "textDraw",
       "text": {
         "update": "f'S{step:02d}'",
         "color": "(255, 0, 0, 255)",
@@ -26,7 +26,7 @@ data_step = json.loads('''{
 
 
 data_blocked = json.loads('''{
-      "type": "text",
+      "type": "textDraw",
       "text": {
         "update": "f'B{blocked:02d}'",
         "color": "(255, 0, 0, 255)",
@@ -34,7 +34,7 @@ data_blocked = json.loads('''{
       }, "position": { "x": "55%", "y": "90%", "justify": "none" }}''')
 
 data_timing = json.loads('''{
-      "type": "text",
+      "type": "textDraw",
       "text": {
         "update": "f'{timing:.3f}s'",
         "color": "(255, 0, 0, 255)",
@@ -42,7 +42,7 @@ data_timing = json.loads('''{
       }, "position": { "x": "75%", "y": "90%", "justify": "none" }}''')
 
 data_mouse = json.loads('''{
-      "type": "text",
+      "type": "textDraw",
       "text": {
         "update": "f'{mouse}'",
         "color": "(255, 0, 0, 255)",
@@ -89,8 +89,11 @@ class Game:
 
 
     def _load_params(self):
-        self.window_size = self.config.get("window_size", [540, 960])
-        self.end_step = self.config.get("end_step", {}).get("step", -1)
+        settings = self.config.get("settings", {})
+        self.end_step = settings.get("end_step", -1)
+        self.window_size = settings.get("window_size", [540, 960])
+        if( settings.get("debug", False) ):
+            self.debug(True)
         
         ############### Background ###############
         background_config = self.config.get("background", [])
@@ -152,13 +155,13 @@ class Game:
 
         # New background if needed
         if( self.background.is_done() ):
-            self.background = BackgroundFactory.create("concentric_wave")
+            self.background = BackgroundFactory.create(self.pygame, "concentric_wave", self.window_size[0], self.window_size[1])
                 
         # Check if we need to explose balls
         arcs_count = sum(1 for obj in self.objects if isinstance(obj, Arc) and obj.is_alive(current_step))
         if( arcs_count == 0 ):        
             for i, obj in enumerate(self.objects):
-                if isinstance(obj, Ball):
+                if isinstance(obj, Ball) and obj.step.block == True:
                     obj.explode()
 
 

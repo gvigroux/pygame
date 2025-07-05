@@ -1,0 +1,578 @@
+{
+  "objects": [
+    {
+      "label": "######################### SOUND ########################",
+      "type": "explosion",
+      "on_spawn": {
+        "sound": {
+          "path": "C:\\PYGAME\\effects\\Cri wilhelm.mp3"
+        }
+      },
+      "step": {
+        "delay": 20.6
+      }
+    },
+    {
+      "label": "######################### SOUND ########################",
+      "type": "explosion",
+      "on_spawn": {
+        "sound": {
+          "path": "C:\\PYGAME\\effects\\Cri wilhelm.mp3"
+        }
+      },
+      "step": {
+        "delay": 42.6
+      }
+    },
+    {
+      "label": "######################### EXPLOSION TOMBE ########################",
+      "type": "explosion",
+      "count": 100,
+      "on_spawn": {
+        "fragment": {
+          "count": 1,
+          "radius": 1.5,
+          "radius_range": 2,
+          "lifetime": "random.choice([1.5, 3, 4])",
+          "color": "(random.uniform(160, 200),random.uniform(115, 150),random.uniform(0, 20),255)",
+          "color_range": 0.1
+        },
+        "sound": {
+          "path": "media/sound/kenney/impact/footstep_snow_001.ogg"
+        }
+      },
+      "position": { "x": "75%", "y": "10%" },
+      "step": {
+        "delay": 5.5
+      }
+    },
+    {
+      "label": "######################### EXPLOSION ASS 0 ########################",
+      "type": "explosion",
+      "count": 100,
+      "on_spawn": {
+        "fragment": {
+          "count": 1,
+          "radius": 3,
+          "radius_range": 3,
+          "lifetime": "random.choice([3, 6])",
+          "color": "(random.uniform(160, 200),random.uniform(115, 150),random.uniform(0, 20),255)",
+          "color_range": 0.1
+        },
+        "sound": {
+          "path": "media/sound/kenney/impact/footstep_snow_003.ogg"
+        }
+      },
+      "position": { "x": "54.6%", "y": "67.5%" },
+      "step": {
+        "delay": 5.85
+      }
+    },
+    {
+      "label": "######################### EXPLOSION ASS 1 ########################",
+      "type": "explosion",
+      "count": 100,
+      "on_spawn": {
+        "fragment": {
+          "count": 1,
+          "radius": 3,
+          "radius_range": 3,
+          "lifetime": "random.choice([3, 6])",
+          "color": "(random.uniform(160, 200),random.uniform(115, 150),random.uniform(0, 20),255)",
+          "color_range": 0.1
+        },
+        "sound": {
+          "path": "media/sound/kenney/impact/footstep_snow_003.ogg"
+        }
+      },
+      "position": { "x": "51.6%", "y": "67.5%" },
+      "step": {
+        "delay": 5.85
+      }
+    },
+    {
+      "label": "######################### QUESTION ########################",
+      "type": "text",
+      "text": {
+        "value": "Combien d’heures un chat peut-il dormir par jour ?",
+        "color": "(0, 0, 0, 255)",
+        "font": {
+          "size": 38,
+          "family": "Anton Regular"
+        },
+        "outline": {
+          "color": "(255, 255, 255)",
+          "width": 2
+        },
+        "margin": "(0, 20, 0, 20)",
+        "padding": "(10, 10, 10, 31)",
+        "background": { "color": "(200, 20, 20,255)", "radius": 10 }
+      },
+      "position": { "x": 0, "y": "12%" },
+      "step": {
+        "stop": 2
+      }
+    },
+    {
+      "label": "######################### SECONDS COUNTER ########################",
+      "type": "text",
+      "surface_draw": false,
+      "text": {
+        "value": "00",
+        "padding": "(0, 0, 0, 0)",
+        "update": "f'{seconds:02d}'",
+        "color": "(255, 0, 0, 255)",
+        "font": {
+          "size": 80,
+          "family": "Wumpus Mono Pro"
+        },
+        "outline": {
+          "color": "(60, 60, 60, 255)",
+          "width": 1
+        }
+      },
+      "on_destroy": {
+        "fragment": {
+          "count": 100,
+          "radius": 4,
+          "lifetime": 2
+        }
+      },
+      "position": { "justify": "HV" },
+      "step": {
+        "delay": 10,
+        "stop": 1,
+        "fade_in": 1,
+        "explode": true
+      }
+    },
+    {
+      "label": "######################### TITLE ########################",
+      "type": "text",
+      "text": {
+        "value": "98% échouent",
+        "color": "( 28,161, 242)",
+        "font": {
+          "bold": false,
+          "size": 50,
+          "family": "Anton Regular"
+        },
+        "outline": {
+          "color": "(255, 255, 255, 255)",
+          "width": 1
+        }
+      },
+      "position": { "y": 40 },
+      "step": {
+        "start": 0,
+        "delay": 10,
+        "stop": 2
+      }
+    },
+    {
+      "label": "######################### VITE!!! ########################",
+      "type": "text",
+      "text": {
+        "value": "C’est toi qui choisis le prochain animal en commentaire!",
+        "font": {
+          "size": 32,
+          "family": "lobsterregular"
+        },
+        "outline": {
+          "color": "(100, 100, 100, 200)",
+          "width": 2
+        },
+        "padding": "(0, 20, 0, 20)"
+      },
+      "position": { "y": 850 },
+      "step": {
+        "delay": 10,
+        "fade_in": 1,
+        "fade_out": 1,
+        "stop": 0.5
+      }
+    },
+    {
+      "label": "######################### RESPONSE TEXT ########################",
+      "type": "text",
+      "text": {
+        "value": "Entre 16 et 20 heures!!!",
+        "font": {
+          "bold": true,
+          "size": 32,
+          "family": "Roboto"
+        },
+        "outline": {
+          "color": "(100, 100, 100, 200)",
+          "width": 2
+        },
+        "padding": "(0, 20, 0, 20)"
+      },
+      "step": {
+        "start": 1,
+        "duration": 10,
+        "delay": 0.5,
+        "fade_in": 0.5,
+        "fade_out": 0.5,
+        "block": true
+      },
+      "position": { "y": "340+i*40" }
+    },
+    {
+      "label": "######################### RESPONSE EMOJI ########################",
+      "type": "text",
+      "text": {
+        "value": "😺💤",
+        "font": {
+          "size": 50,
+          "family": "Segoe UI Emoji"
+        }
+      },
+      "on_spawn": {
+        "fragment": {
+          "count": 100,
+          "radius": 3,
+          "radius_range": 3,
+          "lifetime": "random.choice([3, 6])",
+          "color": "(random.uniform(160, 200),random.uniform(115, 150),random.uniform(0, 20),255)",
+          "color_range": 0.1
+        },
+        "sound": {
+          "path": "media/sound/kenney/impact/footstep_snow_003.ogg"
+        }
+      },
+      "step": {
+        "start": 1,
+        "duration": 10,
+        "delay": 0.5,
+        "fade_in": 0.5,
+        "fade_out": 0.5,
+        "block": true
+      },
+      "position": { "y": "400" }
+    },
+    {
+      "label": "######################### COMMENT LOGO ########################",
+      "type": "text",
+      "text": {
+        "value": "🐾👉",
+        "font": {
+          "size": 40,
+          "family": "Segoe UI Emoji"
+        }
+      },
+      "position": { "x": "60%", "y": "70%", "justify": "none" },
+      "step": {
+        "start": 1,
+        "duration": 5,
+        "delay": 5,
+        "fade_in": 0.5,
+        "block": true
+      }
+    },
+    {
+      "label": "######################### SUBSCRIBE ########################",
+      "type": "text",
+      "text": {
+        "value": "Abonne-toi pour plus de défis !",
+        "font": {
+          "size": 35,
+          "family": "lobsterregular"
+        },
+        "outline": {
+          "color": "(100, 100, 100, 200)",
+          "width": 2
+        },
+        "padding": "(0, 20, 0, 20)"
+      },
+      "position": { "y": "35%" },
+      "step": {
+        "start": 2,
+        "stop": 3,
+        "duration": 8,
+        "delay": 1.7,
+        "fade_in": 0.5,
+        "fade_out": 0.5,
+        "block": true
+      }
+    },
+    {
+      "label": "######################### BALLS TEXT 1 ########################",
+      "type": "ball",
+      "step": {
+        "start": 0,
+        "delay": 10,
+        "update_delay": 3,
+        "fade_in": 0.2,
+        "block": true
+      },
+      "text": {
+        "value": "12"
+      },
+      "on_collision": {
+        "fragment": {
+          "count": 20,
+          "radius": 2,
+          "lifetime": 0.4
+        },
+        "sound": {
+          "path": "media/sound/retro/SoundJump2.wav"
+        },
+        "acceleration": "(1.04, 1.04)"
+      },
+      "on_destroy": {
+        "fragment": {
+          "count": 20,
+          "radius": 3,
+          "lifetime": 0.4
+        },
+        "sound": {
+          "path": "media/sound/retro/SoundLand2.wav"
+        }
+      },
+      "on_spawn": {
+        "sound": {
+          "path": "media/sound/retro/SoundJump2.wav"
+        }
+      },
+      "count": 3,
+      "radius": 15,
+      "position": {
+        "x": "45%",
+        "y": "50%"
+      },
+      "velocity": [
+        "random.choice([-1, 1]) * random.uniform(50, 100)",
+        "random.choice([-1, 1]) * random.uniform(50, 100)"
+      ],
+      "color": "(random.uniform(0, 255), random.uniform(0, 255), random.uniform(0, 255), 255)"
+    },
+    {
+      "label": "######################### BALLS TEXT 2 ########################",
+      "type": "ball",
+      "step": {
+        "start": 0,
+        "delay": 10,
+        "update_delay": 3,
+        "fade_in": 0.2,
+        "block": true
+      },
+      "text": {
+        "value": "14"
+      },
+      "on_collision": {
+        "fragment": {
+          "count": 20,
+          "radius": 2,
+          "lifetime": 0.4
+        },
+        "sound": {
+          "path": "media/sound/retro/SoundJump2.wav"
+        },
+        "acceleration": "(1.04, 1.04)"
+      },
+      "on_destroy": {
+        "fragment": {
+          "count": 20,
+          "radius": 3,
+          "lifetime": 0.4
+        },
+        "sound": {
+          "path": "media/sound/retro/SoundLand2.wav"
+        }
+      },
+      "on_spawn": {
+        "sound": {
+          "path": "media/sound/retro/SoundJump2.wav"
+        }
+      },
+      "count": 3,
+      "radius": 15,
+      "position": {
+        "x": "55%",
+        "y": "50%"
+      },
+      "velocity": [
+        "random.choice([-1, 1]) * random.uniform(50, 100)",
+        "random.choice([-1, 1]) * random.uniform(50, 100)"
+      ],
+      "color": "(random.uniform(0, 255), random.uniform(0, 255), random.uniform(0, 255), 255)"
+    },
+    {
+      "label": "######################### BALLS TEXT 3 ########################",
+      "type": "ball",
+      "step": {
+        "start": 0,
+        "delay": 10,
+        "update_delay": 3,
+        "fade_in": 0.2
+      },
+      "text": {
+        "value": "16"
+      },
+      "on_collision": {
+        "fragment": {
+          "count": 20,
+          "radius": 2,
+          "lifetime": 0.4
+        },
+        "sound": {
+          "path": "media/sound/retro/SoundJump2.wav"
+        },
+        "acceleration": "(1.04, 1.04)"
+      },
+      "on_destroy": {
+        "fragment": {
+          "count": 20,
+          "radius": 3,
+          "lifetime": 0.4
+        },
+        "sound": {
+          "path": "media/sound/retro/SoundLand2.wav"
+        }
+      },
+      "on_spawn": {
+        "sound": {
+          "path": "media/sound/retro/SoundJump2.wav"
+        }
+      },
+      "count": 3,
+      "radius": 15,
+      "position": {
+        "x": "50%",
+        "y": "47.5%"
+      },
+      "velocity": [
+        "random.choice([-1, 1]) * random.uniform(50, 100)",
+        "random.choice([-1, 1]) * random.uniform(50, 100)"
+      ],
+      "color": "(random.uniform(0, 255), random.uniform(0, 255), random.uniform(0, 255), 255)"
+    },
+    {
+      "label": "######################### BALLS TEXT 4 ########################",
+      "type": "ball",
+      "step": {
+        "start": 0,
+        "delay": 10,
+        "update_delay": 3,
+        "fade_in": 0.2
+      },
+      "text": {
+        "value": "20"
+      },
+      "on_collision": {
+        "fragment": {
+          "count": 20,
+          "radius": 2,
+          "lifetime": 0.4
+        },
+        "sound": {
+          "path": "media/sound/retro/SoundJump2.wav"
+        },
+        "acceleration": "(1.04, 1.04)"
+      },
+      "on_destroy": {
+        "fragment": {
+          "count": 20,
+          "radius": 3,
+          "lifetime": 0.4
+        },
+        "sound": {
+          "path": "media/sound/retro/SoundLand2.wav"
+        }
+      },
+      "on_spawn": {
+        "sound": {
+          "path": "media/sound/retro/SoundJump2.wav"
+        }
+      },
+      "count": 3,
+      "radius": 15,
+      "position": {
+        "x": "50%",
+        "y": "52.5%"
+      },
+      "velocity": [
+        "random.choice([-1, 1]) * random.uniform(50, 100)",
+        "random.choice([-1, 1]) * random.uniform(50, 100)"
+      ],
+      "color": "(random.uniform(0, 255), random.uniform(0, 255), random.uniform(0, 255), 255)"
+    },
+    {
+      "label": "#########################  ARCS  ########################",
+      "type": "arc",
+      "step": {
+        "start": 0,
+        "fade_in": 2,
+        "delay": 8,
+        "block": true,
+        "duration": 55
+      },
+      "on_collision": {
+        "fragment": {
+          "count": 20,
+          "radius": 2,
+          "lifetime": 0.4
+        },
+        "sound": {
+          "path": "media/sound/retro/SoundJump2.wav"
+        }
+      },
+      "on_destroy": {
+        "fragment": {
+          "count": 50,
+          "radius": 3,
+          "lifetime": 0.4
+        },
+        "sound": {
+          "path": "media/sound/retro/SoundLand2.wav"
+        }
+      },
+      "count": 12,
+      "radius": "(300 - total*20)",
+      "speed": "random.choice([-1, 1]) * random.uniform(20, 100)",
+      "angle_start": 0,
+      "angle_end": "290",
+      "width": 10,
+      "color": "(random.uniform(0, 255), random.uniform(0, 255), random.uniform(0, 255), 255)",
+      "colors": [
+        "(random.uniform(0, 255), random.uniform(0, 255), random.uniform(0, 255), 255)",
+        "(random.uniform(0, 255), random.uniform(0, 255), random.uniform(0, 255), 255)"
+      ]
+    }
+  ],
+  "background": {
+    "type": "video",
+    "list": [
+      {
+        "path": "C:\\PYGAME\\backgrounds\\chat1.mp4",
+        "freeze_frame": 300,
+        "freeze_duration": 1
+      },
+      {
+        "path": "C:\\PYGAME\\backgrounds\\chat1.mp4",
+        "reverse": true,
+        "sound": {
+          "path": "C:\\PYGAME\\effects\\awesome-rewind-351984.mp3",
+          "volume": 0.8
+        }
+      },
+      {
+        "path": "C:\\PYGAME\\backgrounds\\chat1.mp4"
+      },
+      {
+        "path": "C:\\PYGAME\\backgrounds\\chat1.mp4",
+        "reverse": true,
+        "sound": {
+          "path": "C:\\PYGAME\\effects\\awesome-rewind-351984.mp3",
+          "volume": 0.8
+        }
+      },
+      {
+        "path": "C:\\PYGAME\\backgrounds\\chat1.mp4",
+        "loop": true
+      }
+    ]
+  },  
+  "settings": { "end_step": 3, "debug": false, "window_size": [608, 1080] }
+}

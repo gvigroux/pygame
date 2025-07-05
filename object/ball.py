@@ -4,6 +4,7 @@ import cairo
 import math
 
 
+from element.text import eText
 from object.arc import Arc
 from object.object import Object
 from object.inner_particle import InnerParticle
@@ -13,6 +14,7 @@ class Ball(Object):
         super().__init__(data, pygame, window_size, count, id)
         self.radius     = self.config("radius", 8)
         self.velocity   = self.config("velocity", [random.uniform(-150, 150), random.uniform(-150, 150)])
+        self.text       = eText(**self.config("text", {}))
         self.collision_margin = 1.5
           
 
@@ -22,13 +24,13 @@ class Ball(Object):
         self.position.y += self.velocity[1] * dt
 
         # Rebond sur les bords
-        #if self.position[0] - self.radius < 0 or self.position[0] + self.radius > self.window_width:
-        #    self.velocity[0] *= -1
-        #    self.position[0] = max(self.radius, min(self.position[0], self.window_width - self.radius))
+        if self.position.x - self.radius < 0 or self.position.x + self.radius > self.window_size[0]:
+            self.velocity[0] *= -1
+            self.position.x = max(self.radius, min(self.position.x, self.window_size[0] - self.radius))
 
-        #if self.position[1] - self.radius < 0 or self.position[1] + self.radius > self.window_height:
-        #    self.velocity[1] *= -1
-        #    self.position[1] = max(self.radius, min(self.position[1], self.window_height - self.radius))
+        if self.position.y - self.radius < 0 or self.position.y + self.radius > self.window_size[1]:
+            self.velocity[1] *= -1
+            self.position.y = max(self.radius, min(self.position.y, self.window_size[1] - self.radius))
 
     def _draw(self, ctx):
         # BALL BASIC
@@ -49,6 +51,27 @@ class Ball(Object):
         ctx.arc(self.position.x, self.position.y, self.radius, 0, 2 * math.pi)
         ctx.set_source(gradient)
         ctx.fill()
+
+
+        # ✅ Écriture du numéro au centre
+        if self.text.enabled():
+            ctx.save()
+            ctx.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
+            ctx.set_font_size(self.radius * 1.0)  # Taille relative au rayon
+
+            text = str(self.text.value)
+            # Obtenir la taille du texte
+            xbearing, ybearing, width, height, xadvance, yadvance = ctx.text_extents(text)
+            # Calcul pour centrer le texte
+            x_text = self.position.x - width / 2 - xbearing
+            y_text = self.position.y + height / 2
+
+            ctx.set_source_rgba(1, 1, 1, 1)  # Blanc
+            ctx.move_to(x_text, y_text)
+            ctx.show_text(text)
+            ctx.new_path()
+            ctx.restore()
+            
        
     def _draw_shadow(self, ctx): 
         ctx.arc(
@@ -120,44 +143,14 @@ class Ball(Object):
         ball.collision.play()
         
 
-    def check_arc_collision2(self, arc):
-
-        if(arc.exploded):
-            return False
-        
-        if(not arc.is_alive(self.current_step)):
-            return False
-        
-        dx = self.position.x - arc.position.x
-        dy = self.position.y - arc.position.y
-        dist_sq = dx*dx + dy*dy
-        
-        # Calcul des rayons critiques
-        inner = (arc.radius - arc.width/2) - self.radius
-        outer = (arc.radius + arc.width/2) + self.radius
-        
-        # Vérification rapide des limites
-        if dist_sq < inner*inner or dist_sq > outer*outer:
-            return False
-        
-        # Calcul précis de l'angle
-        angle = math.atan2(dy, dx) % (2*math.pi)
-        arc_end = (arc.start_angle + arc.visible_rad) % (2*math.pi)
-        
-        # Gestion des angles croisant 0°
-        if arc.start_angle > arc_end:
-            in_arc = angle >= arc.start_angle or angle <= arc_end
-        else:
-            in_arc = arc.start_angle <= angle <= arc_end
-        
-        return "hit_arc" if in_arc else "hit_hole"
-
-
     def check_arc_collision(self, arc):
         if arc.exploded:
             return False
 
         if not arc.is_alive(self.current_step):
+            return False
+        
+        if not arc.should_draw:
             return False
 
         dx = self.position.x - arc.position.x

@@ -2,7 +2,7 @@ import math
 import random
 import cairo
 import pygame
-import pygame.gfxdraw
+#import pygame.gfxdraw
 from element.background import eBackground
 from element.outline import eOutline
 from element.text import eText
@@ -45,9 +45,10 @@ class Text(Object):
         
         # Clean surfaces
         self.surfaces = []
+        self.background_surfaces = []
 
         # Padding: haut | droit | bas | gauche
-        max_text_width = self.window_size[0] - self.text.padding[1] - self.text.padding[3] - self.text.outline.width*2
+        max_text_width = self.window_size[0] - self.text.padding[1] - self.text.padding[3] - self.text.outline.width*2 - self.text.margin[1] - self.text.margin[3]  
         
         # --- Préparer le texte multiligne ---
         lines, width = self._wrap_text(self.text.value, max_text_width)
@@ -58,15 +59,18 @@ class Text(Object):
         if( self.title.enabled() ):
             height = round(self.title.font.point_size + self.title.padding[0] + self.title.padding[2])
         
-
         width += self.text.padding[1] + self.text.padding[3] + self.text.outline.width*2
         self.background.size = (width, height)  # Met à jour la hauteur du fond dynamiquement
 
         # --- adjust position ---
+        self.position.y += self.text.margin[0]
+        self.position.x += self.text.margin[1]
+
         if( "H" in self.position.justify ) :
             self.position.x = (self.window_size[0] - self.background.size[0]) // 2
         if( "V" in self.position.justify ) :
-            self.position.y = (self.window_size[1] - self.background.size[1]) // 2
+            self.position.y = (self.window_size[1] - self.background.size[1]) // 2 + self.text.margin[0]
+
 
         # --- background --- 
         if( self.background.enabled() ):  
@@ -76,7 +80,7 @@ class Text(Object):
                 self.background.getColor(self.alpha*255),
                 (0, 0, width, height),
                 border_radius=self.background.radius
-            )        
+            )
 
         self.height_position = 0
             
@@ -92,7 +96,94 @@ class Text(Object):
             surface.set_alpha(self.alpha * 255)
             self.surfaces.append(surface)
             
+
+
+
+    def render_text_with_outline(self, font, text, text_color, outline):
+       
+        # La surface comprend le fond
+        #surf_width  = self.background.size[0]
+        #surf_height = self.background.size[1]
+
+        surf_width  = self.text.font.sysFont.size(text)[0] + self.text.padding[1] + self.text.padding[3]
+        surf_height = self.line_height + self.text.padding[0] + self.text.padding[2] + self.text.outline.width*2
+
+        outline_surface = pygame.Surface((surf_width, surf_height), pygame.SRCALPHA)
+    
+        # Background per line
+        if( self.text.background.enabled() ):
+            background_surface = pygame.Surface((surf_width, surf_height), pygame.SRCALPHA)
+            pygame.draw.rect(
+                background_surface,
+                self.text.background.getColor(self.alpha*255),
+                (0, 0, surf_width, surf_height),
+                border_radius=self.text.background.radius
+            )
+            self.background_surfaces.append(background_surface)
         
+
+        # Texte + outline
+        text_surface = font.render(text, True, text_color)
+
+        # Position du texte centrée sur la zone "background"
+        text_x = (surf_width - text_surface.get_width()) // 2
+        text_y = (surf_height - text_surface.get_height()) // 2
+
+        # Outline = copies décalées autour
+        if outline.width > 0:
+            for dx in [-outline.width, 0, outline.width]:
+                for dy in [-outline.width, 0, outline.width]:
+                    if dx != 0 or dy != 0:
+                        outline_text = font.render(text, True, outline.color)
+                        outline_surface.blit(outline_text, (text_x + dx, text_y + dy))
+
+        # Texte principal
+        outline_surface.blit(text_surface, (text_x, text_y))
+
+        return outline_surface
+
+
+    def _wrap_text(self, text, max_width):
+        """Version améliorée qui retourne :
+        - les lignes découpées
+        - la largeur maximale trouvée
+        
+        Gère à la fois les sauts de ligne manuels (\n) et le wrapping automatique"""
+        
+        paragraphs = text.split('\n')
+        lines = []
+        max_line_width = 0  # Variable pour stocker la largeur maximale
+        
+        for paragraph in paragraphs:
+            words = paragraph.split()
+            current_line = ""
+            
+            for word in words:
+                test_line = current_line + (" " if current_line else "") + word
+                test_width = self.text.font.sysFont.size(test_line)[0]
+                
+                if test_width <= max_width:
+                    current_line = test_line
+                else:
+                    if current_line:
+                        current_width = self.text.font.sysFont.size(current_line)[0]
+                        max_line_width = max(max_line_width, current_width)
+                        lines.append(current_line)
+                    current_line = word
+            
+            if current_line:
+                current_width = self.text.font.sysFont.size(current_line)[0]
+                max_line_width = max(max_line_width, current_width)
+                lines.append(current_line)
+            
+            if not paragraph.strip():
+                lines.append("")
+                # Une ligne vide a une largeur de 0
+                max_line_width = max(max_line_width, 0)
+        
+        return lines, max_line_width
+    
+            
     def _update(self, dt, step, clock, blocked):
 
         if( step >= self.step.stop and self.step.explode ):
@@ -165,15 +256,31 @@ class Text(Object):
         if( self.surface_background is not None):
             screen.blit(self.surface_background , (self.position.x, self.position.y))
 
+        i = 0
+        for surface in self.background_surfaces:
+            x =  self.position.x
+            if( "H" in self.position.justify ) :
+                x = (self.window_size[0] - surface.get_width()) // 2
+
+            #TODO: do the setalpha in the surface and update the surface when the value change
+            alpha = min(self.alpha*255 , self.text.color[3])
+            surface.set_alpha(alpha)
+            screen.blit(surface, (x, self.position.y + self.height_position + i * self.line_height))
+            i += 1
+
         if( self.surface_title is not None):
             screen.blit(self.surface_title , (self.position.x + self.title.padding[1], self.position.y + self.title.padding[3] ))
 
         i = 0
         for surface in self.surfaces:
+            x =  self.position.x
+            if( "H" in self.position.justify ) :
+                x = (self.window_size[0] - surface.get_width()) // 2
+
             #TODO: do the setalpha in the surface and update the surface when the value change
             alpha = min(self.alpha*255 , self.text.color[3])
             surface.set_alpha(alpha)
-            screen.blit(surface, (self.position.x, self.position.y + self.height_position + i * self.line_height))
+            screen.blit(surface, (x, self.position.y + self.height_position + i * self.line_height))
             i += 1
 
 
@@ -186,74 +293,3 @@ class Text(Object):
             y = random.uniform(text_y_start, text_y_start +  self.background.size[1])
             points.append((x, y))
         return points
-
-
-
-    def render_text_with_outline(self, font, text, text_color, outline):
-       
-        # La surface comprend le fond + l'outline autour
-        surf_width  = self.background.size[0] #+ outline.width * 2
-        surf_height = self.background.size[1] #+ outline.width * 2
-
-        outline_surface = pygame.Surface((surf_width, surf_height), pygame.SRCALPHA)
-
-        # Texte + outline
-        text_surface = font.render(text, True, text_color)
-
-        # Position du texte centrée sur la zone "background"
-        text_x = (surf_width - text_surface.get_width()) // 2
-        text_y = (surf_height - text_surface.get_height()) // 2
-
-        # Outline = copies décalées autour
-        if outline.width > 0:
-            for dx in [-outline.width, 0, outline.width]:
-                for dy in [-outline.width, 0, outline.width]:
-                    if dx != 0 or dy != 0:
-                        outline_text = font.render(text, True, outline.color)
-                        outline_surface.blit(outline_text, (text_x + dx, text_y + dy))
-
-        # Texte principal
-        outline_surface.blit(text_surface, (text_x, text_y))
-
-        return outline_surface
-
-
-    def _wrap_text(self, text, max_width):
-        """Version améliorée qui retourne :
-        - les lignes découpées
-        - la largeur maximale trouvée
-        
-        Gère à la fois les sauts de ligne manuels (\n) et le wrapping automatique"""
-        
-        paragraphs = text.split('\n')
-        lines = []
-        max_line_width = 0  # Variable pour stocker la largeur maximale
-        
-        for paragraph in paragraphs:
-            words = paragraph.split()
-            current_line = ""
-            
-            for word in words:
-                test_line = current_line + (" " if current_line else "") + word
-                test_width = self.text.font.sysFont.size(test_line)[0]
-                
-                if test_width <= max_width:
-                    current_line = test_line
-                else:
-                    if current_line:
-                        current_width = self.text.font.sysFont.size(current_line)[0]
-                        max_line_width = max(max_line_width, current_width)
-                        lines.append(current_line)
-                    current_line = word
-            
-            if current_line:
-                current_width = self.text.font.sysFont.size(current_line)[0]
-                max_line_width = max(max_line_width, current_width)
-                lines.append(current_line)
-            
-            if not paragraph.strip():
-                lines.append("")
-                # Une ligne vide a une largeur de 0
-                max_line_width = max(max_line_width, 0)
-        
-        return lines, max_line_width

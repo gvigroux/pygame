@@ -1,0 +1,89 @@
+import random
+import cairo
+import pygame
+
+from element.background import eBackground
+from element.border import eBorder
+from object.object import Object
+
+class Timer(Object):
+    def __init__(self, data, pygame, window_size, count, id):
+        super().__init__(data, pygame, window_size, count, id)
+
+        self.duration = self.config("duration", 5) * 1000
+        self.elapsed  = 0  # temps écoulé en ms
+
+        size = self.config("size", (100, 100))
+        self.width    = size[0]
+        self.height   = size[1]
+
+        self.border     = eBorder(**self.config("border", {}))
+        self.background = eBackground(**self.config("background", {}))
+
+        if( "H" in self.position.justify ) :
+            self.position.x = (self.window_size[0] - self.width) // 2
+        if( "V" in self.position.justify ) :
+            self.position.y = (self.window_size[1] - self.height) // 2
+
+
+    def _update(self, dt, step, clock, blocked):
+        self.elapsed += dt*1000
+        if self.elapsed > self.duration:
+            self.elapsed = self.duration
+
+    def _draw(self, ctx):
+        x, y = self.position.x, self.position.y
+
+        # Dessine le fond de la barre
+        self.set_color(ctx, self.background.color)
+        ctx.rectangle(x, y, self.width, self.height)
+        ctx.fill()
+
+        # Dessine la partie restante
+        progress = self.elapsed / self.duration
+        remaining = max(0.0, 1.0 - progress)
+
+        self.set_color(ctx, self.color)
+        ctx.rectangle(x, y, self.width * remaining, self.height)
+        ctx.fill()
+
+        # Dessine la bordure
+        ctx.set_source_rgba(*self.border.color)
+        ctx.set_line_width(self.border.width)
+        ctx.rectangle(x, y, self.width, self.height)
+        ctx.stroke()
+
+    def _draw_shadow(self, ctx):
+        #TODO: invisible
+        offset = self.shadow.offset
+        x, y = self.position.x + offset, self.position.y + offset
+
+        # Dessine le fond de l’ombre
+        #ctx.set_source_rgba(0, 0, 0, 0.5)
+        ctx.rectangle(x, y, self.width, self.height)
+        ctx.fill()
+
+        # Dessine la partie restante de l’ombre
+        progress = self.elapsed / self.duration
+        remaining = max(0.0, 1.0 - progress)
+
+        ctx.rectangle(x, y, self.width * remaining, self.height)
+        ctx.fill()
+
+        # Ombre de la bordure
+        ctx.set_line_width(self.border.width)
+        ctx.rectangle(x, y, self.width, self.height)
+        ctx.stroke()
+
+    def is_finished(self):
+        return self.elapsed >= self.duration
+
+    def get_points(self, fragment):
+        points = []       
+        text_x_start = self.position.x
+        text_y_start = self.position.y
+        for i in range(fragment.count):
+            x = random.uniform(text_x_start, text_x_start +  self.width)
+            y = random.uniform(text_y_start, text_y_start +  self.height)
+            points.append((x, y))
+        return points
