@@ -7,3 +7,9 @@ class eBorder:
 
     def enabled(self):
         return self.width > 0
+
+    def schema(self):
+        return {
+            "color": ("str", "Color"),
+            "width": ("float", "Width"),
+        }

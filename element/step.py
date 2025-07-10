@@ -44,3 +44,18 @@ class eStep:
 
     def enabled(self):
         return True
+    
+    def schema(self):
+        return {
+            "start": ("float", "Start"),
+            "stop": ("float", "End"),
+            "duration": ("float", "Duration"),
+            "fade_in": ("float", "Fade In"),
+            "fade_out": ("float", "Fade Out"),
+            "delay": ("float", "Delay"),
+            "block": ("bool", "Block"),
+            "explode": ("bool", "Explode"),
+            "update_delay": ("float", "Update Delay"),
+            "count": ("int", "Count"),
+            "index": ("int", "Index"),
+        }

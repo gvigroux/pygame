@@ -25,3 +25,10 @@ class eFont:
 
     def enabled(self):
         return True
+    
+    def schema(self):
+        return {
+            "bold": ("bool", "Bold"),
+            "size": ("float", "Size"),
+            "family": ("str", "Family"),
+        }

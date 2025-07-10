@@ -18,10 +18,10 @@ class eFragment:
         self.radius_range = radius_range
         self.color_range = color_range
         self.color = color
-        if isinstance(self.lifetime, str):
-            self.lifetime = eval(self.lifetime, {"__builtins__": {}}, safe_globals)
-        if isinstance(self.color, str):
-            self.color = eval(self.color, {"__builtins__": {}}, safe_globals)
+        #if isinstance(self.lifetime, str):
+        #    self.lifetime = eval(self.lifetime, {"__builtins__": {}}, safe_globals)
+        #if isinstance(self.color, str):
+        #    self.color = eval(self.color, {"__builtins__": {}}, safe_globals)
 
         if self.color is not None and len(self.color) == 3:
             self.color = self.color + (255,)  # 255 = opaque
@@ -31,10 +31,20 @@ class eFragment:
     
     def get_color(self, main_color = None, backup_color = None):
         if( self.color is not None ):
-            return self.interpolate_color(self.color)
+            color = self.color
+            if isinstance(self.color, str):
+                color = eval(self.color, {"__builtins__": {}}, safe_globals)
+            if color is not None and len(color) == 3:
+                color = color + (255,)  # 25
+            return self.interpolate_color(color)
         if( main_color is not None ):
             return self.interpolate_color(main_color)
         return self.interpolate_color(backup_color)
+    
+    def get_lifetime(self):
+        if isinstance(self.lifetime, str):
+            return eval(self.lifetime, {"__builtins__": {}}, safe_globals)
+        return self.lifetime
         
     def interpolate_color(self, color):
         r, g, b, a = self.normalize_color(color)
@@ -53,3 +63,13 @@ class eFragment:
 
     def normalize_color(self, color):
         return tuple(c / 255.0 for c in color)
+    
+    def schema(self):
+        return {
+            "count": ("int", "Count"),
+            "radius": ("float", "Radius"),
+            "radius_range": ("float", "Radius Range"),
+            "lifetime": ("float", "Lifetime"),
+            "color": ("str", "Color"),
+            "color_range": ("float", "Color Range"),
+        }

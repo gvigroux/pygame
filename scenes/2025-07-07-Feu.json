@@ -1,0 +1,133 @@
+{
+  "garbage": [
+    {
+      "type": "voice",
+      "voice": {
+        "id": "kwhMCf63M8O3rCfnQ3oQ",
+        "text": "Ok, imagine : ta maison brûle. Tu sauves qui en premier, ton lapin ou ton chat ? Choisis vite et explique ton choix en commentaire… j’veux savoir qui tu laisserais derrière !"
+      },
+      "step": {
+        "delay": 0.5
+      }
+    }
+  ],
+  "objects": [
+    {
+      "type": "spark",
+      "position": { "x": 0, "y": "0" },
+      "size": {
+        "width": "100%",
+        "height": "100%"
+      },
+      "on_spawn": {
+        "sound": {
+          "path": "C:\\PYGAME\\effects\\Feu de cheminee 4.mp3",
+          "volume": 0.7
+        }
+      },
+      "fragment": {
+        "count": 2,
+        "radius": 1.5,
+        "radius_range": 2,
+        "lifetime": "random.choice([1.5, 3])",
+        "color": "(random.uniform(160, 250),random.uniform(100, 120),random.uniform(0, 20),255)",
+        "color_range": 0.1
+      }
+    },
+    {
+      "type": "spark",
+      "position": { "x": 0, "y": "90%" },
+      "size": {
+        "width": "100%",
+        "height": "10%"
+      },
+      "fragment": {
+        "count": 8,
+        "radius": 1.5,
+        "radius_range": 2,
+        "lifetime": "random.choice([1.5, 3,5])",
+        "color": "(220, random.choice([10, 150]), random.choice([0, 50]), 255)",
+        "color_range": 0.1
+      }
+    },
+    {
+      "label": "### HOOK ###",
+      "type": "text",
+      "text": {
+        "value": "🔥 Ta maison brûle ! Tu sauves qui ? 🐰🐱",
+        "color": "(255, 255, 255, 255)",
+        "font": {
+          "size": 50,
+          "family": "lobsterregular"
+        },
+        "outline": {
+          "color": "(0, 0, 0, 255)",
+          "width": 2
+        },
+        "margin": "(0, 20, 0, 20)",
+        "padding": "(10, 10, 10, 10)",
+        "background": { "color": "(200, 20, 20,255)", "radius": 10 }
+      },
+      "position": { "x": 0, "y": "12%" },
+      "step": {
+        "fade_out": 0.5,
+        "duration": 18,
+        "block": true
+      }
+    },
+    {
+      "label": "### CTA ###",
+      "type": "text",
+      "text": {
+        "value": "Commente ton choix!",
+        "font": {
+          "size": 40,
+          "family": "Anton Regular"
+        },
+        "outline": {
+          "color": "(0, 0, 0, 255)",
+          "width": 2
+        },
+        "padding": "(0, 20, 0, 20)"
+      },
+      "position": { "y": "70%" },
+      "step": {
+        "start": 0,
+        "stop": 0.9,
+        "duration": 6,
+        "delay": 10.5,
+        "fade_in": 0.2,
+        "fade_out": 0.2,
+        "block": true
+      }
+    }
+  ],
+  "background": {
+    "type": "video",
+    "list": [
+      {
+        "path": "C:\\PYGAME\\clips\\Cute_kittens_compilation_#cute_#ca\\clip_0.mp4",
+        "freeze_frame": 0,
+        "freeze_duration": 0.5
+      },
+      {
+        "path": "C:\\PYGAME\\clips\\Cute_kittens_compilation_#cute_#ca\\clip_0.mp4",
+        "start_frame": 0
+      },
+      {
+        "path": "C:\\PYGAME\\clips\\This bunny is really too leisurely\\clip_5.mp4"
+      },
+      {
+        "path": "C:\\PYGAME\\clips\\Compilation_Bebes_chats_#compilati\\clip_3.mp4"
+      },
+      {
+        "path": "C:\\PYGAME\\clips\\This bunny is really too leisurely\\clip_26.mp4"
+      },
+      {
+        "path": "C:\\PYGAME\\clips\\This bunny is really too leisurely\\clip_26.mp4",
+        "reverse": true
+      }
+    ]
+  },
+  "settings": { "end_step": 1, "debug": false, "window_size": [608, 1080] }
+}

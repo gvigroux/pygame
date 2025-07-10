@@ -19,3 +19,7 @@ class Explosion(Object):
         if( self.first_draw ):
             self.explode()
 
+    def _schema(self):
+        return {}
+
+

@@ -7,3 +7,9 @@ class eShadow:
 
     def enabled(self):
         return self.offset > 0
+    
+    def schema(self):
+        return {
+            "color": ("str", "Color"),
+            "offset": ("float", "Offset"),
+        }

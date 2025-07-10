@@ -214,7 +214,6 @@ class Video(BaseBackground):
 
     def apply_preloaded_video(self, video_data):
         with self.lock:
-            print("[Video] apply_preloaded_video")
             self.surface_frames = video_data.get("surface_frames", [])
             self.current_frame_index = 0
             self.reverse = video_data.get("reverse", False)

@@ -15,7 +15,7 @@ class Ball(Object):
         self.radius     = self.config("radius", 8)
         self.velocity   = self.config("velocity", [random.uniform(-150, 150), random.uniform(-150, 150)])
         self.text       = eText(**self.config("text", {}))
-        self.collision_margin = 1.5
+        #self.collision_margin = 1.5
           
 
     def _update(self, dt, step, clock, blocked):
@@ -136,11 +136,11 @@ class Ball(Object):
         ball.position.x -= nx * overlap * 0.5
         ball.position.y -= ny * overlap * 0.5 
 
-        self.create_particles(self.collision.fragment, self.color)
-        ball.create_particles(ball.collision.fragment, ball.color)
+        self.create_particles(self.on_collision.fragment, self.color)
+        ball.create_particles(ball.on_collision.fragment, ball.color)
 
-        self.accelerate(ball.collision.acceleration)
-        ball.collision.play()
+        self.accelerate(ball.on_collision.acceleration)
+        ball.on_collision.play()
         
 
     def check_arc_collision(self, arc):
@@ -194,9 +194,9 @@ class Ball(Object):
         self.reflect_velocity((nx, ny))
 
         # 4. Effets secondaires       
-        self.accelerate(arc.collision.acceleration)
-        self.create_particles(arc.collision.fragment, arc.color)
-        arc.collision.play()
+        self.accelerate(arc.on_collision.acceleration)
+        self.create_particles(arc.on_collision.fragment, arc.color)
+        arc.on_collision.play()
 
     def accelerate(self, acceleration):
         self.velocity[0] *= acceleration[0]

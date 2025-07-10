@@ -125,3 +125,14 @@ class Timer(Object):
             y = random.uniform(text_y_start, text_y_start +  self.height)
             points.append((x, y))
         return points
+    
+
+    def _schema(self):
+        return {
+            "duration": ("float", "Duration"),
+            "size": ("str", "Size"),
+            "border": ("border", "Border"),
+            "fragment": ("fragment", "Fragment"),
+            "background": ("background", "Background"),
+        }
+

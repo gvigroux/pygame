@@ -31,9 +31,8 @@ class Object:
         self.index      = i
         self.amount     = amount
 
-        self.lifetime   = self.config("lifetime", 1.0)
-        self.timer      = self.config("timer", 1.0)
         self.color      = self.config("color", (255, 255, 255, 255))
+        self.label      = self.config("label", "")
         if( len(self.color) == 3 ):
             self.color = (self.color[0], self.color[1], self.color[2], 255)
         
@@ -42,9 +41,9 @@ class Object:
         self.step           = eStep(self, **self.config("step", {}))
    
 
-        self.spawn              = eEvent(pygame, **self.config("on_spawn", {}))
-        self.destroy            = eEvent(pygame, **self.config("on_destroy", {}))
-        self.collision          = eEvent(pygame, **self.config("on_collision", {}))
+        self.on_spawn              = eEvent(pygame, **self.config("on_spawn", {}))
+        self.on_destroy            = eEvent(pygame, **self.config("on_destroy", {}))
+        self.on_collision          = eEvent(pygame, **self.config("on_collision", {}))
 
         # Timing management
         self.enable     = self.config("enable", True)
@@ -71,6 +70,45 @@ class Object:
         self.log_draw_durations = []
         self.t0 = 0
         self.t1 = 0
+
+    def prepare(self):     
+        self.color      = self.config("color", (255, 255, 255, 255))
+        self.label      = self.config("label", "")
+        if( len(self.color) == 3 ):
+            self.color = (self.color[0], self.color[1], self.color[2], 255)   
+        self.position       = ePosition(self.window_size, self.amount, self.index, **self.config("position", {"x": "50%","y": "50%"}))   
+
+    def enabled(self):
+        return True
+
+    def schema(self):
+        child_schema = self._schema()
+        parent_schema = {
+            "label": ("str", "Label"),
+            "enable": ("bool", "Enable"),
+            "color": ("str", "Color"),
+            "position": ("position", "Position"),
+            "shadow": ("shadow", "Shadow"),
+            "step": ("step", "Step"),
+            "on_spawn": ("event", "On Spawn"),
+            "on_destroy": ("event", "On Destroy"),
+            "on_collision": ("event", "On Collision"),
+        }  
+        return {**parent_schema, **child_schema}
+     
+    # def schema(self):
+    #     return {
+    #         "lifetime": ("float", "Lifetime"),
+    #         "timer": ("float", "Timer"),
+    #         "color": ("color", "Color"),
+    #         "position": ("position", "Position"),
+    #         "shadow": ("shadow", "Shadow"),
+    #         "step": ("step", "Step"),
+    #         "on_spawn": ("event", "On Spawn"),
+    #         "on_destroy": ("event", "On Destroy"),
+    #         "on_collision": ("event", "On Collision"),
+    #         "enable": ("bool", "Enable"),
+    #     }  
 
     def gradient_color(self,color1, color2, t):
         """Retourne une couleur intermédiaire entre color1 et color2 selon t ∈ [0.0, 1.0]"""
@@ -155,7 +193,7 @@ class Object:
         if self.destroyed:
             self.should_draw = False
             self.explode()
-            self.spawn.sound.stop()
+            self.on_spawn.sound.stop()
             return
         
         if self.exploded:
@@ -164,7 +202,7 @@ class Object:
                 self.alpha = 0.0
                 self.destroyed = True
                 self.should_draw = False
-                self.spawn.sound.stop()
+                self.on_spawn.sound.stop()
 
         if( self.age/1000 >= self.step.update_delay ):
             self._update(dt, step, clock, blocked)
@@ -208,8 +246,8 @@ class Object:
             
         if( self.first_draw ):
             self.first_draw = False
-            self.create_particles(self.spawn.fragment)
-            self.spawn.sound.play()
+            self.create_particles(self.on_spawn.fragment)
+            self.on_spawn.sound.play()
 
     def _draw_surface(self, screen):
         pass
@@ -264,8 +302,8 @@ class Object:
     def explode(self):
         if not self.exploded:
             self.exploded = True
-            self.create_particles(self.destroy.fragment)
-            self.destroy.sound.play()
+            self.create_particles(self.on_destroy.fragment)
+            self.on_destroy.sound.play()
 
 
     def get_points(self, fragment):

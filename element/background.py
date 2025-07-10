@@ -15,4 +15,9 @@ class eBackground:
         return (self.color[0], self.color[1], self.color[2],  min(alpha, self.color[3]))
     
 
-    
+    def schema(self):
+        return {
+            "color": ("str", "Color"),
+            "size": ("str", "Size"),
+            "radius": ("float", "Radius"),
+        }

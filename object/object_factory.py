@@ -1,10 +1,11 @@
 from object.arc import Arc
 from object.ball import Ball
 from object.explosion import Explosion
-from object.pytext import Text
+from object.spark import Spark
 from object.text_draw import TextDraw
 from object.text_surface import TextSurface
 from object.timer import Timer
+from object.voice import Voice
 
 OBJECT_CLASSES = {
     "explosion": Explosion,
@@ -13,6 +14,8 @@ OBJECT_CLASSES = {
     "textDraw": TextDraw,
     "text": TextSurface,
     "timer": Timer,
+    "voice": Voice,
+    "spark": Spark,
 }
 
 class ObjectFactory:

@@ -21,3 +21,10 @@ class eSound:
         if( not self.enabled() ):
             return
         self.sound.stop()
+
+    def schema(self):
+        return {
+            "path": ("str", "Path"),
+            "volume": ("float", "Volume"),
+            "loop": ("bool", "Loop"),
+        }

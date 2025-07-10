@@ -10,16 +10,16 @@ safe_globals = {
     'i': 0
 }
 
-class ePosition:
-    def __init__(self, window_size, total = 0, i=0, x = "50%" , y = "50%", justify = "H"):
+class eSize:
+    def __init__(self, window_size, total = 0, i=0, width = "50%" , height = "50%"):
         self.window_size = window_size
-        #self.raw_x = x
-        #self.raw_y = y
+        self.raw_width  = width
+        self.raw_height = height
         safe_globals["total"] = total
         safe_globals["i"] = i
-        self.x = self._resolve_coord(x, window_size[0])
-        self.y = self._resolve_coord(y, window_size[1])
-        self.justify = justify
+        self.width  = self._resolve_coord(width, window_size[0])
+        self.height = self._resolve_coord(height, window_size[1])
+       
 
     def _resolve_coord(self, val, total):
         if isinstance(val, str) and val.endswith("%"):
@@ -38,11 +38,6 @@ class ePosition:
 
     def schema(self):
         return {
-            "x": ("float", "X"),
-            "y": ("float", "Y"),
-            "justify": ("str", "Justify"),
+            "width": ("float", "Width"),
+            "height": ("float", "Height"),
         }
-    
-    def prepare(self):
-        self.x = self._resolve_coord(self.x, self.window_size[0])
-        self.y = self._resolve_coord(self.y, self.window_size[1])

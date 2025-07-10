@@ -30,15 +30,36 @@ class TextDraw(Object):
         self.text       = eText(**self.config("text", {}))
         self.title      = eText(**self.config("title", {}))
         self.background = eBackground(**self.config("background", {}))
-        self.surface_draw = self.config("surface_draw", True)
         self.surfaces   = []
 
         self.line_height = self.text.font.point_size + 4
         self.surface_background = None
         self.surface_title = None
-        self._prepare()
-        
+           
+    def _schema(self):
+        return {
+            "text": ("text", "Text"),
+            "title": ("text", "Title"),
+            "background": ("background", "Background"),
+        }
 
+    def _update(self, dt, step, clock, blocked):
+        if step >= self.step.stop and self.step.explode:
+            self.explode()
+            return
+
+        if len(self.text.update) > 0:
+            safe_globals["seconds"] = int(self.age / 1000)
+            safe_globals["fps"] = int(clock.get_fps())
+            safe_globals["step"] = int(step)
+            safe_globals["blocked"] = int(blocked)
+            safe_globals["timing"] = self.age / 1000.0
+            x, y = self.pygame.mouse.get_pos()
+            safe_globals["mouse"] = f"{x * 100 / self.window_size[0]:.1f}% / {y * 100 / self.window_size[1]:.1f}%"
+
+            val = str(eval(self.text.update, {"__builtins__": {}}, safe_globals))
+            if val != self.text.value:
+                self.text.value = val
 
 
 

@@ -4,12 +4,12 @@ import time
 from background.backgrounds import BackgroundFactory
 from object.arc import Arc
 from object.ball import Ball
-from object.pytext import Text
 from object.object_factory import ObjectFactory
 
 
 data_fps = json.loads('''{
       "type": "textDraw",
+      "label": "Debug - FPS",
       "text": {
         "update": "f'F{fps:02d}'",
         "color": "(255, 0, 0, 255)",
@@ -18,6 +18,7 @@ data_fps = json.loads('''{
 
 data_step = json.loads('''{
       "type": "textDraw",
+      "label": "Debug - Step",
       "text": {
         "update": "f'S{step:02d}'",
         "color": "(255, 0, 0, 255)",
@@ -27,6 +28,7 @@ data_step = json.loads('''{
 
 data_blocked = json.loads('''{
       "type": "textDraw",
+      "label": "Debug - Blocked",
       "text": {
         "update": "f'B{blocked:02d}'",
         "color": "(255, 0, 0, 255)",
@@ -35,6 +37,7 @@ data_blocked = json.loads('''{
 
 data_timing = json.loads('''{
       "type": "textDraw",
+      "label": "Debug - Timing",
       "text": {
         "update": "f'{timing:.3f}s'",
         "color": "(255, 0, 0, 255)",
@@ -43,6 +46,7 @@ data_timing = json.loads('''{
 
 data_mouse = json.loads('''{
       "type": "textDraw",
+      "label": "Debug - Mouse",
       "text": {
         "update": "f'{mouse}'",
         "color": "(255, 0, 0, 255)",
@@ -66,13 +70,13 @@ class Game:
     
     def debug(self, value = False):        
         if( value ):
-            self.objects.append(Text(data_fps, self.pygame, self.window_size,0,0))
-            self.objects.append(Text(data_step,self.pygame, self.window_size,0,0))
-            self.objects.append(Text(data_blocked,self.pygame, self.window_size,0,0))
-            self.objects.append(Text(data_timing,self.pygame, self.window_size,0,0))
-            self.objects.append(Text(data_mouse,self.pygame, self.window_size,0,0))
+            self.objects.append(ObjectFactory.create(data_fps, self.pygame, self.window_size,0,0))
+            self.objects.append(ObjectFactory.create(data_step,self.pygame, self.window_size,0,0))
+            self.objects.append(ObjectFactory.create(data_mouse,self.pygame, self.window_size,0,0))
+            self.objects.append(ObjectFactory.create(data_timing,self.pygame, self.window_size,0,0))
+            self.objects.append(ObjectFactory.create(data_blocked,self.pygame, self.window_size,0,0))
             
-    def load(self, filename = "config.json"):
+    def load(self, filename = "config.json", avoid_debug = False):
 
         file_path = os.path.dirname(os.path.realpath(__file__))
         file = os.path.join(file_path, filename)
@@ -83,19 +87,19 @@ class Game:
         with open(file, 'r', encoding='utf-8') as f:
             self.config = json.load(f)
 
-        self._load_params()
+        self._load_params(avoid_debug)
         self._load_objects()
         self.start_delay = self.pygame.time.get_ticks()
 
 
-    def _load_params(self):
+    def _load_params(self, avoid_debug):
         settings = self.config.get("settings", {})
         self.end_step = settings.get("end_step", -1)
         self.window_size = settings.get("window_size", [540, 960])
-        if( settings.get("debug", False) ):
+        if( settings.get("debug", False) ) and avoid_debug:
             self.debug(True)
         
-        ############### Background ###############
+        ############### Background ###############        
         background_config = self.config.get("background", [])
         self.background = BackgroundFactory.create(self.pygame, background_config.get("type", "concentric_wave"),*self.window_size, background_config)
 
@@ -138,6 +142,11 @@ class Game:
                         self.objects.append(object)
                 else:
                     self.objects.append(object)
+
+    def add_object(self, data):
+        object = ObjectFactory.create(data, self.pygame, self.window_size, 1, 0)
+        self.objects.append(object)
+        return object
 
     @property
     def age(self):

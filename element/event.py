@@ -17,3 +17,10 @@ class eEvent:
         if( not self.enabled() ):
             return
         self.sound.play()
+
+    def schema(self):
+        return {
+            "fragment": ("dict", "Fragment"),
+            "sound": ("dict", "Sound"),
+            "acceleration": ("str", "Acceleration"),
+        }
