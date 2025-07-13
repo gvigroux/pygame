@@ -4,6 +4,8 @@ import math
 import random
 import time
 
+import pygame
+
 from element.event import  eEvent
 from element.fragment import eFragment
 from element.position import ePosition
@@ -254,16 +256,30 @@ class Object:
     def _update(self, dt, step, clock, blocked):
         pass
 
+
     def clone(self):
-        new_obj = self.__class__.__new__(self.__class__)
+        # new_obj = self.__class__.__new__(self.__class__)
+        # for key, value in self.__dict__.items():
+        #     try:
+        #         copied_value = copy.deepcopy(value)
+        #     except Exception as e:
+        #         print(f"[clone] Failed to deepcopy attribute '{key}' of type {type(value)}: {e}")
+        #         copied_value = value  # fallback: shallow copy
+        #     setattr(new_obj, key, copied_value)
+        # return new_obj
+       
+        obj = self.__class__.__new__(self.__class__)
         for key, value in self.__dict__.items():
+            if key in ("font_emoji"):
+                obj.set_font_emoji()
+                continue
             try:
                 copied_value = copy.deepcopy(value)
             except Exception as e:
-                print(f"[clone] Failed to deepcopy attribute '{key}' of type {type(value)}: {e}")
+                print(f"[clone] Failed to deepcopy attribute '{key}': {e}")
                 copied_value = value  # fallback: shallow copy
-            setattr(new_obj, key, copied_value)
-        return new_obj
+            setattr(obj, key, copied_value)
+        return obj
     
     def draw(self, ctx):
         t0 = time.perf_counter()

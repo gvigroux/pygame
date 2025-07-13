@@ -19,27 +19,30 @@ class eVoice:
         self.hash = hashlib.md5(text_bytes).hexdigest()
         #TODO: path should be configurable
         output_path = "c:\\PYGAME\\media\\voices\\"
-        self.filepath = f"{output_path}{self.id}_{self.hash}.mp3"
+        self.path = f"{output_path}{self.id}_{self.hash}.mp3"
 
         if not os.path.exists(output_path):
             os.makedirs(output_path)
 
-        if not os.path.isfile(self.filepath):
+        if not os.path.isfile(self.path):
             self.download()
-
         
         if(  self.enabled() ):
-            self.sound    = pygame.mixer.Sound(self.filepath)
+            self.sound    = pygame.mixer.Sound(self.path)
             self.sound.set_volume(0.8)
 
     def __getstate__(self):
         state = self.__dict__.copy()
-        del state["sound"]
+        if "sound" in state:
+            del state["sound"]
         return state
 
     def __setstate__(self, state):
         self.__dict__.update(state)
-        self.sound    = pygame.mixer.Sound(self.filepath)
+        if( self.path is not None ):
+            self.sound    = pygame.mixer.Sound(self.path)
+            self.sound.set_volume(0.8)
+
 
     def enabled(self):
         return self.text is not None

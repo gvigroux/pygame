@@ -179,7 +179,7 @@ def handle_time_click(seconds):
     preview_panel.show_preview(img)
 
 def handle_video_drop(video, x, y):
-    print(f"Vidéo lâchée à {x}, {y} : {video.path}")
+    #print(f"Vidéo lâchée à {x}, {y} : {video.path}")
     #timeline.add_background_video(video, at_position=(x, y))
     timeline.drop_clip(video, at_position=(x, y))
 

@@ -168,7 +168,7 @@ class Video(Object):
 
     def clone(self):
         """Clonage thread-safe"""
-        new_video = Video(self.data, pygame, self.window_size, self.count, self.index)
+        new_video = Video(self.data, self.window_size, self.count, self.index)
         # Copie des frames déjà chargés si disponible
         if self.is_ready():
             new_video.surface_frames = self.surface_frames.copy()
