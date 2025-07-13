@@ -267,11 +267,20 @@ class Object:
         #         copied_value = value  # fallback: shallow copy
         #     setattr(new_obj, key, copied_value)
         # return new_obj
+
+
+        try:
+            obj = copy.deepcopy(self)
+        except Exception as e:
+            print(f"[clone] Failed to deepcopy': {e}")
+        return obj
        
-        obj = self.__class__.__new__(self.__class__)
+        obj = self.__class__.__new__(self.__class__)        
         for key, value in self.__dict__.items():
             if key in ("font_emoji"):
                 obj.set_font_emoji()
+                continue
+            if key in ("thumb"):
                 continue
             try:
                 copied_value = copy.deepcopy(value)

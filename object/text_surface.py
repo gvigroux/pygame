@@ -30,10 +30,17 @@ class TextSurface(Object):
         self.line_height = self.text.font.point_size + 4
         self.surface_background = None
         self.surface_title = None
-        self.set_font_emoji()
+        self.font_emoji = pygame.font.SysFont("Segoe UI Emoji", self.text.font.point_size)
         self._prepare()
 
-    def set_font_emoji(self):
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        del state["font_emoji"]
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
         self.font_emoji = pygame.font.SysFont("Segoe UI Emoji", self.text.font.point_size)
 
     def _schema(self):

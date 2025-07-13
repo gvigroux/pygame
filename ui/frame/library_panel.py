@@ -19,6 +19,9 @@ class VideoLibraryPanel(ttk.Frame):
         self.scroll_frame = ScrollableFrame(self)
         self.scroll_frame.pack(fill="both", expand=True)
 
+    def has_video(self, path):
+        return path in self._added_video_paths
+
     def add_video(self, video):
         if video.path in self._added_video_paths:
             return

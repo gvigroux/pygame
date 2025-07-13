@@ -26,6 +26,8 @@ class Video(Object):
         self.end_frame = self.config("end_frame", -1)
         self.fps = self.config("fps", -1)
         self.thumb = None
+        self._thumb_ready = threading.Event()
+
 
         # Système de chargement asynchrone
         self._load_thread = None
@@ -34,47 +36,115 @@ class Video(Object):
         self.surface_frames = []
         self.target_size = None
 
-        # Initialisationp
-        print(f"[INIT VIDEO] label={self.label} path={self.path}")
+        # Initialisation
+        #print(f"[INIT VIDEO] label={self.label} path={self.path}")
         self._init_video_metadata()
         self._start_async_load()
 
+    # def __getstate__(self):
+    #     state = self.__dict__.copy()
+    #     # Supprimer les attributs non-copiables
+    #     for key in ['_load_thread', '_should_stop', '_frames_ready', '_thumb_ready', 'thumb']:
+    #         if key in state:
+    #             del state[key]
+    #     return state
+
+    # def __setstate__(self, state):
+    #     self.__dict__.update(state)
+    #     # Recrée les éléments exclus
+    #     self._should_stop = threading.Event()
+    #     self._frames_ready = threading.Event()
+    #     self._thumb_ready = threading.Event()
+    #     self._load_thread = None
+    #     self.thumb = None
+
     def _init_video_metadata(self):
-        """Charge les métadonnées synchrones (rapide)"""
+        """Charge les métadonnées de la vidéo (synchrone, rapide)"""
         cap = cv2.VideoCapture(self.path)
         if not cap.isOpened():
             print(f"[ERROR] Impossible d'ouvrir la vidéo: {self.path}")
             return
 
-        # Configuration FPS et durée
-        original_fps = cap.get(cv2.CAP_PROP_FPS)
+        # FPS
+        original_fps = cap.get(cv2.CAP_PROP_FPS) or 25  # fallback utile
         self.fps = self.fps if self.fps > 0 else original_fps
-        
-        frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+
+        # Nombre de frames total
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        usable_frames = total_frames
         if self.end_frame > 0:
-            frame_count = min(frame_count, self.end_frame) - self.start_frame
-        
-        # Définition de la durée
+            usable_frames = max(0, min(total_frames, self.end_frame) - self.start_frame)
+
+        # Définir la durée
         if self.freeze_duration > 0:
             self.step.duration = self.freeze_duration
-        elif self.step.duration == -1:
-            self.step.duration = frame_count / self.fps
+        elif self.step.duration <= 0:
+            self.step.duration = round(usable_frames / self.fps, 2)
 
-        # Création de la miniature
-        target_frame = self.freeze_frame if self.freeze_duration > 0 else self.start_frame
-        cap.set(cv2.CAP_PROP_POS_FRAMES, target_frame)
+        # Déterminer quelle frame utiliser pour la miniature
+        target_frame_idx = self.freeze_frame if self.freeze_duration > 0 else self.start_frame
+        cap.set(cv2.CAP_PROP_POS_FRAMES, target_frame_idx)
+
+        self.thumb_pil = None
+        self.target_size = (640, 480)  # fallback
+
         ret, frame = cap.read()
-        if ret:
+        if ret and frame is not None:
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            h, w, _ = frame_rgb.shape
-            height = 30
-            scale = height / h
-            resized = cv2.resize(frame_rgb, (int(w * scale), height), interpolation=cv2.INTER_AREA)
-            self.thumb = ImageTk.PhotoImage(Image.fromarray(resized))
-        
-        # Définit la taille cible pour les frames
-        self.target_size = (int(w), int(h)) if ret else (640, 480)
+            h, w = frame_rgb.shape[:2]
+            self.target_size = (w, h)
+
+            # Création miniature PIL (30px hauteur)
+            thumb_height = 30
+            thumb_width = int(w * (thumb_height / h))
+            resized = cv2.resize(frame_rgb, (thumb_width, thumb_height), interpolation=cv2.INTER_AREA)
+            self.thumb_pil = Image.fromarray(resized)
+
         cap.release()
+
+
+    # def _init_video_metadata(self):
+    #     """Charge les métadonnées synchrones (rapide)"""
+    #     cap = cv2.VideoCapture(self.path)
+    #     if not cap.isOpened():
+    #         print(f"[ERROR] Impossible d'ouvrir la vidéo: {self.path}")
+    #         return
+
+    #     # Configuration FPS et durée
+    #     original_fps = cap.get(cv2.CAP_PROP_FPS)
+    #     self.fps = self.fps if self.fps > 0 else original_fps
+        
+    #     frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+    #     if self.end_frame > 0:
+    #         frame_count = min(frame_count, self.end_frame) - self.start_frame
+        
+    #     # Définition de la durée
+    #     if self.freeze_duration > 0:
+    #         self.step.duration = self.freeze_duration
+    #     elif self.step.duration == -1:
+    #         self.step.duration = round(frame_count / self.fps,2)
+
+    #     # Création de la miniature
+    #     target_frame = self.freeze_frame if self.freeze_duration > 0 else self.start_frame
+    #     cap.set(cv2.CAP_PROP_POS_FRAMES, target_frame)
+    #     ret, frame = cap.read()
+    #     if ret:
+    #         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    #         h, w, _ = frame_rgb.shape
+    #         height = 30
+    #         scale = height / h
+    #         resized = cv2.resize(frame_rgb, (int(w * scale), height), interpolation=cv2.INTER_AREA)
+    #         self.thumb = ImageTk.PhotoImage(Image.fromarray(resized))
+        
+    #     # Définit la taille cible pour les frames
+    #     self.target_size = (int(w), int(h)) if ret else (640, 480)
+    #     cap.release()
+
+    def get_thumb(self):
+        """Retourne la miniature (attend si nécessaire)"""
+        if( self.thumb is None ):
+            self.thumb = ImageTk.PhotoImage(self.thumb_pil)
+        return  self.thumb
 
     def _start_async_load(self):
         """Démarre le chargement en arrière-plan"""
@@ -125,11 +195,29 @@ class Video(Object):
                 temp_frames.reverse()
 
             self.surface_frames = temp_frames
+
+            # Générer une miniature depuis la première image chargée
+            # if temp_frames:
+            #     thumb_image = self.cairo_surface_to_pil(temp_frames[0])
+            #     thumb_resized = thumb_image.resize((thumb_image.width * 30 // thumb_image.height, 30), Image.Resampling.LANCZOS)
+            #     self.thumb = thumb_resized #ImageTk.PhotoImage(thumb_resized)
+            #     self._thumb_ready.set()
+
             self._frames_ready.set()
 
         except Exception as e:
             print(f"[VIDEO LOAD ERROR] {self.path}: {str(e)}")
 
+    def cairo_surface_to_pil(self, surface):
+        """Convertit une surface Cairo (FORMAT_ARGB32) en Image PIL"""
+        surface.flush()
+        width = surface.get_width()
+        height = surface.get_height()
+        stride = surface.get_stride()
+        data = surface.get_data()
+        buf = np.frombuffer(data, np.uint8).reshape((height, stride // 4, 4))[:, :width]
+        argb = buf[:, :, [1, 2, 3, 0]]  # ARGB32 → RGBA
+        return Image.fromarray(argb, mode="RGBA")
 
 
     def is_ready(self):

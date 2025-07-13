@@ -451,7 +451,7 @@ class Timeline(ttk.Frame):
         thumb_id = None
         if track == "background":
             rect_id     = self.canvas.create_rectangle(x1, y1, x2, y2, fill=self.style_clip_bg, outline=self.style_clip_bd)
-            thumb_id    = self.canvas.create_image(x1, y1, anchor="nw", image=object.thumb)
+            thumb_id    = self.canvas.create_image(x1, y1, anchor="nw", image=object.get_thumb())
         else:
             rect_id     = self.canvas.create_rectangle(x1, y1, x2, y2, fill=self.style_clip_bg, outline=self.style_clip_bd)
          

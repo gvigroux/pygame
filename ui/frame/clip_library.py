@@ -49,6 +49,9 @@ class ClipLibrary(ttk.Frame):
             )
             btn.pack(pady=4)
 
+    def has_video(self, path):
+        return path in self._added_video_paths
+    
     def add_unique_clip(self, clip):
         if( isinstance(clip, Video) ):
             if( clip.path in self._added_video_paths ):
@@ -64,6 +67,10 @@ class ClipLibrary(ttk.Frame):
         self.add_clip(new_clip)
 
     def add_clip(self, clip):
+        if( isinstance(clip, Video) ):
+            if( clip.path in self._added_video_paths ):
+                return
+            self._added_video_paths.add(clip.path)
 
         self._all_clips.append(clip)
 
@@ -72,6 +79,13 @@ class ClipLibrary(ttk.Frame):
                 self._create_video_widget(clip)
             else:
                 self._create_clip_widget(clip)
+
+    def get_video(self, path):
+        for clip in self._all_clips:
+            if( isinstance(clip, Video) ):
+                if clip.path == path:
+                    return clip
+        return None
 
     def _should_display(self, clip):
         if self._current_filter in (None, "all"):
@@ -95,8 +109,9 @@ class ClipLibrary(ttk.Frame):
         container = ttk.Frame(self.scroll_frame.get_content_frame(), padding=5, style="Unselected.TFrame")
         container.pack(fill="x", padx=5, pady=2)
 
-        label_img = ttk.Label(container, image=clip.thumb)
-        label_img.image = clip.thumb
+        img = clip.get_thumb()
+        label_img = ttk.Label(container, image=img)
+        label_img.image = img
         label_img.pack(side="left")
 
         text_frame = ttk.Frame(container)

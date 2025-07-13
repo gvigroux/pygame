@@ -10,6 +10,7 @@ import json
 import os
 import tkinter as tk
 from PIL import Image, ImageTk
+from concurrent.futures import ThreadPoolExecutor
 
 from background.video import Video
 from game import Game
@@ -91,18 +92,88 @@ def load_scene(state, game, file_path):
     if( game.background is not None ):
         background = game.background
         if( isinstance(background, Video) ):
+            seen_paths = set()
+            unique_videos = []
+
+            
+            all = time.time()
+            print(f"--Start ")
+
+            for data in background.raw_videos:
+                path = data.get("path")
+                if not path or path in seen_paths:
+                    continue
+                seen_paths.add(path)
+                data["type"] = "Video"
+                unique_videos.append(data)
+
+            with ThreadPoolExecutor(max_workers=6) as executor:
+                futures = [
+                    executor.submit(ObjectFactory.create, data, game.window_size, 1, 0)
+                    for data in unique_videos
+                ]
+
+            for future, data in zip(futures, unique_videos):
+                obj = future.result()
+                obj.step.delay = 0
+                library_panel.add_clip(obj)
+
+            print(f"[LOAD] Temps total pour {len(unique_videos)} vidéos : {(time.time() - all):.2f} secondes")
+
+
+
             i = 0
             last_end = 0
             for data in background.raw_videos:
-                data["type"] = "Video"
-                object = ObjectFactory.create(data, game.window_size, 1, 0)
-                object.step.delay = last_end
-                last_end = object.step.delay + object.step.duration
-                timeline.add_clip(object, track="background", start=object.step.delay, duration=object.step.duration)
+
+                video = library_panel.get_video(data["path"])
+                if video is None:
+                    continue
+                new_video = video.clone()
+                new_video.step.delay = last_end   
+                last_end = new_video.step.delay + new_video.step.duration
+                timeline.add_clip(new_video, track="background", start=new_video.step.delay, duration=new_video.step.duration)
+
+                #start_time = time.time()
+                #object = ObjectFactory.create(data, game.window_size, 1, 0)
+                #print(f"--Init : {(time.time() - start_time):.4f} secondes")
+                #object.step.delay = last_end
+                
+
+                #last_end = object.step.delay + object.step.duration
+                #timeline.add_clip(object, track="background", start=object.step.delay, duration=object.step.duration)
 
                 #library_panel.add_video(object)
-                library_panel.add_unique_clip(object)
+                #library_panel.add_unique_clip(object)
                 i+=1
+            #     
+            # for data in background.raw_videos:
+            #     if( library_panel.has_video(data["path"]) ):
+            #         continue
+            #     data["type"] = "Video"
+            #     start_time = time.time()
+            #     object = ObjectFactory.create(data, game.window_size, 1, 0)
+            #     object.step.delay = 0
+            #     library_panel.add_clip(object)
+            #     pass
+            # print(f"--Video all loaded : {(time.time() - all):.4f} secondes")
+            # i = 0
+            # last_end = 0
+            # for data in background.raw_videos:
+            #     data["type"] = "Video"
+                
+            #     start_time = time.time()
+            #     object = ObjectFactory.create(data, game.window_size, 1, 0)
+            #     print(f"--Init : {(time.time() - start_time):.4f} secondes")
+            #     object.step.delay = last_end
+                
+
+            #     last_end = object.step.delay + object.step.duration
+            #     timeline.add_clip(object, track="background", start=object.step.delay, duration=object.step.duration)
+
+            #     #library_panel.add_video(object)
+            #     library_panel.add_unique_clip(object)
+            #     i+=1
 
     timeline._draw_tracks()
 
@@ -178,9 +249,8 @@ def handle_time_click(seconds):
     img = Image.frombytes("RGBA", temp_surface.get_size(), raw_string)
     preview_panel.show_preview(img)
 
+
 def handle_video_drop(video, x, y):
-    #print(f"Vidéo lâchée à {x}, {y} : {video.path}")
-    #timeline.add_background_video(video, at_position=(x, y))
     timeline.drop_clip(video, at_position=(x, y))
 
 
