@@ -1,5 +1,6 @@
 import tkinter as tk
 import ttkbootstrap as ttk
+from object.video import Video
 from ui.frame.scrollable_frame import ScrollableFrame
 from PIL import Image, ImageTk
 import vlc
@@ -43,6 +44,9 @@ class PreviewPanel(ttk.Frame):
             elif media.lower().endswith((".mp4", ".avi", ".mov", ".mkv")):
                 self._show_video(media)
 
+        elif( isinstance(media, Video) ):
+            self._show_video(media.path)
+            
         elif isinstance(media, Image.Image):
             self._show_pil_image(media)
 

@@ -75,11 +75,11 @@ class Game:
     
     def debug(self, value = False):        
         if( value ):
-            self.objects.append(ObjectFactory.create(data_fps, self.pygame, self.window_size,0,0))
-            self.objects.append(ObjectFactory.create(data_step,self.pygame, self.window_size,0,0))
-            self.objects.append(ObjectFactory.create(data_mouse,self.pygame, self.window_size,0,0))
-            self.objects.append(ObjectFactory.create(data_timing,self.pygame, self.window_size,0,0))
-            self.objects.append(ObjectFactory.create(data_blocked,self.pygame, self.window_size,0,0))
+            self.objects.append(ObjectFactory.create(data_fps, self.window_size,0,0))
+            self.objects.append(ObjectFactory.create(data_step, self.window_size,0,0))
+            self.objects.append(ObjectFactory.create(data_mouse, self.window_size,0,0))
+            self.objects.append(ObjectFactory.create(data_timing, self.window_size,0,0))
+            self.objects.append(ObjectFactory.create(data_blocked, self.window_size,0,0))
             
     def load(self, filename = "config.json", avoid_debug = False, load_background = True):
 
@@ -142,7 +142,7 @@ class Game:
                 if( data.get("type") == "text" ) and data.get("split", False):
                     data["text"]["value"] = parts[i]
 
-                object = ObjectFactory.create(data, self.pygame, self.window_size, count, i)
+                object = ObjectFactory.create(data, self.window_size, count, i)
                 if( isinstance(object, Ball) ):
                     if not any(object.check_ball_collision(other) for other in self.objects if isinstance(other, Ball)):
                         self.objects.append(object)
@@ -150,7 +150,7 @@ class Game:
                     self.objects.append(object)
 
     def add_object(self, data):
-        object = ObjectFactory.create(data, self.pygame, self.window_size, 1, 0)
+        object = ObjectFactory.create(data, self.window_size, 1, 0)
         self.objects.append(object)
         return object
 

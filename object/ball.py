@@ -10,8 +10,8 @@ from object.object import Object
 from object.inner_particle import InnerParticle
 
 class Ball(Object):
-    def __init__(self, data, pygame, window_size, count, id):
-        super().__init__(data, pygame, window_size, count, id)
+    def __init__(self, data, window_size, count, id):
+        super().__init__(data, window_size, count, id)
         self.radius     = self.config("radius", 8)
         self.velocity   = self.config("velocity", [random.uniform(-150, 150), random.uniform(-150, 150)])
         self.text       = eText(**self.config("text", {}))

@@ -3,9 +3,9 @@ from element.sound import eSound
 
 
 class eEvent:
-    def __init__(self, pygame, fragment = {}, sound = {}, acceleration = (1, 1)):
+    def __init__(self, fragment = {}, sound = {}, acceleration = (1, 1)):
         self.fragment = eFragment(**fragment)
-        self.sound    = eSound(pygame, **sound)
+        self.sound    = eSound(**sound)
         self.acceleration = acceleration
         if isinstance(self.acceleration, str):
             self.acceleration = eval(self.acceleration)

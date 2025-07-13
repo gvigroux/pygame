@@ -1,7 +1,5 @@
 import math
 import random
-import cairo
-import pygame
 
 from element.background import eBackground
 from element.border import eBorder
@@ -10,8 +8,8 @@ from object.inner_particle import InnerParticle
 from object.object import Object
 
 class Timer(Object):
-    def __init__(self, data, pygame, window_size, count, id):
-        super().__init__(data, pygame, window_size, count, id)
+    def __init__(self, data, window_size, count, id):
+        super().__init__(data, window_size, count, id)
 
         self.duration = self.config("duration", 5)
         self.elapsed  = 0  # temps écoulé en ms

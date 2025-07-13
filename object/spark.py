@@ -7,8 +7,8 @@ from object.inner_particle import InnerParticle
 from object.object import Object
 
 class Spark(Object):
-    def __init__(self, data, pygame, window_size, count, id):
-        super().__init__(data, pygame, window_size, count, id)
+    def __init__(self, data, window_size, count, id):
+        super().__init__(data, window_size, count, id)
         self.position   = ePosition(window_size, count, id, **self.config("position", {}))
         self.size       = eSize(window_size, count, id, **self.config("size", {}))
         self.fragment   = eFragment(**self.config("fragment", {}))

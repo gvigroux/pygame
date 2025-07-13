@@ -1,4 +1,5 @@
 
+import copy
 import math
 import random
 import time
@@ -21,7 +22,7 @@ safe_globals = {
 
 
 class Object:
-    def __init__(self, data, pygame, window_size, amount =1, i = 1):
+    def __init__(self, data, window_size, amount =1, i = 1):
         cls = self.__class__
         if not hasattr(cls, "_count"):
             cls._count = 0
@@ -41,9 +42,9 @@ class Object:
         self.step           = eStep(self, **self.config("step", {}))
    
 
-        self.on_spawn              = eEvent(pygame, **self.config("on_spawn", {}))
-        self.on_destroy            = eEvent(pygame, **self.config("on_destroy", {}))
-        self.on_collision          = eEvent(pygame, **self.config("on_collision", {}))
+        self.on_spawn              = eEvent(**self.config("on_spawn", {}))
+        self.on_destroy            = eEvent(**self.config("on_destroy", {}))
+        self.on_collision          = eEvent(**self.config("on_collision", {}))
 
         # Timing management
         self.enable     = self.config("enable", True)
@@ -65,7 +66,7 @@ class Object:
         self.exploded   = False
         self.destroyed  = False
         self.first_draw = True
-        self.pygame     = pygame
+        #self.pygame     = pygame
         self.fade_speed = 5.0  # vitesse de disparition (1.0 = lent, 5.0 = rapide)
 
         self.log_draw_durations = []
@@ -253,7 +254,17 @@ class Object:
     def _update(self, dt, step, clock, blocked):
         pass
 
-
+    def clone(self):
+        new_obj = self.__class__.__new__(self.__class__)
+        for key, value in self.__dict__.items():
+            try:
+                copied_value = copy.deepcopy(value)
+            except Exception as e:
+                print(f"[clone] Failed to deepcopy attribute '{key}' of type {type(value)}: {e}")
+                copied_value = value  # fallback: shallow copy
+            setattr(new_obj, key, copied_value)
+        return new_obj
+    
     def draw(self, ctx):
         t0 = time.perf_counter()
 

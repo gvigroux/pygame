@@ -22,9 +22,9 @@ OBJECT_CLASSES = {
 
 class ObjectFactory:
     @staticmethod
-    def create(data, pygame, window_size, count, id):
+    def create(data, window_size, count, id):
         type = data.get("type")
         cls = OBJECT_CLASSES.get(type) 
         if cls is None:
             cls = OBJECT_CLASSES.get(type[0].lower() + type[1:])            
-        return cls(data, pygame, window_size, count, id)
+        return cls(data, window_size, count, id)

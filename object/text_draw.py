@@ -24,8 +24,8 @@ safe_globals = {
 }
 
 class TextDraw(Object):
-    def __init__(self, data, pygame, window_size, count, id):
-        super().__init__(data, pygame, window_size, count, id)
+    def __init__(self, data, window_size, count, id):
+        super().__init__(data, window_size, count, id)
 
         self.text       = eText(**self.config("text", {}))
         self.title      = eText(**self.config("title", {}))

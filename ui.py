@@ -15,6 +15,7 @@ from background.video import Video
 from game import Game
 from object.object import Object
 from object.object_factory import ObjectFactory
+from ui.frame.clip_library import ClipLibrary
 from ui.frame.empty_panel import EmptyPanel
 from ui.frame.library_panel import VideoLibraryPanel
 from ui.frame.preview_panel import PreviewPanel
@@ -84,6 +85,7 @@ def load_scene(state, game, file_path):
     for object in game.objects:
         timeline.add_track_top(False)
         timeline.add_clip( object, track=i, start=object.step.delay, duration=object.step.duration)
+        library_panel.add_unique_clip(object)
         i-=1
 
     if( game.background is not None ):
@@ -93,12 +95,13 @@ def load_scene(state, game, file_path):
             last_end = 0
             for data in background.raw_videos:
                 data["type"] = "Video"
-                object = ObjectFactory.create(data, game.pygame, game.window_size, 1, 0)
+                object = ObjectFactory.create(data, game.window_size, 1, 0)
                 object.step.delay = last_end
                 last_end = object.step.delay + object.step.duration
-                timeline.add_clip( object, track="background", start=object.step.delay, duration=object.step.duration)
+                timeline.add_clip(object, track="background", start=object.step.delay, duration=object.step.duration)
 
-                library_panel.add_video(object)
+                #library_panel.add_video(object)
+                library_panel.add_unique_clip(object)
                 i+=1
 
     timeline._draw_tracks()
@@ -177,7 +180,9 @@ def handle_time_click(seconds):
 
 def handle_video_drop(video, x, y):
     print(f"Vidéo lâchée à {x}, {y} : {video.path}")
-    timeline.add_background_video(video, at_position=(x, y))
+    #timeline.add_background_video(video, at_position=(x, y))
+    timeline.drop_clip(video, at_position=(x, y))
+
 
 
 def on_video_selected(path):
@@ -185,8 +190,7 @@ def on_video_selected(path):
         "type": "video",
         "path": path
     }    
-    object = ObjectFactory.create(data, game.pygame, game.window_size, 1, 0) 
-   # add_thumbnail_library(zone1_content, object, on_drop_callback=handle_video_drop)
+    object = ObjectFactory.create(data, game.window_size, 1, 0) 
     library_panel.add_video(object)
 
 
@@ -224,9 +228,8 @@ def open_type_chooser():
 
 
 
-def handle_video_click(video):
-    print(f"Vidéo cliquée : {video.path}")
-    preview_panel.show_preview(video.path)
+def handle_video_click(object):
+    preview_panel.show_preview(object)
 
 ######################################
 
@@ -387,8 +390,8 @@ paned = ttk.PanedWindow(vertical_paned, orient="horizontal")
 
 # Créer les 3 zones verticales
 
-library_panel = VideoLibraryPanel(paned, on_drop_callback=handle_video_drop, on_click=handle_video_click) 
 preview_panel = PreviewPanel(paned)
+library_panel = ClipLibrary(paned, on_drop_callback=handle_video_drop, on_click=preview_panel.show_preview) 
 property_panel = PropertyPanel(paned, update_callback=lambda: timeline.redraw())
 
 #library_panel = EmptyPanel(paned, title="Library", color="red")

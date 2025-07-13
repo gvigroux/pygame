@@ -1,6 +1,7 @@
 from element.background import eBackground
 from element.font import eFont
 from element.outline import eOutline
+import pygame
 
 
 class eText:
@@ -46,3 +47,4 @@ class eText:
             "background": ("dict", "Background"),
             "update": ("str", "Update"),
         }
+    

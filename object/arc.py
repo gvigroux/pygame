@@ -13,8 +13,8 @@ from object.inner_particle import InnerParticle
 
 
 class Arc(Object):
-    def __init__(self, data, pygame, window_size, count, id):
-        super().__init__(data, pygame, window_size, count, id)
+    def __init__(self, data, window_size, count, id):
+        super().__init__(data, window_size, count, id)
 
         self.radius      = self.config("radius", 10)
         self.angle_start_deg = self.config("angle_start", 0)  # DEGRÉS FIXE

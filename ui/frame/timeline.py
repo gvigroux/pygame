@@ -424,6 +424,11 @@ class Timeline(ttk.Frame):
 
 
     def _on_resize_end(self, event):
+        clip = self._resize_data.get("clip")
+        if clip and clip["track"] != "background":
+            self._resolve_overlaps_on_track(clip["track"])
+        elif clip and clip["track"] == "background":
+            self._reorder_background_clips()
         self._resize_data = {"clip": None, "side": None, "start_x": 0}
 
     def add_clip(self, object, track, start, duration):
@@ -496,7 +501,7 @@ class Timeline(ttk.Frame):
     def _on_clip_release(self, event):
         x = self.canvas.canvasx(event.x)
         dx = abs(x - self._drag_data["start_x"])
-        seuil = 5
+        seuil = 5 # Seuil pour distinguer un clic d’un drag
 
         item = self._drag_data["item"]
         for clip in self.clips:
@@ -510,9 +515,12 @@ class Timeline(ttk.Frame):
                     self.canvas.focus_set()
                     if self.on_clip_click:
                         self.on_clip_click(clip["object"])
-                elif clip["track"] == "background":
-                    # ✅ Réorganiser les clips de background à la fin du drag
-                    self._reorder_background_clips()
+                else:
+                    # DRAG terminé → réaligner si besoin
+                    if clip["track"] != "background":
+                        self._resolve_overlaps_on_track(clip["track"])
+                    else:
+                        self._reorder_background_clips()
                 break
 
         self._drag_data = {"x": 0, "item": None, "start_x": 0}
@@ -525,30 +533,54 @@ class Timeline(ttk.Frame):
         item = self.canvas.find_closest(x, event.y)[0]
         self._drag_data = {"item": item, "x": x, "start_x": event.x}
   
+   
     def _on_drag(self, event):
         if not self._drag_data["item"]:
             return
 
         item = self._drag_data["item"]
         x = self.canvas.canvasx(event.x)
+        y = self.canvas.canvasy(event.y)
+
         dx = x - self._drag_data["x"]
         self._drag_data["x"] = x
 
         for clip in self.clips:
             if item in (clip["rect_id"], clip["text_id"]):
-                if clip["track"] == "background":
-                    clip["object"].step.delay += dx / 50
-                else:
-                    self.canvas.move(clip["rect_id"], dx, 0)
-                    self.canvas.move(clip["text_id"], dx, 0)
-                    self.canvas.move(clip["left_handle"], dx, 0)
-                    self.canvas.move(clip["right_handle"], dx, 0)
+                old_track = clip["track"]
+
+                # === Mouvement horizontal
+                self.canvas.move(clip["rect_id"], dx, 0)
+                self.canvas.move(clip["text_id"], dx, 0)
+                self.canvas.move(clip["left_handle"], dx, 0)
+                self.canvas.move(clip["right_handle"], dx, 0)
+                if clip.get("thumb_id"):
+                    self.canvas.move(clip["thumb_id"], dx, 0)
+
+                # === Met à jour le delay
+                x1, _, _, _ = self.canvas.coords(clip["rect_id"])
+                clip["object"].step.delay = round(x1 / 50.0, 2)
+
+                # === Détection de track actuelle
+                new_track = int(y // self.track_height)
+                if 0 <= new_track < self.num_tracks and new_track != old_track:
+                    # Décalage vertical
+                    dy = (new_track - old_track) * self.track_height
+                    self.canvas.move(clip["rect_id"], 0, dy)
+                    self.canvas.move(clip["text_id"], 0, dy)
+                    self.canvas.move(clip["left_handle"], 0, dy)
+                    self.canvas.move(clip["right_handle"], 0, dy)
+                    if clip.get("thumb_id"):
+                        self.canvas.move(clip["thumb_id"], 0, dy)
+
+                    clip["track"] = new_track
                 break
+
+
 
     def _reorder_background_clips(self):
         """Réorganise les clips de la piste 'background' sans chevauchement et met à jour leur step.delay"""
-        print("Reorder background clips")
-
+      
         # 1. Récupérer et trier les clips de la piste 'background' par leur position logique (step.delay)
         background_clips = [
             clip for clip in self.clips if clip["track"] == "background"
@@ -581,11 +613,6 @@ class Timeline(ttk.Frame):
                 self.canvas.coords(clip["thumb_id"], x1, y1)
 
             current_time += duration
-
-
-    def _on_drag_end(self, event):
-        if self._drag_data["item"]:
-            self._drag_data = {"x": 0, "item": None, "start_x": 0}
 
 
     def _on_clip_click(self, event):
@@ -641,10 +668,85 @@ class Timeline(ttk.Frame):
         video_copy = video.clone()
         canvas_x = self.canvas.canvasx(at_position[0])
         video_copy.step.delay = max((canvas_x / 50.0)-10, 0)
-        print("Adding background video at:", video_copy.step.delay)
         self.add_clip(video_copy, track="background", start=video_copy.step.delay, duration= video_copy.step.duration)
         self._reorder_background_clips()
         self.redraw()
+
+    def get_track_at_y(self, y):
+        # Trouve la position du canvas dans la fenêtre globale
+        canvas_y_on_screen = self.canvas.winfo_rooty()
+        
+        # Calcule le y relatif dans le canvas
+        local_y = y - canvas_y_on_screen
+        
+        # Prend en compte le scroll
+        canvas_y = self.canvas.canvasy(local_y)
+        track_index = int(canvas_y // self.track_height)
+        return track_index
+    
+    def drop_clip(self, object, at_position):
+        # Conversion coordonnées écran → canevas
+        screen_x, screen_y = at_position
+        canvas_x = self.canvas.canvasx(screen_x - self.canvas.winfo_rootx())
+        canvas_y = self.canvas.canvasy(screen_y - self.canvas.winfo_rooty())
+        
+        track_index = self.get_track_at_y(at_position[1])
+        if track_index < 0 or track_index >= self.num_tracks:
+            print(f"[DROP] Invalid track index: {track_index}")
+            return
+
+        # Crée un nouvel objet clip (selon ton système)
+        object_copy = object.clone()
+        object_copy.step.delay = max((canvas_x / 50.0), 0)
+        print(f"[DROP] Adding background video at: {object_copy.step.delay:.2f} (track {track_index}) {canvas_x:.2f}")
+
+        self.add_clip(object_copy, track=track_index, start=object_copy.step.delay, duration= object_copy.step.duration)
+        self._resolve_overlaps_on_track(track_index)
+
+
+    def _resolve_overlaps_on_track(self, track_index):
+        """Décale les clips qui se chevauchent sur une track, récursivement"""
+
+        # 1. Récupère les clips de la track concernée
+        clips = [
+            clip for clip in self.clips
+            if clip["track"] == track_index and clip["object"].step.duration > 0
+        ]
+
+        # 2. Trie les clips par start time
+        clips.sort(key=lambda c: c["object"].step.delay)
+
+        for i in range(len(clips) - 1):
+            current = clips[i]
+            next_clip = clips[i + 1]
+
+            current_start = current["object"].step.delay
+            current_end = current_start + current["object"].step.duration
+
+            next_start = next_clip["object"].step.delay
+            next_duration = next_clip["object"].step.duration
+
+            # Si overlap : on pousse le next_clip juste après current
+            if next_start < current_end:
+                new_start = current_end
+                next_clip["object"].step.delay = new_start
+                next_clip["object"].data.setdefault("step", {})["start"] = new_start
+
+                # met à jour position canvas
+                x1 = new_start * 50
+                x2 = x1 + next_duration * 50
+                y1 = track_index * self.track_height + 5
+                y2 = y1 + self.track_height - 10
+
+                self.canvas.coords(next_clip["rect_id"], x1, y1, x2, y2)
+                self.canvas.coords(next_clip["left_handle"], x1 - 5, y1, x1 + 5, y2)
+                self.canvas.coords(next_clip["right_handle"], x2 - 5, y1, x2 + 5, y2)
+                self.canvas.coords(next_clip["text_id"], x1 + 5, (y1 + y2) / 2)
+
+                # Reboucle pour résoudre overlap en chaîne
+                self._resolve_overlaps_on_track(track_index)
+                break  # très important pour éviter boucle infinie
+
 
 
     def delete_selected_clip(self, event=None):
@@ -678,6 +780,4 @@ class Timeline(ttk.Frame):
                 duration = obj.step.duration
 
                 if( time >= start and time < start + duration ):
-                    print(obj.label)
-                    print(len(obj.surface_frames))
                     return obj.get_image(time-start)

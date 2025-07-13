@@ -8,6 +8,20 @@
       }
     },
     {
+      "label": "######################### REWIND ########################",
+      "type": "explosion",
+      "count": 1,
+      "on_spawn": {
+        "sound": {
+          "path": "C:\\PYGAME\\effects\\awesome-rewind-351984.mp3",
+          "volume": 0.8
+        }
+      },
+      "step": {
+        "delay": 3
+      }
+    },
+    {
       "label": "### HOOK ###",
       "type": "text",
       "text": {

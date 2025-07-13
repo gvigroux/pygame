@@ -32,3 +32,13 @@ class eFont:
             "size": ("float", "Size"),
             "family": ("str", "Family"),
         }
+
+    def __getstate__(self):
+        # Exclut self.font de la sauvegarde
+        state = self.__dict__.copy()
+        del state["sysFont"]
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.sysFont = pygame.font.SysFont(self.family, self.size, bold=self.bold)

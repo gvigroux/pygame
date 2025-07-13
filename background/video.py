@@ -126,7 +126,7 @@ class Video(BaseBackground):
         return True
 
     def play_sound(self, video):
-        sound = eSound(self.pygame, **video.get("sound", {}))
+        sound = eSound(**video.get("sound", {}))
         if not sound.enabled():
             return
         sound.play()

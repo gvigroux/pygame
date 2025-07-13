@@ -7,11 +7,13 @@ import cairo
 from PIL import Image, ImageTk
 from element.step import eStep
 from object.object import Object
+import pygame
+
 
 class Video(Object):
-    def __init__(self, data, pygame, window_size, count, id):
+    def __init__(self, data, window_size, count, id):
         #data = data.deepcopy()
-        super().__init__(data, pygame, window_size, count, id)
+        super().__init__(data, window_size, count, id)
         # Configuration originale
         self.path = self.config("path", "")
         if len(self.label) <= 0:
@@ -92,7 +94,6 @@ class Video(Object):
 
     def _async_load_task(self):
         """Tâche asynchrone de chargement des frames (isolée par instance)"""
-        print(f"[LOAD DEBUG] {self.label} → {self.path}")
         try:
             cap = cv2.VideoCapture(self.path)
             if not cap.isOpened():
@@ -125,8 +126,6 @@ class Video(Object):
 
             self.surface_frames = temp_frames
             self._frames_ready.set()
-            print(f"  surface_frames count: {len(self.surface_frames)}")
-            print(f"  surface_frames ids: {[id(f) for f in self.surface_frames[:3]]}")
 
         except Exception as e:
             print(f"[VIDEO LOAD ERROR] {self.path}: {str(e)}")
@@ -169,7 +168,7 @@ class Video(Object):
 
     def clone(self):
         """Clonage thread-safe"""
-        new_video = Video(self.data, self.pygame, self.window_size, self.count, self.index)
+        new_video = Video(self.data, pygame, self.window_size, self.count, self.index)
         # Copie des frames déjà chargés si disponible
         if self.is_ready():
             new_video.surface_frames = self.surface_frames.copy()

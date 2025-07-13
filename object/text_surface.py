@@ -19,8 +19,8 @@ safe_globals = {
 }
 
 class TextSurface(Object):
-    def __init__(self, data, pygame, window_size, count, id):
-        super().__init__(data, pygame, window_size, count, id)
+    def __init__(self, data, window_size, count, id):
+        super().__init__(data, window_size, count, id)
 
         self.text = eText(**self.config("text", {}))
         self.title = eText(**self.config("title", {}))
@@ -28,12 +28,21 @@ class TextSurface(Object):
         self.surfaces = []
 
         # Font pour emoji
-        self.font_emoji = pygame.font.SysFont("Segoe UI Emoji", self.text.font.point_size)
+        self.font_emoji = None #pygame.font.SysFont("Segoe UI Emoji", self.text.font.point_size)
 
         self.line_height = self.text.font.point_size + 4
         self.surface_background = None
         self.surface_title = None
         self._prepare()
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        del state["font_emoji"]
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.font_emoji = pygame.font.SysFont("Segoe UI Emoji", self.text.font.point_size)
 
     def _schema(self):
         return {
@@ -98,7 +107,7 @@ class TextSurface(Object):
 
     def render_text_with_outline(self, text, text_color, outline):
         font_normal = self.text.font.sysFont
-        font_emoji = self.font_emoji
+        font_emoji = pygame.font.SysFont("Segoe UI Emoji", self.text.font.point_size) #self.font_emoji
 
         parts = []
         buffer = ''

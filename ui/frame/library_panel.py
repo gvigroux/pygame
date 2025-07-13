@@ -78,8 +78,6 @@ class VideoLibraryPanel(ttk.Frame):
     def _start_drag(self, video, widget, event):
         if getattr(widget, "_is_dragging", False):
             return
-        
-        print(f"Start drag {video.label}")
 
         widget._is_dragging = True
         ghost = tk.Toplevel()

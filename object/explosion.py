@@ -11,8 +11,8 @@ from object.object import Object
 
 
 class Explosion(Object):
-    def __init__(self, data, pygame, window_size, count, id):
-        super().__init__(data, pygame, window_size, count, id)
+    def __init__(self, data, window_size, count, id):
+        super().__init__(data, window_size, count, id)
         
 
     def _draw(self, ctx):
