@@ -1,5 +1,11 @@
 import math
+import random
 
+
+safe_globals = {
+    "random": random,
+    "math": math
+}
 
 class InnerParticle:
     def __init__(self, position, velocity, lifetime=0.5, radius=2, color=(1, 1, 1, 1)):

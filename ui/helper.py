@@ -2,6 +2,49 @@
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 
+from PIL import Image, ImageTk, ImageOps
+
+def lighten_color(hex_color, factor=0.1):
+    """Éclaircit une couleur hex de `factor` (0.1 = +10%)"""
+    hex_color = hex_color.lstrip("#")
+    r = int(hex_color[0:2], 16)
+    g = int(hex_color[2:4], 16)
+    b = int(hex_color[4:6], 16)
+
+    r = min(int(r + (255 - r) * factor), 255)
+    g = min(int(g + (255 - g) * factor), 255)
+    b = min(int(b + (255 - b) * factor), 255)
+
+    return f"#{r:02x}{g:02x}{b:02x}"
+
+
+ 
+
+def colorize_icon(path, new_color=(255, 0, 0)):
+    """
+    Ouvre un PNG noir et transparent et remplace le noir par new_color.
+    """
+    img = Image.open(path).convert("RGBA")
+
+    # Séparer alpha
+    r, g, b, a = img.split()
+
+    # Convertir l’image en noir & blanc (mask)
+    gray = ImageOps.grayscale(img)
+    # Inverser : noir devient blanc
+    mask = ImageOps.invert(gray)
+
+    # Créer une image couleur unie
+    color_img = Image.new("RGBA", img.size, new_color + (0,))
+
+    # Coller la couleur uniquement où c’était noir
+    colored = Image.composite(color_img, Image.new("RGBA", img.size), mask)
+    colored.putalpha(a)
+
+    return ImageTk.PhotoImage(colored)
+
+
+
 
 def center_window(window, window_width, window_height):
         
@@ -37,7 +80,8 @@ def center_window(window, window_width, window_height):
 #     window.geometry(f"{width}x{height}+{new_x}+{new_y}")
 
 
-    
+   
+
 def center_on_parent(window):
     """
     Centre une Toplevel sur son parent.

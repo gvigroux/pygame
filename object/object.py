@@ -49,6 +49,7 @@ class Object:
         self.enable     = self.config("enable", True)
         self.current_step = -1
         self.start_time = 0
+        self.start_time = time.time()
         self.should_draw = False
         self.current_fade_in_time = 0.0
         self.current_fade_out_time = self.step.fade_out
@@ -80,6 +81,19 @@ class Object:
 
     def enabled(self):
         return True
+
+    def reset(self, start_time, current_step=0):
+        self.start_time = start_time
+        self.current_step = current_step
+        self.destroyed  = False
+        self.exploded   = False
+        self.first_draw = True
+        self.should_draw = False
+        self.alpha      = 1.0
+        self.particles  = []
+        self.current_fade_in_time = 0.0
+        self.current_fade_out_time = self.step.fade_out
+        
 
     def schema(self):
         child_schema = self._schema()
@@ -123,7 +137,7 @@ class Object:
     
     @property
     def age(self):
-        return self.pygame.time.get_ticks() - self.start_time - self.step.delay * 1000
+        return (time.time() - self.start_time - self.step.delay)
     
     def is_destroyed(self):
         return self.destroyed and len(self.particles) == 0
@@ -142,7 +156,6 @@ class Object:
             return True
         return False
     
-
     def update(self, dt, step, clock, blocked):
 
         if( self.enable == False ):
@@ -156,39 +169,69 @@ class Object:
         if( self.step.start > step ):
             return
         
+        # We move to current step
         if( self.current_step != self.step.start ):
-            self.start_time     = self.pygame.time.get_ticks()
+            #self.start_time     = self.pygame.time.get_ticks()
+            self.start_time     = time.time()
             self.current_step   = self.step.start
 
         # Delay
-        if( (self.pygame.time.get_ticks() - self.start_time)/1000 < self.step.delay ): 
-            return
+        #if( (self.pygame.time.get_ticks() - self.start_time)/1000 < self.step.delay ): 
+        #    return
         
-        phase_out = False
-        if( self.step.duration > 0 and self.age/1000 > self.step.duration ):
-            phase_out = True
+        if( (time.time() - self.start_time) < self.step.delay ): 
+             return
+        
+        #phase_out = False
+        #if( self.step.duration > 0 and self.age > self.step.duration ):
+        #    phase_out = True
         
         self.should_draw    = True
+    
         
-        # Fade in
-        if self.current_fade_in_time < self.step.fade_in:
-            self.current_fade_in_time += dt
-            self.alpha = min(self.current_fade_in_time / self.step.fade_in, 1.0)
+        if self.age < self.step.fade_in:
+            self.alpha = min(self.age / self.step.fade_in, 1.0)
+        else:
+            self.alpha = 1.0  # une fois le fade-in terminé
 
-        if( self.step.stop >= 0 and self.step.stop < step and self.step.fade_out > 0):
-            phase_out = True
+        #if( self.step.stop >= 0 and self.step.stop < step and self.step.fade_out > 0):
+        #    phase_out = True
 
-        if( phase_out ):
-            if( self.step.fade_out <= 0 ):
-                self.alpha = 0.0
-            elif self.current_fade_out_time <= self.step.fade_out:
-                self.current_fade_out_time -= dt
-                self.alpha = max(self.current_fade_out_time / self.step.fade_out, 0.0) 
+        # if( phase_out ):
+        #     if( self.step.fade_out <= 0 ):
+        #         self.alpha = 0.0
+        #     elif self.current_fade_out_time <= self.step.fade_out:
+        #         self.current_fade_out_time -= dt
+        #         self.alpha = max(self.current_fade_out_time / self.step.fade_out, 0.0) 
+        #         print("fadeout alpha", self.alpha)
 
-            if( self.alpha <= 0.0 ):
-                self.destroyed = True
-                #if( type(self).__name__ == "Arc" ):
-                self.explode()
+        #     if( self.alpha <= 0.0 ):
+        #         self.destroyed = True
+        #         self.explode()
+
+        if( self.age >= self.step.duration - self.step.fade_out ) and ( self.age < self.step.duration ):
+            age = self.age
+            time_in_fade_out = self.age - (self.step.duration - self.step.fade_out)
+            self.alpha = max(1.0 - (time_in_fade_out / self.step.fade_out), 0.0)
+            print("fadeout alpha", self.alpha)
+
+        if( self.age >= self.step.duration ) and ( self.step.duration >= 0):
+            self.destroyed = True
+            self.explode()
+
+        # if (self.step.stop >= 0 and self.step.stop < step and self.step.fade_out > 0) or (self.step.duration > 0 and self.age > self.step.duration - self.step.fade_out):
+        #     fade_out_start = self.age - self.step.duration - self.step.fade_out
+
+        #     if( self.step.fade_out <= 0 ):
+        #         self.alpha = 0.0
+
+        #     elif self.age >= self.step.duration - fade_out_start:
+        #         time_in_fade_out = self.age - fade_out_start
+        #         self.alpha = max(1.0 - (time_in_fade_out / self.step.fade_out), 0.0)
+            
+        #     if( self.alpha <= 0.0 ):
+        #         self.destroyed = True
+        #         self.explode()
 
         if self.destroyed:
             self.should_draw = False
@@ -204,7 +247,7 @@ class Object:
                 self.should_draw = False
                 self.on_spawn.sound.stop()
 
-        if( self.age/1000 >= self.step.update_delay ):
+        if( self.age >= self.step.update_delay ):
             self._update(dt, step, clock, blocked)
         
     def _update(self, dt, step, clock, blocked):
@@ -328,7 +371,17 @@ class Object:
             vx = math.cos(angle) * speed
             vy = math.sin(angle) * speed
 
+
+            lifetime = fragment.get_lifetime()
+
+            # For TiktokMaker
+            if( self.exploded ):
+                lifetime = max(self.step.duration - self.age + lifetime, 0 )
+
+            if( lifetime <= 0 ):
+                continue
+
             # Créer la particule
             particle = InnerParticle(position=(point[0], point[1]), velocity=(vx, vy),
-                                radius=fragment.get_radius(), lifetime=fragment.lifetime, color=fragment.get_color(color, self.color))
+                                radius=fragment.get_radius(), lifetime=lifetime, color=fragment.get_color(color, self.color))
             self.particles.append(particle)

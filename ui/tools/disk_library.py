@@ -13,49 +13,44 @@ from ui.log import log_message
 VIDEO_EXTENSIONS = [".mp4", ".avi"]
 THUMBNAIL_SIZE = (160, 90)
 
-class LibraryWindow:
-    def __init__(self, state):
+class DiskLibraryWindow:
+    def __init__(self, state, on_double_click=None):
         self.state = state
         self.current_player = None
         self.current_video_frame = None
         self.thumbs = []
         self.thumbnail_queue = queue.Queue()
+        self.on_double_click = on_double_click
 
         # Crée la fenêtre Toplevel
         self.window = ttk.Toplevel()
         self.window.title("Library")
 
-        
-        # Définir la taille souhaitée
+        # Dimensions
         window_width = 1000
         window_height = 700
-
-        # Obtenir la taille de l'écran
         screen_width = self.state['app'].winfo_screenwidth()
         screen_height = self.state['app'].winfo_screenheight()
-
-        # Calculer les coordonnées
         x = (screen_width - window_width) // 2
         y = (screen_height - window_height) // 2
-
-        # Appliquer la géométrie centrée
-        self.window.geometry(f"{window_width}x{window_height}+{x}+{y}")        
+        self.window.geometry(f"{window_width}x{window_height}+{x}+{y}")
         self.window.protocol("WM_DELETE_WINDOW", self.on_close)
 
-        # Colonne gauche : Canvas + scrollbar
+        # Partie gauche (thumbnails + scroll)
         left_side = ttk.Frame(self.window)
         left_side.pack(side="left", fill="both", expand=True)
 
         self.thumbs_canvas = ttk.Canvas(left_side)
         scrollbar = ttk.Scrollbar(left_side, orient="vertical", command=self.thumbs_canvas.yview)
-
         self.scrollable_frame = ttk.Frame(self.thumbs_canvas)
+
         self.scrollable_frame.bind(
             "<Configure>",
             lambda e: self.thumbs_canvas.configure(scrollregion=self.thumbs_canvas.bbox("all"))
         )
+
         def _on_mousewheel(event):
-            self.thumbs_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+            self.thumbs_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
         self.thumbs_canvas.bind_all("<MouseWheel>", _on_mousewheel)
         self.thumbs_canvas.bind_all("<Button-4>", lambda e: self.thumbs_canvas.yview_scroll(-1, "units"))
@@ -67,7 +62,7 @@ class LibraryWindow:
         self.thumbs_canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
 
-        # Colonne droite : vidéo
+        # Partie droite (lecteur vidéo)
         self.video_frame = ttk.Frame(self.window, width=304, height=540)
         self.video_frame.pack(side="right", padx=10, pady=10)
         self.video_frame.pack_propagate(False)
@@ -75,7 +70,7 @@ class LibraryWindow:
         video_label = ttk.Label(self.video_frame)
         video_label.pack(expand=True)
 
-        # Lance le thread de génération
+        # Lancer le thread
         self.start_thumbnail_loader("C:\\PYGAME\\clips")
 
     def start_thumbnail_loader(self, video_dir):
@@ -88,20 +83,21 @@ class LibraryWindow:
         log_message(self.state, f"Found {len(video_files)} videos.")
         for video_path in video_files:
             thumb = self.extract_thumbnail(video_path)
+            duration = self.get_video_duration(video_path)
             if thumb:
-                self.thumbnail_queue.put((thumb, video_path))
+                self.thumbnail_queue.put((thumb, video_path, duration))
 
     def check_queue(self):
         try:
             while True:
-                thumb, video_path = self.thumbnail_queue.get_nowait()
-                self.add_thumbnail(thumb, video_path)
+                thumb, video_path, duration = self.thumbnail_queue.get_nowait()
+                self.add_thumbnail(thumb, video_path, duration)
         except queue.Empty:
             pass
         self.window.after(100, self.check_queue)
 
-    def add_thumbnail(self, thumb, video_path, columns=8):
-        self.thumbs.append(thumb)  # Garde la référence pour éviter le GC
+    def add_thumbnail(self, thumb, video_path, duration, columns=8):
+        self.thumbs.append(thumb)
 
         i = len(self.thumbs) - 1
         row = i // columns
@@ -114,10 +110,25 @@ class LibraryWindow:
         label_img.image = thumb
         label_img.pack()
 
-        label_img.bind("<Button-1>", lambda e, path=video_path: self.play_video_vlc(self.state, path))
+        click_id = None  # pour stocker le timer de clic
 
-        label_text = ttk.Label(frame, text=os.path.basename(video_path), wraplength=150)
-        label_text.pack()
+        def on_click(e, path=video_path):
+            nonlocal click_id
+            if click_id is not None:
+                self.window.after_cancel(click_id)
+                click_id = None
+                if self.on_double_click:
+                    self.on_double_click(path)
+            else:
+                click_id = self.window.after(250, lambda: self.play_video_vlc(self.state, path))
+
+        label_img.bind("<Button-1>", on_click)
+
+        # Nom du fichier
+        ttk.Label(frame, text=os.path.basename(video_path), wraplength=150).pack()
+
+        # Durée
+        ttk.Label(frame, text=duration, font=("Arial", 8, "italic")).pack()
 
     def get_all_video_files(self, directory):
         video_files = []
@@ -138,13 +149,28 @@ class LibraryWindow:
             return ImageTk.PhotoImage(img)
         return None
 
+    def get_video_duration(self, video_path):
+        try:
+            cap = cv2.VideoCapture(video_path)
+            fps = cap.get(cv2.CAP_PROP_FPS)
+            frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+            cap.release()
+            if fps > 0:
+                seconds = int(frame_count / fps)
+                minutes = seconds // 60
+                seconds %= 60
+                return f"{minutes}:{seconds:02d}s"
+        except Exception as e:
+            print(f"Error getting duration: {e}")
+        return "??:??"
+
     def play_video_vlc(self, state, video_path):
         log_message(state, f"Play video [{video_path}]")
-        if self.current_player is not None:
+        if self.current_player:
             self.current_player.stop()
             self.current_player.release()
             self.current_player = None
-        if self.current_video_frame is not None:
+        if self.current_video_frame:
             self.current_video_frame.destroy()
             self.current_video_frame = None
 
@@ -157,10 +183,11 @@ class LibraryWindow:
         handle = self.current_video_frame.winfo_id()
         media = instance.media_new(video_path)
         player.set_media(media)
-        player.set_hwnd(handle)  # Windows
+        player.set_hwnd(handle)  # Windows only
 
         player.play()
         self.current_player = player
 
     def on_close(self):
         self.window.destroy()
+

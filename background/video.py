@@ -14,6 +14,7 @@ class Video(BaseBackground):
         super().__init__(pygame, width, height)
         self.parameters = parameters
         self.videos = list(parameters.get("list", []))
+        self.raw_videos = list(parameters.get("list", []))
         self.loop = False
         self.reverse = False
         self.cap = None
@@ -213,6 +214,7 @@ class Video(BaseBackground):
             self.preload_thread.start()
 
     def apply_preloaded_video(self, video_data):
+        print("Apply preloaded video")
         with self.lock:
             self.surface_frames = video_data.get("surface_frames", [])
             self.current_frame_index = 0

@@ -23,15 +23,22 @@ class Arc(Object):
         self.speed       = self.config("speed", random.uniform(-2, 2))
 
 
-        self.current_angle_deg  = 0.0  # angle dynamique en DEGRÉS
-
-        
+        self.current_angle_deg  = 0.0  # angle dynamique en DEGRÉS        
         self.visible_rad    = math.radians(self.angle_end_deg - self.angle_start_deg) 
 
         # Initialiser
         self.start_angle = math.radians(self.angle_start_deg)
         self.end_angle   = self.start_angle + self.visible_rad
 
+    def _schema(self):
+        return {
+            "radius": ("float", "Radius"),
+            "angle_start": ("float", "Angle start"),
+            "angle_end": ("float", "Angle end"),
+            "width": ("float", "Width"),
+            "speed": ("float", "Speed"),
+        }
+    
         
     def _update(self, dt, step, clock, blocked):
         # Angle tournant (ex: rotation)

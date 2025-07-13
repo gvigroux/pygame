@@ -13,7 +13,7 @@ class Timer(Object):
     def __init__(self, data, pygame, window_size, count, id):
         super().__init__(data, pygame, window_size, count, id)
 
-        self.duration = self.config("duration", 5) * 1000
+        self.duration = self.config("duration", 5)
         self.elapsed  = 0  # temps écoulé en ms
 
         size = self.config("size", (100, 100))
@@ -29,11 +29,20 @@ class Timer(Object):
         if( "V" in self.position.justify ) :
             self.position.y = (self.window_size[1] - self.height) // 2
 
+    def reset(self, start_time, current_step):
+        super().reset(start_time, current_step)
+        self.elapsed = 0
 
     def _update(self, dt, step, clock, blocked):
-        self.elapsed += dt*1000
-        if self.elapsed > self.duration:
+        #self.elapsed += dt
+        #if self.elapsed > self.duration:
+        #    self.elapsed = self.duration
+        #print("Timer update", self.age, self.elapsed, self.duration)
+
+        self.elapsed = self.age - self.step.update_delay
+        if self.elapsed >= self.duration:
             self.elapsed = self.duration
+        return
 
     def _draw(self, ctx):
         x, y = self.position.x, self.position.y

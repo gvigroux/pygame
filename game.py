@@ -60,13 +60,18 @@ class Game:
         self.pygame = pygame
 
         self.start_delay = 0
-                
+
         pygame.mixer.init()
         pygame.mixer.music.set_volume(0.2)  # 50% du volume
 
         self.objects = []
         self.has_music  = False
+        self.background = None
 
+    def reset(self):
+        self.objects = []
+        self.has_music  = False
+        self.background = None
     
     def debug(self, value = False):        
         if( value ):
@@ -76,7 +81,7 @@ class Game:
             self.objects.append(ObjectFactory.create(data_timing,self.pygame, self.window_size,0,0))
             self.objects.append(ObjectFactory.create(data_blocked,self.pygame, self.window_size,0,0))
             
-    def load(self, filename = "config.json", avoid_debug = False):
+    def load(self, filename = "config.json", avoid_debug = False, load_background = True):
 
         file_path = os.path.dirname(os.path.realpath(__file__))
         file = os.path.join(file_path, filename)
@@ -87,24 +92,25 @@ class Game:
         with open(file, 'r', encoding='utf-8') as f:
             self.config = json.load(f)
 
-        self._load_params(avoid_debug)
+        self._load_params(avoid_debug, load_background)
         self._load_objects()
-        self.start_delay = self.pygame.time.get_ticks()
+        self.start_time = time.time()
 
 
-    def _load_params(self, avoid_debug):
+    def _load_params(self, avoid_debug, load_background):
         settings = self.config.get("settings", {})
         self.end_step = settings.get("end_step", -1)
         self.window_size = settings.get("window_size", [540, 960])
         if( settings.get("debug", False) ) and avoid_debug:
             self.debug(True)
         
-        ############### Background ###############        
-        background_config = self.config.get("background", [])
-        self.background = BackgroundFactory.create(self.pygame, background_config.get("type", "concentric_wave"),*self.window_size, background_config)
+        ############### Background ###############     
+        if( load_background ):
+            background_config = self.config.get("background", [])
+            self.background = BackgroundFactory.create(self.pygame, background_config.get("type", "concentric_wave"),*self.window_size, background_config)
 
-        while not self.background.ready:
-            time.sleep(0.01)
+            while not self.background.ready:
+                time.sleep(0.01)
 
         ############### Music ###############
         self.music_stated = False
@@ -148,9 +154,13 @@ class Game:
         self.objects.append(object)
         return object
 
+    def remove_object(self, target):
+        if target in self.objects:
+            self.objects.remove(target)
+            
     @property
     def age(self):
-        return (self.pygame.time.get_ticks() - self.start_delay)/ 1000
+        return time.time() - self.start_time
 
     def update(self, dt, current_step, clock, obj_block):
 
@@ -163,7 +173,7 @@ class Game:
             self.music_stated = True
 
         # New background if needed
-        if( self.background.is_done() ):
+        if( self.background is not None and self.background.is_done() ):
             self.background = BackgroundFactory.create(self.pygame, "concentric_wave", self.window_size[0], self.window_size[1])
                 
         # Check if we need to explose balls
@@ -176,13 +186,13 @@ class Game:
 
     def draw_on_context(self, ctx, current_time):
 
-        self.background.draw(ctx, current_time)
+        if( self.background is not None):
+           self.background.draw(ctx, current_time)
         
         for object in self.objects:
             object.draw(ctx)
 
         
-
     def block_count(self, step):
         return sum(1 for obj in self.objects if obj.block(step))
     
