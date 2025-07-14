@@ -1,8 +1,11 @@
 import hashlib
 import os
+import subprocess
 import pygame
 
 import requests
+
+from element.sound import eSound
 
 API_KEY = "sk_a4ea9842ff92c551a2190616767d8f558e3318d0c397324b"
 
@@ -14,6 +17,7 @@ class eVoice:
     def __init__(self, id = 'kwhMCf63M8O3rCfnQ3oQ', text = None):
         self.id = id
         self.text = text
+        self.volume = 0.8
 
         text_bytes = text.encode('utf-8')
         self.hash = hashlib.md5(text_bytes).hexdigest()
@@ -26,37 +30,18 @@ class eVoice:
 
         if not os.path.isfile(self.path):
             self.download()
+
+        self.eSound = eSound(path=self.path,volume=0.8, loop=False)
         
-        if(  self.enabled() ):
-            self.sound    = pygame.mixer.Sound(self.path)
-            self.sound.set_volume(0.8)
-
-    def __getstate__(self):
-        state = self.__dict__.copy()
-        if "sound" in state:
-            del state["sound"]
-        return state
-
-    def __setstate__(self, state):
-        self.__dict__.update(state)
-        if( self.path is not None ):
-            self.sound    = pygame.mixer.Sound(self.path)
-            self.sound.set_volume(0.8)
-
-
+      
+        
     def enabled(self):
         return self.text is not None
     
     
-    def play(self):
-        if( not self.enabled() ):
-            return
-        self.sound.play(loops=False)
+    def play(self, start):
+        self.eSound.play(start)
 
-    def stop(self):
-        if( not self.enabled() ):
-            return
-        self.sound.stop()
 
     def download(self):
         

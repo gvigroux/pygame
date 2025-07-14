@@ -1,136 +1,165 @@
 {
-  "objects": [
-    {
-      "type": "voice",
-      "voice": {
-        "id": "kwhMCf63M8O3rCfnQ3oQ",
-        "text": "Chat ou Lapin? Choisis ton camp!"
-      }
-    },
-    {
-      "label": "######################### REWIND ########################",
-      "type": "explosion",
-      "count": 1,
-      "on_spawn": {
-        "sound": {
-          "path": "C:\\PYGAME\\effects\\awesome-rewind-351984.mp3",
-          "volume": 0.8
+    "objects": [
+        {
+            "type": "voice",
+            "voice": {
+                "id": "kwhMCf63M8O3rCfnQ3oQ",
+                "text": "Chat ou Lapin? Choisis ton camp!"
+            }
+        },
+        {
+            "label": "######################### REWIND ########################",
+            "type": "explosion",
+            "count": 1,
+            "on_spawn": {
+                "sound": {
+                    "path": "C:\\PYGAME\\effects\\awesome-rewind-351984.mp3",
+                    "volume": 0.8
+                }
+            },
+            "step": {
+                "delay": 3
+            }
+        },
+        {
+            "label": "### HOOK ###",
+            "type": "text",
+            "text": {
+                "value": "Lapin 🐰 ou Chat 🐱 ? \nChoisis ton camp",
+                "color": "(255, 255, 255, 255)",
+                "font": {
+                    "size": 50,
+                    "family": "lobsterregular"
+                },
+                "outline": {
+                    "color": "(0, 0, 0, 255)",
+                    "width": 2
+                },
+                "margin": "(0, 20, 0, 20)",
+                "padding": "(10, 10, 10, 10)",
+                "background": {
+                    "color": "(200, 20, 20,255)",
+                    "radius": 10
+                }
+            },
+            "position": {
+                "x": 0,
+                "y": "12%"
+            },
+            "step": {
+                "fade_out": 0.5,
+                "duration": 18,
+                "block": true
+            }
+        },
+        {
+            "label": "### CTA ###",
+            "type": "text",
+            "text": {
+                "value": "Commente ton choix!",
+                "font": {
+                    "size": 40,
+                    "family": "Anton Regular"
+                },
+                "outline": {
+                    "color": "(0, 0, 0, 255)",
+                    "width": 2
+                },
+                "padding": "(0, 20, 0, 20)"
+            },
+            "position": {
+                "y": "70%"
+            },
+            "step": {
+                "start": 0,
+                "stop": 0.9,
+                "duration": 6,
+                "delay": 10.5,
+                "fade_in": 0.2,
+                "fade_out": 0.2,
+                "block": true
+            }
+        },
+        {
+            "label": "### CTA 2 ###",
+            "type": "text",
+            "text": {
+                "value": "C'est un 🐰 ou un 🐱 ?",
+                "font": {
+                    "size": 40,
+                    "family": "Anton Regular"
+                },
+                "outline": {
+                    "color": "(0, 0, 0, 255)",
+                    "width": 2
+                },
+                "padding": "(0, 20, 0, 20)"
+            },
+            "position": {
+                "y": "30%"
+            },
+            "step": {
+                "start": 0,
+                "stop": 0.9,
+                "duration": 4,
+                "delay": 18,
+                "fade_in": 0.2,
+                "fade_out": 0.2,
+                "block": true
+            }
+        },
+        {
+            "path": "C:\\PYGAME\\clips\\This bunny is really too leisurely\\clip_6.mp4",
+            "freeze_frame": 0,
+            "freeze_duration": 0.5,
+            "type": "Video"
+        },
+        {
+            "path": "C:\\PYGAME\\clips\\This bunny is really too leisurely\\clip_6.mp4",
+            "freeze_frame": 0,
+            "freeze_duration": 0.5,
+            "type": "Video"
         }
-      },
-      "step": {
-        "delay": 3
-      }
+    ],
+    "background": {
+        "type": "video",
+        "list": [
+            {
+                "path": "C:\\PYGAME\\clips\\This bunny is really too leisurely\\clip_6.mp4",
+                "freeze_frame": 0,
+                "freeze_duration": 0.5
+            },
+            {
+                "path": "C:\\PYGAME\\clips\\This bunny is really too leisurely\\clip_6.mp4",
+                "end_frame": 120
+            },
+            {
+                "path": "C:\\PYGAME\\clips\\#chatonsmignons_#bebechatons_#cats\\clip_0.mp4",
+                "start_frame": 100,
+                "end_frame": 180
+            },
+            {
+                "path": "C:\\PYGAME\\clips\\This bunny is really too leisurely\\clip_0.mp4",
+                "end_frame": 120
+            },
+            {
+                "path": "C:\\PYGAME\\clips\\Compilation_Bebes_chats_#compilati\\clip_3.mp4"
+            },
+            {
+                "path": "C:\\PYGAME\\clips\\This bunny is really too leisurely\\clip_1.mp4"
+            },
+            {
+                "path": "C:\\PYGAME\\clips\\#chaton#chatongris#mignon#tartine#\\clip_0.mp4",
+                "loop": true
+            }
+        ]
     },
-    {
-      "label": "### HOOK ###",
-      "type": "text",
-      "text": {
-        "value": "Lapin 🐰 ou Chat 🐱 ? \nChoisis ton camp",
-        "color": "(255, 255, 255, 255)",
-        "font": {
-          "size": 50,
-          "family": "lobsterregular"
-        },
-        "outline": {
-          "color": "(0, 0, 0, 255)",
-          "width": 2
-        },
-        "margin": "(0, 20, 0, 20)",
-        "padding": "(10, 10, 10, 10)",
-        "background": { "color": "(200, 20, 20,255)", "radius": 10 }
-      },
-      "position": { "x": 0, "y": "12%" },
-      "step": {
-        "fade_out": 0.5,
-        "duration": 18,
-        "block": true
-      }
-    },
-    {
-      "label": "### CTA ###",
-      "type": "text",
-      "text": {
-        "value": "Commente ton choix!",
-        "font": {
-          "size": 40,
-          "family": "Anton Regular"
-        },
-        "outline": {
-          "color": "(0, 0, 0, 255)",
-          "width": 2
-        },
-        "padding": "(0, 20, 0, 20)"
-      },
-      "position": { "y": "70%" },
-      "step": {
-        "start": 0,
-        "stop": 0.9,
-        "duration": 6,
-        "delay": 10.5,
-        "fade_in": 0.2,
-        "fade_out": 0.2,
-        "block": true
-      }
-    },
-    {
-      "label": "### CTA 2 ###",
-      "type": "text",
-      "text": {
-        "value": "C'est un 🐰 ou un 🐱 ?",
-        "font": {
-          "size": 40,
-          "family": "Anton Regular"
-        },
-        "outline": {
-          "color": "(0, 0, 0, 255)",
-          "width": 2
-        },
-        "padding": "(0, 20, 0, 20)"
-      },
-      "position": { "y": "30%" },
-      "step": {
-        "start": 0,
-        "stop": 0.9,
-        "duration": 4,
-        "delay": 18,
-        "fade_in": 0.2,
-        "fade_out": 0.2,
-        "block": true
-      }
+    "settings": {
+        "end_step": 1,
+        "debug": false,
+        "window_size": [
+            608,
+            1080
+        ]
     }
-  ],
-  "background": {
-    "type": "video",
-    "list": [
-      {
-        "path": "C:\\PYGAME\\clips\\This bunny is really too leisurely\\clip_6.mp4",
-        "freeze_frame": 0,
-        "freeze_duration": 0.5
-      },
-      {
-        "path": "C:\\PYGAME\\clips\\This bunny is really too leisurely\\clip_6.mp4",
-        "end_frame": 120
-      },
-      {
-        "path": "C:\\PYGAME\\clips\\#chatonsmignons_#bebechatons_#cats\\clip_0.mp4",
-        "start_frame": 100,
-        "end_frame": 180
-      },
-      {
-        "path": "C:\\PYGAME\\clips\\This bunny is really too leisurely\\clip_0.mp4",
-        "end_frame": 120
-      },
-      {
-        "path": "C:\\PYGAME\\clips\\Compilation_Bebes_chats_#compilati\\clip_3.mp4"
-      },
-      {
-        "path": "C:\\PYGAME\\clips\\This bunny is really too leisurely\\clip_1.mp4"
-      },
-      {
-        "path": "C:\\PYGAME\\clips\\#chaton#chatongris#mignon#tartine#\\clip_0.mp4",
-        "loop": true
-      }
-    ]
-  },
-  "settings": { "end_step": 1, "debug": false, "window_size": [608, 1080] }
 }

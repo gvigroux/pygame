@@ -326,7 +326,7 @@ class Object:
         if( self.first_draw ):
             self.first_draw = False
             self.create_particles(self.on_spawn.fragment)
-            self.on_spawn.sound.play()
+            self.on_spawn.sound.play(self.age)
 
     def _draw_surface(self, screen):
         pass
@@ -382,7 +382,7 @@ class Object:
         if not self.exploded:
             self.exploded = True
             self.create_particles(self.on_destroy.fragment)
-            self.on_destroy.sound.play()
+            self.on_destroy.sound.play(0)
 
 
     def get_points(self, fragment):

@@ -26,37 +26,41 @@ class Video(Object):
         self.end_frame = self.config("end_frame", -1)
         self.fps = self.config("fps", -1)
         self.thumb = None
-        self._thumb_ready = threading.Event()
-
+        self.is_copy = False
 
         # Système de chargement asynchrone
         self._load_thread = None
         self._should_stop = threading.Event()
         self._frames_ready = threading.Event()
         self.surface_frames = []
+        #self.surface_frames_pil = []
+        
         self.target_size = None
 
         # Initialisation
-        #print(f"[INIT VIDEO] label={self.label} path={self.path}")
+        print(f"[INIT VIDEO] label={self.label} path={self.path}")
         self._init_video_metadata()
         self._start_async_load()
 
-    # def __getstate__(self):
-    #     state = self.__dict__.copy()
-    #     # Supprimer les attributs non-copiables
-    #     for key in ['_load_thread', '_should_stop', '_frames_ready', '_thumb_ready', 'thumb']:
-    #         if key in state:
-    #             del state[key]
-    #     return state
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        # Supprimer les attributs non-copiables
+        for key in ['_load_thread', '_should_stop', '_frames_ready', 'thumb', 'surface_frames']:
+            if key in state:
+                del state[key]
+        print(len(self.surface_frames))
+        return state
 
-    # def __setstate__(self, state):
-    #     self.__dict__.update(state)
-    #     # Recrée les éléments exclus
-    #     self._should_stop = threading.Event()
-    #     self._frames_ready = threading.Event()
-    #     self._thumb_ready = threading.Event()
-    #     self._load_thread = None
-    #     self.thumb = None
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        # Recrée les éléments exclus
+        self._should_stop = threading.Event()
+        self._frames_ready = threading.Event()
+        self._load_thread = None
+        self.thumb = None
+        self.surface_frames = []
+        self.is_copy = True
+        #self._start_async_load()
 
     def _init_video_metadata(self):
         """Charge les métadonnées de la vidéo (synchrone, rapide)"""
@@ -102,43 +106,6 @@ class Video(Object):
 
         cap.release()
 
-
-    # def _init_video_metadata(self):
-    #     """Charge les métadonnées synchrones (rapide)"""
-    #     cap = cv2.VideoCapture(self.path)
-    #     if not cap.isOpened():
-    #         print(f"[ERROR] Impossible d'ouvrir la vidéo: {self.path}")
-    #         return
-
-    #     # Configuration FPS et durée
-    #     original_fps = cap.get(cv2.CAP_PROP_FPS)
-    #     self.fps = self.fps if self.fps > 0 else original_fps
-        
-    #     frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
-    #     if self.end_frame > 0:
-    #         frame_count = min(frame_count, self.end_frame) - self.start_frame
-        
-    #     # Définition de la durée
-    #     if self.freeze_duration > 0:
-    #         self.step.duration = self.freeze_duration
-    #     elif self.step.duration == -1:
-    #         self.step.duration = round(frame_count / self.fps,2)
-
-    #     # Création de la miniature
-    #     target_frame = self.freeze_frame if self.freeze_duration > 0 else self.start_frame
-    #     cap.set(cv2.CAP_PROP_POS_FRAMES, target_frame)
-    #     ret, frame = cap.read()
-    #     if ret:
-    #         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    #         h, w, _ = frame_rgb.shape
-    #         height = 30
-    #         scale = height / h
-    #         resized = cv2.resize(frame_rgb, (int(w * scale), height), interpolation=cv2.INTER_AREA)
-    #         self.thumb = ImageTk.PhotoImage(Image.fromarray(resized))
-        
-    #     # Définit la taille cible pour les frames
-    #     self.target_size = (int(w), int(h)) if ret else (640, 480)
-    #     cap.release()
 
     def get_thumb(self):
         """Retourne la miniature (attend si nécessaire)"""
@@ -195,14 +162,6 @@ class Video(Object):
                 temp_frames.reverse()
 
             self.surface_frames = temp_frames
-
-            # Générer une miniature depuis la première image chargée
-            # if temp_frames:
-            #     thumb_image = self.cairo_surface_to_pil(temp_frames[0])
-            #     thumb_resized = thumb_image.resize((thumb_image.width * 30 // thumb_image.height, 30), Image.Resampling.LANCZOS)
-            #     self.thumb = thumb_resized #ImageTk.PhotoImage(thumb_resized)
-            #     self._thumb_ready.set()
-
             self._frames_ready.set()
 
         except Exception as e:
@@ -219,6 +178,16 @@ class Video(Object):
         argb = buf[:, :, [1, 2, 3, 0]]  # ARGB32 → RGBA
         return Image.fromarray(argb, mode="RGBA")
 
+    def rebuild_cairo_from_pil(self):
+        """Reconstruit les surfaces Cairo à partir des images PIL (si besoin après clone)."""
+        self.surface_frames = [
+            self.pil_to_cairo(img) for img in self.surface_frames_pil
+        ]
+        self._frames_ready.set()
+
+    def pil_to_cairo(self, pil_image):
+        rgba = np.array(pil_image).astype(np.uint8)
+        return self.numpy_to_cairo_surface(rgba)
 
     def is_ready(self):
         """Vérifie si le chargement est terminé"""
@@ -247,27 +216,23 @@ class Video(Object):
         data = np.ascontiguousarray(bgra)
         return cairo.ImageSurface.create_for_data(data, cairo.FORMAT_ARGB32, w, h, w * 4)
 
-    def _draw(self, ctx, current_time, width, height):
+    def _update(self, dt, step, clock, blocked):
+        self.current_frame = self.get_image(dt-self.step.delay)
+        pass
+
+    def _draw(self, ctx):
         """Dessin thread-safe"""
-        surface = self.get_image(current_time)
-        if surface:
-            ctx.set_source_surface(surface, 0, 0)
+        if( self.current_frame ):
+            ctx.set_source_surface(self.current_frame, 0, 0)
             ctx.paint()
 
-    def clone(self):
-        """Clonage thread-safe"""
-        new_video = Video(self.data, self.window_size, self.count, self.index)
-        # Copie des frames déjà chargés si disponible
-        if self.is_ready():
-            new_video.surface_frames = self.surface_frames.copy()
-            new_video._frames_ready.set()
-        return new_video
 
-    def __del__(self):
-        """Nettoyage des ressources"""
-        self._should_stop.set()
-        if self._load_thread:
-            self._load_thread.join()
+
+    # def __del__(self):
+    #     """Nettoyage des ressources"""
+    #     self._should_stop.set()
+    #     if self._load_thread:
+    #         self._load_thread.join()
 
 
     def schema(self):

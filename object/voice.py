@@ -8,7 +8,7 @@ class Voice(Object):
 
     def _draw(self, ctx):
         if( self.first_draw ):
-            self.voice.play()
+            self.voice.play(self.age)
 
     def _schema(self):
         return {

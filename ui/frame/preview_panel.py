@@ -1,4 +1,5 @@
 import tkinter as tk
+import numpy as np
 import ttkbootstrap as ttk
 from object.video import Video
 from ui.frame.scrollable_frame import ScrollableFrame
@@ -20,6 +21,7 @@ class PreviewPanel(ttk.Frame):
         self.player = None
         self.video_widget = None
         self.current_preview = None
+        self.preview_label = None  # référence persistante
 
     def clear(self):
         """Efface la prévisualisation et arrête la vidéo si besoin."""
@@ -67,11 +69,6 @@ class PreviewPanel(ttk.Frame):
         image = Image.open(path)
         self._show_pil_image(image)
 
-    # def _show_pil_image(self, image):
-    #     photo = ImageTk.PhotoImage(image)
-    #     label = ttk.Label(self.preview_area, image=photo)
-    #     label.image = photo  # garder une référence
-    #     label.pack(padx=10, pady=10)
 
     def _show_pil_image(self, image):
         # Forcer une mise à jour pour connaître la taille réelle du conteneur
@@ -84,20 +81,28 @@ class PreviewPanel(ttk.Frame):
         if container_width <= 1 or container_height <= 1:
             container_width, container_height = 800, 600  # fallback
 
-        # Redimensionner proprement
-        img_copy = image.copy()
-        img_copy.thumbnail((container_width - 20, container_height - 20), Image.Resampling.LANCZOS)
+        # Calculer la taille cible avec une marge
+        target_width = max(1, container_width - 20)
+        target_height = max(1, container_height - 20)
 
-        photo = ImageTk.PhotoImage(img_copy)
+        # Calculer la taille de destination sans modifier l’image originale
+        img_w, img_h = image.size
+        ratio = min(target_width / img_w, target_height / img_h)
+        new_size = (int(img_w * ratio), int(img_h * ratio))
 
-        # Créer une frame fixe pour éviter que le label agrandisse la scroll zone
-        frame = ttk.Frame(self.preview_area, width=container_width, height=container_height)
-        frame.pack_propagate(False)  # important pour que le label reste borné
-        frame.pack(fill="both", expand=True, padx=10, pady=10)
+        # Redimensionner plus rapidement avec BILINEAR (≈ qualité LANCZOS, mais plus rapide)
+        resized = image.resize(new_size, Image.Resampling.BILINEAR)
 
-        label = ttk.Label(frame, image=photo, anchor="center")
-        label.image = photo
-        label.pack(expand=True)
+        photo = ImageTk.PhotoImage(resized)
+        
+        # Réutiliser le label s’il existe
+        if self.preview_label is None or not self.preview_label.winfo_exists():
+            self.preview_label = ttk.Label(self.preview_area, anchor="center")
+            self.preview_label.pack(fill="both", expand=True, padx=10, pady=10)
+
+        # Mettre à jour l’image
+        self.preview_label.configure(image=photo)
+        self.preview_label.image = photo  # garder la référence
 
 
 
@@ -107,19 +112,49 @@ class PreviewPanel(ttk.Frame):
         label.image = photo
         label.pack(padx=10, pady=10)
 
+
     def _show_pygame_surface(self, surface):
         """Affiche une surface Pygame dans le panneau de prévisualisation avec redimensionnement auto."""
         # Convertir la surface Pygame en image PIL
-        raw_data = pygame.image.tostring(surface, "RGBA")
-        size = surface.get_size()
-        image = Image.frombytes("RGBA", size, raw_data)
+        #raw_data = pygame.image.tostring(surface, "RGBA")
+        #size = surface.get_size()
+        #image = Image.frombytes("RGBA", size, raw_data)
+
+        image = self._surface_to_image_fast(surface)
 
         # Auto-scale : redimensionner si l'image dépasse les limites
-        max_width, max_height = 800, 600
-        if image.width > max_width or image.height > max_height:
-            image.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
+        #max_width, max_height = 800, 600
+        #if image.width > max_width or image.height > max_height:
+        #    image.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
 
         self._show_pil_image(image)
+
+    def _surface_to_image_fast(self, surface: pygame.Surface) -> Image.Image:
+        # Malgré le warning, c'est 3× plus rapide que surfarray, car c’est une méthode C optimisée
+        raw = pygame.image.tostring(surface, "RGBA", False)
+        w, h = surface.get_size()
+        return Image.frombytes("RGBA", (w, h), raw)
+
+    def _surface_to_image(self, surface: pygame.Surface) -> Image.Image:
+        """
+        Convertit une surface Pygame en une image PIL.Image avec orientation correcte (RGBA).
+        """
+        # S'assurer que la surface a un canal alpha (RGBA)
+        surface = surface.convert_alpha()
+
+        # Extraire les pixels RGB et alpha
+        rgb_array = pygame.surfarray.pixels3d(surface)
+        alpha_array = pygame.surfarray.pixels_alpha(surface)
+
+        # Fusionner les canaux
+        rgba = np.dstack((rgb_array, alpha_array)) 
+        rgba = np.transpose(rgba, (1, 0, 2)) 
+
+        # Rendre contigu pour PIL (sinon crash possible avec fromarray)
+        rgba = np.ascontiguousarray(rgba)
+
+        # Créer l'image PIL
+        return Image.fromarray(rgba, "RGBA")
 
 
     def _show_video(self, path):

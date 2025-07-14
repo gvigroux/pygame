@@ -2,6 +2,7 @@ import time
 from tkinter import filedialog
 import cairo
 import cv2
+import numpy as np
 import pygame
 import tkinter as tk
 import ttkbootstrap as ttk
@@ -12,10 +13,11 @@ import tkinter as tk
 from PIL import Image, ImageTk
 from concurrent.futures import ThreadPoolExecutor
 
-from background.video import Video
 from game import Game
 from object.object import Object
 from object.object_factory import ObjectFactory
+from object.video import Video
+from background.video import Video as BackgroundVideo
 from ui.frame.clip_library import ClipLibrary
 from ui.frame.empty_panel import EmptyPanel
 from ui.frame.library_panel import VideoLibraryPanel
@@ -91,7 +93,7 @@ def load_scene(state, game, file_path):
 
     if( game.background is not None ):
         background = game.background
-        if( isinstance(background, Video) ):
+        if( isinstance(background, BackgroundVideo) ):
             seen_paths = set()
             unique_videos = []
 
@@ -197,16 +199,12 @@ print(f"Temps d'exécution : {execution_time:.4f} secondes")
 # Callbacks
 
 
-def remove_clip(object):
-    game.remove_object(object)        
-
 def handle_time_click(seconds):
 
     current_time = 0
 
     for object in game.objects:
         object.reset(time.time()-seconds, 0)
-
 
     # Cairo surface et contexte réutilisables
     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, *game.window_size)
@@ -225,15 +223,21 @@ def handle_time_click(seconds):
         ctx.set_source_surface(background_image, 0, 0)
         ctx.paint()
         ctx.restore()
-    
+      
     dt = (seconds * 0.016 * 60) # - object.step.delay
     game.update(dt, 0, None, 0)
+
+    for object in game.objects:
+        if( isinstance(object, Video) ):
+            if( not object.is_ready() ):
+                original = library_panel.get_video(object.path)
+                object.surface_frames = original.surface_frames
+                if( len(object.surface_frames) > 0 ):
+                    object._frames_ready.set() 
 
     game.background = None
     game.draw_on_context(ctx, current_time)
 
-
-    
     # Cairo → Pygame Surface
     raw_buf = surface.get_data()
     img = pygame.image.frombuffer(raw_buf, game.window_size, "BGRA").convert_alpha()
@@ -244,15 +248,11 @@ def handle_time_click(seconds):
 
     for obj in game.objects:
         obj.draw_surface(temp_surface)
-        
-    raw_string = pygame.image.tostring(temp_surface, "RGBA")
-    img = Image.frombytes("RGBA", temp_surface.get_size(), raw_string)
-    preview_panel.show_preview(img)
 
+    preview_panel.show_preview(temp_surface)
 
 def handle_video_drop(video, x, y):
     timeline.drop_clip(video, at_position=(x, y))
-
 
 
 def on_video_selected(path):
@@ -289,7 +289,7 @@ def open_type_chooser():
             "step" : {{"duration": 2}}
         }}
         '''.format(choice=choice))
-        object = game.add_object(data)
+        object = game.add_object_factory(data)
         timeline.add_clip(object, track=track_index, start=object.step.delay, duration=object.step.duration)
 
     subclasses = get_subclasses(Object)
@@ -377,6 +377,12 @@ def load_config(app, state):
                         print("Erreur vertical sash :", e)
                 app.after(200, apply_vertical_pane_sizes)
                     
+def handle_video_update(object, seconds):
+    original = library_panel.get_video(object.path)
+    object.surface_frames = original.surface_frames
+    object._frames_ready.set()
+    return object.get_image(seconds)
+
 
 
 ######################################
@@ -386,7 +392,6 @@ app = ttk.Window(themename="superhero")
 app.title("TikTok Maker")
 center_window(app, 1080, 720)
 app.resizable(True, True)
-
 
 
 style = ttk.Style("superhero")
@@ -464,16 +469,9 @@ preview_panel = PreviewPanel(paned)
 library_panel = ClipLibrary(paned, on_drop_callback=handle_video_drop, on_click=preview_panel.show_preview) 
 property_panel = PropertyPanel(paned, update_callback=lambda: timeline.redraw())
 
-#library_panel = EmptyPanel(paned, title="Library", color="red")
-#preview_panel = EmptyPanel(paned, title="Preview", color="blue")
-#property_panel = EmptyPanel(paned, title="Property", color="green")
-
-
 paned.add(library_panel, weight=1)
 paned.add(preview_panel, weight=1)
 paned.add(property_panel, weight=1)
-
-
 
 ############################################
 
@@ -482,20 +480,20 @@ timeline_zone = ttk.Frame(vertical_paned)
 timeline_zone.columnconfigure(0, weight=1)
 timeline_zone.rowconfigure(0, weight=0)  # Toolbar (fixe)
 timeline_zone.rowconfigure(1, weight=1)  # Timeline (extensible si nécessaire)
-#timeline_toolbar = ttk.Frame(timeline_zone)
-#timeline_toolbar.pack(fill="x", pady=(0, 10))
 
+
+timeline = Timeline(timeline_zone, num_tracks=0, length=120,
+                    on_clip_click=property_panel.show_object,
+                    on_clip_add=game.add_object,
+                    on_clip_removed=game.remove_object,
+                    on_time_click=handle_time_click, on_video_update=handle_video_update)   
 
 timeline_toolbar = Toolbar(timeline_zone)
+timeline_toolbar.add_icon("ui/icons/icons8-ajouter-24.png", timeline.add_track_top)
 timeline_toolbar.add_icon("ui/icons/icons8-ajouter-24.png", open_type_chooser)
 
 
-
 #num_tracks = len(game.objects)
-timeline = Timeline(timeline_zone, num_tracks=0, length=120,
-                    on_clip_click=property_panel.show_object,
-                    on_clip_removed=remove_clip,
-                    on_time_click=handle_time_click)
 timeline.grid(row=1, column=0, sticky="nsew")
 
 

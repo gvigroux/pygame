@@ -149,11 +149,14 @@ class Game:
                 else:
                     self.objects.append(object)
 
-    def add_object(self, data):
+    def add_object_factory(self, data):
         object = ObjectFactory.create(data, self.window_size, 1, 0)
         self.objects.append(object)
         return object
-
+    
+    def add_object(self, object):
+        self.objects.append(object)
+    
     def remove_object(self, target):
         if target in self.objects:
             self.objects.remove(target)

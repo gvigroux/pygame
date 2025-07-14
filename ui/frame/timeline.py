@@ -1,6 +1,7 @@
 import copy
 import math
 import os
+import time
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 import tkinter as tk
@@ -25,7 +26,7 @@ def darken(hex_color, factor=0.8):
 
 
 class Timeline(ttk.Frame):
-    def __init__(self, master, num_tracks=3, length=60, height=300, on_clip_click=None, on_clip_removed=None, on_time_click = None, **kwargs):
+    def __init__(self, master, num_tracks=3, length=60, height=300, on_clip_click=None, on_clip_add=None, on_clip_removed=None, on_time_click = None, on_video_update = None ,**kwargs):
         self.on_clip_click = on_clip_click
         self.num_tracks = num_tracks
         self.length = length
@@ -34,6 +35,8 @@ class Timeline(ttk.Frame):
         self.on_clip_removed = on_clip_removed
         self.has_background = True  # ajoute une piste "background"
         self.on_time_click = on_time_click
+        self.on_video_update = on_video_update
+        self.on_clip_add = on_clip_add
 
         super().__init__(master, **kwargs)
 
@@ -146,17 +149,24 @@ class Timeline(ttk.Frame):
     def play_loop(self):
         if not self.is_playing:
             return
-
-        self.current_time += 0.1
+        
+        start_time = time.perf_counter()  # ⏱ début précis
+    
+        self.current_time += 0.05
         if self.current_time >= self.length:
             self.current_time = self.length
             self.is_playing = False
             return
 
         self.update_playhead_and_preview()
+        
+        # 🧮 durée écoulée
+        elapsed = (time.perf_counter() - start_time) * 1000  # en ms
+        delay = max(0, int(50 - elapsed))  # évite d'appeler avec délai négatif
 
-        # Refaire appel à cette fonction après 100ms
-        self.after(100, self.play_loop)
+        #print(f"Elapsed: {elapsed:.2f} ms")
+        # Refaire appel à cette fonction après 50ms
+        self.after(delay, self.play_loop)
 
 
     def truncate_text(self, text, max_width, font):
@@ -698,9 +708,10 @@ class Timeline(ttk.Frame):
         # Crée un nouvel objet clip (selon ton système)
         object_copy = object.clone()
         object_copy.step.delay = max((canvas_x / 50.0), 0)
-        print(f"[DROP] Adding background video at: {object_copy.step.delay:.2f} (track {track_index}) {canvas_x:.2f}")
+        print(f"[DROP] Adding clip at: {object_copy.step.delay:.2f} (track {track_index}) {canvas_x:.2f}")
 
         self.add_clip(object_copy, track=track_index, start=object_copy.step.delay, duration= object_copy.step.duration)
+        self.on_clip_add(object_copy)
         self._resolve_overlaps_on_track(track_index)
 
 
@@ -780,4 +791,7 @@ class Timeline(ttk.Frame):
                 duration = obj.step.duration
 
                 if( time >= start and time < start + duration ):
-                    return obj.get_image(time-start)
+                    if( obj.is_ready() ):
+                        return obj.get_image(time-start)
+                    return self.on_video_update(obj,time-start)
+                    #return obj.get_image(time-start)
