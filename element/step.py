@@ -12,8 +12,8 @@ safe_globals = {
 
 class eStep:
     def __init__(self, object, start = 0 , stop = -1, delay = 0, update_delay = 0, duration = -1, fade_in = 0, fade_out = 0, block = False, explode = False):
-        self.index = object.index
-        self.count = object.amount
+        #self.index = object.index
+        #self.count = object.amount
         self.start = start
         self.stop = stop
         self.delay = delay
@@ -23,8 +23,6 @@ class eStep:
         self.fade_out = fade_out
         self.block = block
         self.explode = explode
-        self.amount = object.amount
-        self.index = object.index
         self.prepare()
 
 
@@ -71,7 +69,5 @@ class eStep:
             "delay": ("float", "Delay"),
             "block": ("bool", "Block"),
             "explode": ("bool", "Explode"),
-            "update_delay": ("float", "Update Delay"),
-            "count": ("int", "Count"),
-            "index": ("int", "Index"),
+            "update_delay": ("float", "Update Delay")
         }

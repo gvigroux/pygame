@@ -5,6 +5,7 @@ from background.backgrounds import BackgroundFactory
 from object.arc import Arc
 from object.ball import Ball
 from object.object_factory import ObjectFactory
+from object.video import Video
 
 
 data_fps = json.loads('''{
@@ -94,6 +95,14 @@ class Game:
 
         self._load_params(avoid_debug, load_background)
         self._load_objects()
+
+        # Wait first video to be loaded
+        for object in self.objects:
+            if isinstance(object, Video):
+                while not object.is_ready():
+                    time.sleep(0.01)
+                break
+
         self.start_time = time.time()
 
 
@@ -106,7 +115,7 @@ class Game:
         
         ############### Background ###############     
         if( load_background ):
-            background_config = self.config.get("background", [])
+            background_config = self.config.get("background", {})
             self.background = BackgroundFactory.create(self.pygame, background_config.get("type", "concentric_wave"),*self.window_size, background_config)
 
             while not self.background.ready:
@@ -127,6 +136,8 @@ class Game:
 
 
     def _load_objects(self):
+        added_video_paths = set()
+
         for data in self.config.get("objects", []):
             count = data.get("count", 1) 
             # Automatically split text
@@ -142,10 +153,22 @@ class Game:
                 if( data.get("type") == "text" ) and data.get("split", False):
                     data["text"]["value"] = parts[i]
 
-                object = ObjectFactory.create(data, self.window_size, count, i)
+                if( data.get("type") == "video" and data.get("path") in added_video_paths ):
+                    tmp = next((obj for obj in self.objects if getattr(obj, "path", None) == data.get("path")), None)
+                    object = tmp.clone()
+                    object.step.delay = data.get("step", {}).get("delay", 0)
+
+                else:
+                    object = ObjectFactory.create(data, self.window_size, count, i)
+
+
                 if( isinstance(object, Ball) ):
                     if not any(object.check_ball_collision(other) for other in self.objects if isinstance(other, Ball)):
                         self.objects.append(object)
+                elif( isinstance(object, Video) ):
+                    added_video_paths.add(object.path)
+                    self.objects.append(object)
+                    pass
                 else:
                     self.objects.append(object)
 

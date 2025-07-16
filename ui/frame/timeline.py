@@ -101,12 +101,11 @@ class Timeline(ttk.Frame):
 
     def reset(self):
 
-        clips_to_remove = [clip for clip in self.clips ]
-        for clip in clips_to_remove:
+        while self.clips:
+            clip = self.clips.pop()
             for key in ("rect_id", "text_id", "left_handle", "right_handle", "thumb_id"):
-                self.canvas.delete(clip[key])
-            self.clips.remove(clip)      
-            if self.on_clip_removed:      
+                self.canvas.delete(clip.get(key))
+            if self.on_clip_removed:
                 self.on_clip_removed(clip["object"])
 
         for index in range(self.num_tracks):
@@ -226,7 +225,7 @@ class Timeline(ttk.Frame):
 
             lbl = ttk.Label(
                 frame,
-                text=f"Track {i+1}",
+                text=f"Track {self.num_tracks-i}",
                 anchor="center",
                 padding=5
             )
@@ -350,10 +349,16 @@ class Timeline(ttk.Frame):
         # Décale tous les clips existants vers le bas
         if( move_clips ):
             for clip in self.clips:
+                #clip["track"] += 1
                 self.canvas.move(clip["rect_id"], 0, self.track_height)
                 self.canvas.move(clip["text_id"], 0, self.track_height)
                 self.canvas.move(clip["left_handle"], 0, self.track_height)
                 self.canvas.move(clip["right_handle"], 0, self.track_height)
+                if clip.get("thumb_id"):
+                    self.canvas.move(clip["thumb_id"], 0, self.track_height)
+                if( isinstance(clip["track"], int) ):
+                    clip["track"] += 1
+
 
         # Décale l'échelle de temps vers le bas
         self.canvas.move("time_scale", 0, self.track_height)
@@ -372,6 +377,7 @@ class Timeline(ttk.Frame):
         for widget in self.headers_frame.winfo_children():
             widget.destroy()
         self._draw_headers()
+        self._draw_tracks()
 
     
     
@@ -507,6 +513,10 @@ class Timeline(ttk.Frame):
         self._drag_data["item"] = item
         self._drag_data["x"] = x
         self._drag_data["start_x"] = x
+
+    def _save_internal_data(self, object):
+        object.data.setdefault("step", {})["delay"]    = object.step.delay
+        object.data.setdefault("step", {})["duration"] = object.step.duration
 
     def _on_clip_release(self, event):
         x = self.canvas.canvasx(event.x)
@@ -727,15 +737,19 @@ class Timeline(ttk.Frame):
         # 2. Trie les clips par start time
         clips.sort(key=lambda c: c["object"].step.delay)
 
+        for clip in clips:
+            self._save_internal_data(clip["object"])
+
         for i in range(len(clips) - 1):
             current = clips[i]
             next_clip = clips[i + 1]
 
             current_start = current["object"].step.delay
             current_end = current_start + current["object"].step.duration
-
+ 
             next_start = next_clip["object"].step.delay
             next_duration = next_clip["object"].step.duration
+
 
             # Si overlap : on pousse le next_clip juste après current
             if next_start < current_end:
@@ -794,4 +808,5 @@ class Timeline(ttk.Frame):
                     if( obj.is_ready() ):
                         return obj.get_image(time-start)
                     return self.on_video_update(obj,time-start)
-                    #return obj.get_image(time-start)
+                
+                

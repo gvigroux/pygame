@@ -57,6 +57,9 @@ class eFragment:
             min(max(b + db, 0.0), 1.0),
             1.0
         )
+
+    def prepare(self):
+        pass
     
     def get_radius(self):
         return random.uniform(max(0.1,self.radius - self.radius_range), self.radius + self.radius_range)
@@ -69,7 +72,7 @@ class eFragment:
             "count": ("int", "Count"),
             "radius": ("float", "Radius"),
             "radius_range": ("float", "Radius Range"),
-            "lifetime": ("float", "Lifetime"),
+            "lifetime": ("floateval", "Lifetime"),
             "color": ("str", "Color"),
             "color_range": ("float", "Color Range"),
         }

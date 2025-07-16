@@ -32,6 +32,8 @@ class eSize:
            return int(eval(val, {"__builtins__": {}}, safe_globals))
         return int(val)
     
+    def get(self):
+        return (self.width, self.height)
     
     def enabled(self):
         return True

@@ -27,12 +27,14 @@ from ui.helper import center_window, lighten_color
 from ui.log import log_message
 from ui.tools.downloader import DownloaderWindow
 from ui.tools.disk_library import DiskLibraryWindow
+from ui.tools.xdownloader import XDownloader
 from ui.frame.scrollable_frame import ScrollableFrame
 from ui.frame.timeline import Timeline
 from ui.frame.toolbar import Toolbar
 from ui.frame.type_chooser import TypeChooser
 
 import os
+
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 
@@ -58,7 +60,10 @@ def save_scene(state, scene_filepath, game):
 
     data["objects"] = []
     for object in game.objects:
-        data["objects"].append(object.data) 
+        obj = serialize_object(object, True)
+        #obj = object.data
+        obj["track"] = object.track
+        data["objects"].append(obj) 
         
     # 3️⃣ Réécrire le fichier avec la nouvelle config
     with open(scene_filepath, "w", encoding="utf-8") as f:
@@ -72,24 +77,127 @@ def load_scene_dialog(state, game):
     )
     load_scene(state, game, file_path)
 
+def serialize_object(obj, first_level = False):
+
+    if not hasattr(obj, "schema") or not callable(obj.schema):
+        raise ValueError("L'objet n'a pas de méthode .schema()")
+
+    result = {}
+    schema = obj.schema()
+
+    if( first_level ):
+        result["type"] = obj.__class__.__name__
+
+    for key in schema:
+        try:
+            value = getattr(obj, key)
+        except AttributeError:
+            continue
+
+        if hasattr(value, "schema") and callable(value.schema):
+            if( value.enabled()):
+                result[key] = serialize_object(value)  # appel récursif
+        elif isinstance(value, (str, int, float, bool)): # or value is None:
+            result[key] = value
+        elif isinstance(value, list):
+            # Liste d'objets ou de primitives
+            serialized_list = []
+            for item in value:
+                if hasattr(item, "schema") and callable(item.schema):
+                    if( item.enabled()):
+                        serialized_list.append(serialize_object(item))
+                elif isinstance(item, (str, int, float, bool)):
+                    serialized_list.append(item)
+            result[key] = serialized_list
+
+        # On ignore les autres types (ex: objets non listés ou non sérialisables)
+
+    return result
 
 
-def load_scene(state, game, file_path):
+
+def load_scene(state, game, filename):
  
-    if len(file_path) <= 0:
+    if len(filename) <= 0:
         return
     
     timeline.reset()
     game.reset()
+    #game.load(file_path, avoid_debug=False)
+      
+      
+    file_path = os.path.dirname(os.path.realpath(__file__))
+    file = os.path.join(file_path, filename)
     
-    game.load(file_path, avoid_debug=False)
-  
+    # Lecture avec encodage UTF-8 explicite et gestion d'erreur
+    with open(file, 'r', encoding='utf-8') as f:
+        config = json.load(f)
+
+    # Settings    
+    settings            = config.get("settings", {})
+    game.end_step       = settings.get("end_step", -1)
+    game.window_size    = settings.get("window_size", [540, 960])
+
+
+    for data in config.get("objects", []):
+        object = library_panel.get_video(data.get("path"))
+        if object is None:
+            # When Video not in path or any other object (beacause no path as well)
+            object = ObjectFactory.create(data, game.window_size, 0, 0)
+            library_panel.add_clip(object)
+        else:
+            object = object.clone()
+            object.step.delay = data.get("step", {}).get("delay", 0)
+        game.objects.append(object)
+
+
     i = len(game.objects)-1
     for object in game.objects:
         timeline.add_track_top(False)
-        timeline.add_clip( object, track=i, start=object.step.delay, duration=object.step.duration)
-        library_panel.add_unique_clip(object)
+        timeline.add_clip(object, track=i, start=object.step.delay, duration=object.step.duration)
+        #library_panel.add_clip(object)
         i-=1
+  
+
+    return
+    for data in config.get("objects", []):
+        count = data.get("count", 1) 
+
+        # Automatically split text
+        if( data.get("type") == "text" ) and data.get("split", False):
+            if( count > 1 ):
+                print(f"\033[38;5;208mWarning (Text): The count property is ignored for text objects!\033[0m")
+            parts = data.get("text").get("value").split('\\n')
+            count = len(parts)
+            
+        for i in range(count):
+
+            # Update text value
+            if( data.get("type") == "text" ) and data.get("split", False):
+                data["text"]["value"] = parts[i]
+
+            if( data.get("type") == "video" and data.get("path") in added_video_paths ):
+                tmp = next((obj for obj in game.objects if getattr(obj, "path", None) == data.get("path")), None)
+                object = tmp.clone()
+                object.step.delay = data.get("step", {}).get("delay", 0)
+
+            else:
+                object = ObjectFactory.create(data, game.window_size, count, i)
+
+            if( isinstance(object, Video) ):
+                added_video_paths.add(object.path)
+                game.objects.append(object)
+                pass
+            else:
+                game.objects.append(object)
+
+    # i = len(game.objects)-1
+    # for object in game.objects:
+    #     timeline.add_track_top(False)
+    #     timeline.add_clip(object, track=i, start=object.step.delay, duration=object.step.duration)
+    #     library_panel.add_clip(object)
+    #     i-=1
+  
 
     if( game.background is not None ):
         background = game.background
@@ -188,10 +296,6 @@ def load_scene(state, game, file_path):
 ######################################
 pygame.init()
 game = Game(pygame)
-start_time = time.time()
-game.load(filename="config.json", avoid_debug=False)
-execution_time = time.time() - start_time
-print(f"Temps d'exécution : {execution_time:.4f} secondes")
 ######################################
 
 
@@ -261,7 +365,7 @@ def on_video_selected(path):
         "path": path
     }    
     object = ObjectFactory.create(data, game.window_size, 1, 0) 
-    library_panel.add_video(object)
+    library_panel.add_clip(object)
 
 
 ############################################
@@ -408,6 +512,9 @@ style.configure("Titlebar.Enabled.TLabel", background="#0a283b", foreground="whi
 style.configure("Titlebar.Disabled.TFrame", background="#A55C21")
 style.configure("Titlebar.Disabled.TLabel", background="#A55C21", foreground="#dddddd")
 
+style.configure("Titlebar.Error.TFrame", background="#ffcccc")
+style.configure("Titlebar.Error.TLabel", background="#ffcccc", foreground="red")
+
 bg = style.colors.get("secondary")
 hover_bg = lighten_color(bg, 0.1)  # éclaircir légèrement pour le hover
 
@@ -430,15 +537,6 @@ main_frame.rowconfigure(2, weight=0)  # Log en bas
 main_frame.columnconfigure(0, weight=1)
 
 
-#################################################
-
-toolbar = Toolbar(main_frame)
-toolbar.add_icon("ui/icons/icons8-document-24.png", lambda: load_scene_dialog(state, game), tooltip="Load scene")
-toolbar.add_icon("ui/icons/icons8-save-24.png", lambda: save_scene(state, "config.json", game), tooltip="Save scene")
-toolbar.add_separator()
-toolbar.add_text("TOOLS")
-toolbar.add_icon("ui/icons/icons8-download-from-the-cloud-24.png", lambda: DownloaderWindow(state), tooltip="Downloader & Splitter")
-toolbar.add_icon("ui/icons/icons8-video-gallery-24.png", lambda: DiskLibraryWindow(state, on_double_click=on_video_selected), tooltip="Media Library")
 
 # Séparateur en dessous
 separator = ttk.Separator(main_frame, orient="horizontal")
@@ -465,9 +563,13 @@ paned = ttk.PanedWindow(vertical_paned, orient="horizontal")
 
 # Créer les 3 zones verticales
 
+def on_library_clip_click(object):
+    preview_panel.show_preview(object)
+    property_panel.show_object(object)
+
 preview_panel = PreviewPanel(paned)
-library_panel = ClipLibrary(paned, on_drop_callback=handle_video_drop, on_click=preview_panel.show_preview) 
-property_panel = PropertyPanel(paned, update_callback=lambda: timeline.redraw())
+library_panel = ClipLibrary(paned, on_drop_callback=handle_video_drop, on_click=on_library_clip_click) 
+property_panel = PropertyPanel(state, paned, update_callback=lambda: timeline.redraw())
 
 paned.add(library_panel, weight=1)
 paned.add(preview_panel, weight=1)
@@ -499,6 +601,25 @@ timeline.grid(row=1, column=0, sticky="nsew")
 
 vertical_paned.add(paned, weight=3)  # haut
 vertical_paned.add(timeline_zone, weight=1)  # bas
+
+
+#################################################
+
+def reset():
+    timeline.reset()
+    library_panel.reset()
+
+toolbar = Toolbar(main_frame)
+toolbar.add_icon("ui/icons/icons8-restart-24.png", lambda: reset(), tooltip="Reset")
+toolbar.add_icon("ui/icons/icons8-document-24.png", lambda: load_scene_dialog(state, game), tooltip="Load scene")
+toolbar.add_icon("ui/icons/icons8-save-24.png", lambda: save_scene(state, "config.json", game), tooltip="Save scene")
+toolbar.add_separator()
+toolbar.add_text("TOOLS")
+toolbar.add_icon("ui/icons/icons8-download-from-the-cloud-24.png", lambda: DownloaderWindow(state), tooltip="Downloader & Splitter")
+toolbar.add_icon("ui/icons/icons8-video-gallery-24.png", lambda: DiskLibraryWindow(state, on_double_click=on_video_selected), tooltip="Media Library")
+toolbar.add_icon("ui/icons/icons8-video-gallery-24.png", lambda: XDownloader(state), tooltip="X Downloader")
+
+
 
 
 # Toolbar de la timeline

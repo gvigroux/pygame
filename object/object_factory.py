@@ -14,6 +14,7 @@ OBJECT_CLASSES = {
     "ball": Ball,
     "textDraw": TextDraw,
     "text": TextSurface,
+    "TextSurface": TextSurface,
     "timer": Timer,
     "voice": Voice,
     "spark": Spark,

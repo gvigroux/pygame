@@ -17,7 +17,11 @@ def lighten_color(hex_color, factor=0.1):
 
     return f"#{r:02x}{g:02x}{b:02x}"
 
-
+def get_calculated_value(obj, key):
+    method = "get_" + key
+    if hasattr(obj, method) and callable(getattr(obj, method, "")):
+        return eval("obj."+method + "()")
+    return getattr(obj, key, "")
  
 
 def colorize_icon(path, new_color=(255, 0, 0)):

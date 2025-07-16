@@ -70,6 +70,7 @@ class Object:
         self.first_draw = True
         #self.pygame     = pygame
         self.fade_speed = 5.0  # vitesse de disparition (1.0 = lent, 5.0 = rapide)
+        self.track      = 0
 
         self.log_draw_durations = []
         self.t0 = 0

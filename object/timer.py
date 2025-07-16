@@ -4,6 +4,7 @@ import random
 from element.background import eBackground
 from element.border import eBorder
 from element.fragment import eFragment
+from element.size import eSize
 from object.inner_particle import InnerParticle
 from object.object import Object
 
@@ -14,18 +15,15 @@ class Timer(Object):
         self.duration = self.config("duration", 5)
         self.elapsed  = 0  # temps écoulé en ms
 
-        size = self.config("size", (100, 100))
-        self.width    = size[0]
-        self.height   = size[1]
-
+        self.size       = eSize(window_size, count, id,**self.config("size", { "width": 250, "height": 15 }))
         self.border     = eBorder(**self.config("border", {}))
         self.background = eBackground(**self.config("background", {}))
         self.fragment   = eFragment(**self.config("fragment", {}))
 
         if( "H" in self.position.justify ) :
-            self.position.x = (self.window_size[0] - self.width) // 2
+            self.position.x = (self.window_size[0] - self.size.width) // 2
         if( "V" in self.position.justify ) :
-            self.position.y = (self.window_size[1] - self.height) // 2
+            self.position.y = (self.window_size[1] - self.size.height) // 2
 
     def reset(self, start_time, current_step):
         super().reset(start_time, current_step)
@@ -47,7 +45,7 @@ class Timer(Object):
 
         # Dessine le fond de la barre
         self.set_color(ctx, self.background.color)
-        ctx.rectangle(x, y, self.width, self.height)
+        ctx.rectangle(x, y, self.size.width, self.size.height)
         ctx.fill()
 
         # Dessine la partie restante
@@ -55,16 +53,16 @@ class Timer(Object):
         remaining = max(0.0, 1.0 - progress)
 
         self.set_color(ctx, self.color)
-        ctx.rectangle(x, y, self.width * remaining, self.height)
+        ctx.rectangle(x, y, self.size.width * remaining, self.size.height)
         ctx.fill()
 
         # Dessine la bordure
         ctx.set_source_rgba(*self.border.color)
         ctx.set_line_width(self.border.width)
-        ctx.rectangle(x, y, self.width, self.height)
+        ctx.rectangle(x, y, self.size.width, self.size.height)
         ctx.stroke()
 
-        self.create_particles_timer(self.width * remaining, self.fragment, self.color)
+        self.create_particles_timer(self.size.width * remaining, self.fragment, self.color)
 
     def _draw_shadow(self, ctx):
         #TODO: invisible
@@ -73,19 +71,19 @@ class Timer(Object):
 
         # Dessine le fond de l’ombre
         #ctx.set_source_rgba(0, 0, 0, 0.5)
-        ctx.rectangle(x, y, self.width, self.height)
+        ctx.rectangle(x, y, self.size.width, self.size.height)
         ctx.fill()
 
         # Dessine la partie restante de l’ombre
         progress = self.elapsed / self.duration
         remaining = max(0.0, 1.0 - progress)
 
-        ctx.rectangle(x, y, self.width * remaining, self.height)
+        ctx.rectangle(x, y, self.size.width * remaining, self.size.height)
         ctx.fill()
 
         # Ombre de la bordure
         ctx.set_line_width(self.border.width)
-        ctx.rectangle(x, y, self.width, self.height)
+        ctx.rectangle(x, y, self.size.width, self.size.height)
         ctx.stroke()
 
 
@@ -117,7 +115,7 @@ class Timer(Object):
         text_y_start = self.position.y
         for i in range(fragment.count):
             x = text_x_start + position_width 
-            y = random.uniform(text_y_start, text_y_start +  self.height)
+            y = random.uniform(text_y_start, text_y_start +  self.size.height)
             points.append((x, y))
         return points
 
@@ -128,8 +126,8 @@ class Timer(Object):
         text_x_start = self.position.x
         text_y_start = self.position.y
         for i in range(fragment.count):
-            x = random.uniform(text_x_start, text_x_start +  self.width)
-            y = random.uniform(text_y_start, text_y_start +  self.height)
+            x = random.uniform(text_x_start, text_x_start +  self.size.width)
+            y = random.uniform(text_y_start, text_y_start +  self.size.height)
             points.append((x, y))
         return points
     
@@ -137,7 +135,7 @@ class Timer(Object):
     def _schema(self):
         return {
             "duration": ("float", "Duration"),
-            "size": ("str", "Size"),
+            "size": ("size", "Size"),
             "border": ("border", "Border"),
             "fragment": ("fragment", "Fragment"),
             "background": ("background", "Background"),

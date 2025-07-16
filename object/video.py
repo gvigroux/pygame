@@ -5,6 +5,8 @@ import cv2
 import numpy as np
 import cairo
 from PIL import Image, ImageTk
+from element.position import ePosition
+from element.size import eSize
 from element.step import eStep
 from object.object import Object
 import pygame
@@ -12,7 +14,6 @@ import pygame
 
 class Video(Object):
     def __init__(self, data, window_size, count, id):
-        #data = data.deepcopy()
         super().__init__(data, window_size, count, id)
         # Configuration originale
         self.path = self.config("path", "")
@@ -28,12 +29,16 @@ class Video(Object):
         self.thumb = None
         self.is_copy = False
 
+        
+        self.position   = ePosition(window_size, count, id, **self.config("position", { "x": 0, "y": 0 }))
+        self.raw_size   = eSize(window_size, count, id, **self.config("size", {"width": "100%", "height": "100%"}))
+        self.size       = eSize(window_size, count, id, **self.config("size", {"width": "100%", "height": "100%"}))
+
         # Système de chargement asynchrone
         self._load_thread = None
         self._should_stop = threading.Event()
         self._frames_ready = threading.Event()
         self.surface_frames = []
-        #self.surface_frames_pil = []
         
         self.target_size = None
 
@@ -45,10 +50,9 @@ class Video(Object):
     def __getstate__(self):
         state = self.__dict__.copy()
         # Supprimer les attributs non-copiables
-        for key in ['_load_thread', '_should_stop', '_frames_ready', 'thumb', 'surface_frames']:
+        for key in ['_load_thread', '_should_stop', '_frames_ready', 'thumb', 'surface_frames', 'current_frame']:
             if key in state:
                 del state[key]
-        print(len(self.surface_frames))
         return state
 
     def __setstate__(self, state):
@@ -59,6 +63,7 @@ class Video(Object):
         self._load_thread = None
         self.thumb = None
         self.surface_frames = []
+        self.current_frame = None
         self.is_copy = True
         #self._start_async_load()
 
@@ -90,13 +95,18 @@ class Video(Object):
         cap.set(cv2.CAP_PROP_POS_FRAMES, target_frame_idx)
 
         self.thumb_pil = None
-        self.target_size = (640, 480)  # fallback
+        #self.target_size = (640, 480)  # fallback
+        #self.size.x = self.size.width
 
         ret, frame = cap.read()
         if ret and frame is not None:
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             h, w = frame_rgb.shape[:2]
-            self.target_size = (w, h)
+            #self.target_size = (w, h)
+            self.raw_size.width = w
+            self.raw_size.height = h
+            self.size.width = w
+            self.size.height = h
 
             # Création miniature PIL (30px hauteur)
             thumb_height = 30
@@ -150,7 +160,7 @@ class Video(Object):
                 if not ret:
                     break
 
-                frame = cv2.resize(frame, self.target_size, interpolation=cv2.INTER_AREA)
+                frame = cv2.resize(frame, self.size.get(), interpolation=cv2.INTER_AREA)
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2BGRA)
                 surface = self.numpy_to_cairo_surface(frame)
                 temp_frames.append(surface)
@@ -163,6 +173,8 @@ class Video(Object):
 
             self.surface_frames = temp_frames
             self._frames_ready.set()
+            
+            print(f"[VIDEO OK] label={self.label} path={self.path}")
 
         except Exception as e:
             print(f"[VIDEO LOAD ERROR] {self.path}: {str(e)}")
@@ -217,8 +229,7 @@ class Video(Object):
         return cairo.ImageSurface.create_for_data(data, cairo.FORMAT_ARGB32, w, h, w * 4)
 
     def _update(self, dt, step, clock, blocked):
-        self.current_frame = self.get_image(dt-self.step.delay)
-        pass
+        self.current_frame = self.get_image(self.age)
 
     def _draw(self, ctx):
         """Dessin thread-safe"""
@@ -248,6 +259,9 @@ class Video(Object):
             "start_frame": ("int", "Start frame"),
             "end_frame": ("int", "End frame"),
             "step": ("step", "Step"),
+            "raw_size": ("size", "Orginal Size"),
+            "size": ("size", "Size"),
+            "position": ("position", "Position"),
             "on_spawn": ("event", "On Spawn"),
             "on_destroy": ("event", "On Destroy"),
             "on_collision": ("event", "On Collision"),

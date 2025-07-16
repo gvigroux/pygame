@@ -15,7 +15,7 @@
       "name": "Python Debugger: UI",
       "type": "debugpy",
       "request": "launch",
-      "program": "ui.py",
+      "program": "interface.py",
       "console": "integratedTerminal"
     }
   ]

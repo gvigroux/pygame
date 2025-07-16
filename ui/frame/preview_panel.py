@@ -1,6 +1,9 @@
+import time
 import tkinter as tk
+import cairo
 import numpy as np
 import ttkbootstrap as ttk
+from object.object import Object
 from object.video import Video
 from ui.frame.scrollable_frame import ScrollableFrame
 from PIL import Image, ImageTk
@@ -58,12 +61,54 @@ class PreviewPanel(ttk.Frame):
         elif isinstance(media, pygame.Surface):
             self._show_pygame_surface(media)
 
+        elif isinstance(media, Object):
+            self._show_object(media)
+
+
         else:
             ttk.Label(
                 self.preview_area,
                 text="Format non supporté",
                 font=("Segoe UI", 10, "italic")
             ).pack(padx=10, pady=10)
+
+    def _show_object(self, object):
+
+        window_size = [608, 1080]
+        current_time = 0
+        seconds = object.step.delay+object.step.fade_in
+
+        object.reset(time.time()-seconds, 0)
+
+        # Cairo surface et contexte réutilisables
+        surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, *window_size)
+        ctx     = cairo.Context(surface)
+        screen  = pygame.display.set_mode((window_size[0], window_size[1]), pygame.DOUBLEBUF | pygame.SRCALPHA)
+            
+        ctx.save()
+        ctx.set_operator(cairo.OPERATOR_CLEAR)
+        ctx.paint()
+        ctx.restore()
+
+        
+        dt = (seconds * 0.016 * 60) # - object.step.delay
+        object.update(dt, 0, None, 0)
+
+        object.draw(ctx)
+
+        # Cairo → Pygame Surface
+        raw_buf = surface.get_data()
+        img = pygame.image.frombuffer(raw_buf, window_size, "BGRA").convert_alpha()
+        
+        # Dessine les objets sur la surface pygame (si nécessaire)
+        temp_surface = pygame.Surface(window_size, pygame.SRCALPHA)
+        temp_surface.blit(img, (0, 0))
+
+        object.draw_surface(temp_surface)
+
+        
+        self. _show_pygame_surface(temp_surface)  
+        pass
 
     def _show_image(self, path):
         image = Image.open(path)

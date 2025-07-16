@@ -4,6 +4,7 @@ __pycache__/
 media/music/*
 ff*.exe
 captures/
+conf.py
 *.avi
 *.mp4
 *.png

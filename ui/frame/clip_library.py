@@ -198,3 +198,15 @@ class ClipLibrary(ttk.Frame):
             self._current_selected_frame.config(style="Unselected.TFrame")
         frame.config(style="Selected.TFrame")
         self._current_selected_frame = frame
+
+    def reset(self):
+        # Supprimer tous les widgets affichés
+        for widget in self.scroll_frame.get_content_frame().winfo_children():
+            widget.destroy()
+
+        # Réinitialiser l'état interne
+        self._all_clips.clear()
+        self._added_video_paths.clear()
+        self._current_selected_frame = None
+        self._current_filter = None
+        self._apply_filter("all")  # si tu veux forcer le filtre "Tous"
