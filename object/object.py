@@ -214,10 +214,9 @@ class Object:
         #         self.explode()
 
         if( self.age >= self.step.duration - self.step.fade_out ) and ( self.age < self.step.duration ):
-            age = self.age
             time_in_fade_out = self.age - (self.step.duration - self.step.fade_out)
             self.alpha = max(1.0 - (time_in_fade_out / self.step.fade_out), 0.0)
-            print("fadeout alpha", self.alpha)
+            
 
         if( self.age >= self.step.duration ) and ( self.step.duration >= 0):
             self.destroyed = True

@@ -7,6 +7,7 @@ from object.object import Object
 from object.video import Video
 from ui.frame.scrollable_frame import ScrollableFrame
 from PIL import Image, ImageTk
+from PIL import ImageOps
 import vlc
 import os
 import pygame
@@ -75,7 +76,6 @@ class PreviewPanel(ttk.Frame):
     def _show_object(self, object):
 
         window_size = [608, 1080]
-        current_time = 0
         seconds = object.step.delay+object.step.fade_in
 
         object.reset(time.time()-seconds, 0)
@@ -138,7 +138,8 @@ class PreviewPanel(ttk.Frame):
         # Redimensionner plus rapidement avec BILINEAR (≈ qualité LANCZOS, mais plus rapide)
         resized = image.resize(new_size, Image.Resampling.BILINEAR)
 
-        photo = ImageTk.PhotoImage(resized)
+        bordered = ImageOps.expand(resized, border=1, fill='black')
+        photo = ImageTk.PhotoImage(bordered)
         
         # Réutiliser le label s’il existe
         if self.preview_label is None or not self.preview_label.winfo_exists():

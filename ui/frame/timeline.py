@@ -182,7 +182,7 @@ class Timeline(ttk.Frame):
         
 
     def _on_canvas_click(self, event):
-        self.canvas.focus_set() 
+        self.canvas.focus_set()
 
         if not self.on_time_click:
             return
@@ -190,31 +190,27 @@ class Timeline(ttk.Frame):
         x = self.canvas.canvasx(event.x)
         y = self.canvas.canvasy(event.y)
 
-        # Calcul de la position verticale de la bande de l'échelle de temps
-        total_tracks = self.num_tracks + int(self.has_background)
-        time_scale_y = total_tracks * self.track_height
+        # 1. Vérifie si on clique sur un clip (ou ses handles/textes)
+        clicked_items = self.canvas.find_overlapping(x, y, x, y)
+        for item in clicked_items:
+            for clip in self.clips:
+                if item in (
+                    clip["rect_id"], clip["text_id"],
+                    clip["left_handle"], clip["right_handle"],
+                    clip.get("thumb_id")
+                ):
+                    return  # clic sur un clip → on ignore
 
-        # Seulement si on clique dans la bande de l'échelle de temps
-        if time_scale_y <= y <= time_scale_y + self.tick_height*2:
+        # 2. Si on clique sur la zone des pistes ou de l’échelle de temps
+        total_tracks = self.num_tracks + int(self.has_background)
+        max_y = total_tracks * self.track_height + self.tick_height * 2
+
+        if 0 <= y <= max_y:
             time_in_seconds = round(x / 50, 2)
             self.current_time = time_in_seconds
             self.update_playhead_and_preview()
-            #self.on_time_click(time_in_seconds)
 
-            # Supprimer l'ancienne ligne si elle existe
-            #if self.playhead_line_id:
-            #    self.canvas.delete(self.playhead_line_id)
 
-            #x_pos = x  # position cliquée
-
-            # Calcul de la hauteur de la ligne
-            #total_height = (self.num_tracks + int(self.has_background)) * self.track_height + self.tick_height
-
-            # Dessine une nouvelle ligne verticale rouge
-            #self.playhead_line_id = self.canvas.create_line(
-            #    x_pos, 0, x_pos, total_height,
-            #    fill="red", width=2, dash=(4, 2), tags="playhead"
-            #)
 
 
     def _draw_headers(self):
@@ -285,13 +281,6 @@ class Timeline(ttk.Frame):
             self.canvas.create_text(x + 2, y + 15, text=f"{second}s", anchor="nw", font=("Arial", 8), tags="time_scale")
         self.canvas.create_line(0, y, self.length * 50, y, fill="black", tags="time_scale")
 
-        #self.canvas.tag_bind("time_scale", "<Button-1>", self._on_time_scale_click)
-
-    #def _on_time_scale_click(self, event):
-    #    x = self.canvas.canvasx(event.x)
-    #    seconds = round(x / 50, 2)  # ou int(x / 50) pour une valeur entière
-    #    if self._on_time_click_callback:
-    #        self._on_time_click_callback(seconds)
 
     def _remove_track(self, track_index):
         # Supprimer tous les clips de cette piste
@@ -436,7 +425,7 @@ class Timeline(ttk.Frame):
         pixels_per_second = 50
         duration = (new_x2 - new_x1) / pixels_per_second
         clip["object"].step.duration = round(duration, 1)
-        clip["object"].data.setdefault("step", {})["duration"] = clip["object"].step.duration
+        #clip["object"].data.setdefault("step", {})["duration"] = clip["object"].step.duration
 
 
     def _on_resize_end(self, event):
@@ -483,6 +472,7 @@ class Timeline(ttk.Frame):
         left_handle = self.canvas.create_rectangle(x1 - handle_size, y1, x1 + handle_size, y2, fill="", outline="")
         right_handle = self.canvas.create_rectangle(x2 - handle_size, y1, x2 + handle_size, y2, fill="", outline="")
 
+
         self.clips.append({
             "rect_id": rect_id,
             "text_id": text_id,
@@ -497,8 +487,8 @@ class Timeline(ttk.Frame):
             self.canvas.tag_bind(item_id, "<ButtonPress-1>", self._on_clip_press)
             self.canvas.tag_bind(item_id, "<B1-Motion>", self._on_drag)
             self.canvas.tag_bind(item_id, "<ButtonRelease-1>", self._on_clip_release)
-            self.canvas.tag_bind(item_id, "<Enter>", lambda e: self.canvas.config(cursor="fleur"))
-            self.canvas.tag_bind(item_id, "<Leave>", lambda e: self.canvas.config(cursor=""))
+            self.canvas.tag_bind(item_id, "<Enter>", self._on_enter_clip)
+            self.canvas.tag_bind(item_id, "<Leave>", self._on_leave_clip)
 
         for handle_id, side in ((left_handle, "left"), (right_handle, "right")):
             self.canvas.tag_bind(handle_id, "<ButtonPress-1>", lambda e, s=side: self._on_resize_start(e, s))
@@ -517,6 +507,7 @@ class Timeline(ttk.Frame):
     def _save_internal_data(self, object):
         object.data.setdefault("step", {})["delay"]    = object.step.delay
         object.data.setdefault("step", {})["duration"] = object.step.duration
+        pass
 
     def _on_clip_release(self, event):
         x = self.canvas.canvasx(event.x)
@@ -528,10 +519,7 @@ class Timeline(ttk.Frame):
             if item in (clip["rect_id"], clip["text_id"]):
                 if dx < seuil:
                     # clic
-                    if self._selected_clip:
-                        self.canvas.itemconfig(self._selected_clip["rect_id"], fill=self.style_clip_bg, outline=self.style_clip_bd)
-                    self.canvas.itemconfig(clip["rect_id"], fill=self.style_clip_selected_bg, outline=self.style_clip_selected_bd)
-                    self._selected_clip = clip
+                    self.select_clip(clip)
                     self.canvas.focus_set()
                     if self.on_clip_click:
                         self.on_clip_click(clip["object"])
@@ -554,7 +542,7 @@ class Timeline(ttk.Frame):
         self._drag_data = {"item": item, "x": x, "start_x": event.x}
   
    
-    def _on_drag(self, event):
+    def _on_drag2(self, event):
         if not self._drag_data["item"]:
             return
 
@@ -596,6 +584,53 @@ class Timeline(ttk.Frame):
                     clip["track"] = new_track
                 break
 
+    def _on_drag(self, event):
+        if not self._drag_data["item"]:
+            return
+
+        item = self._drag_data["item"]
+        x = self.canvas.canvasx(event.x)
+        y = self.canvas.canvasy(event.y)
+
+        dx = x - self._drag_data["x"]
+        self._drag_data["x"] = x
+
+        for clip in self.clips:
+            if item in (clip["rect_id"], clip["text_id"]):
+                old_track = clip["track"]
+
+                # === Mouvement horizontal sécurisé ===
+                x1, _, x2, _ = self.canvas.coords(clip["rect_id"])
+                new_x1 = x1 + dx
+                new_x2 = x2 + dx
+
+                # Bloque à gauche : ne pas passer avant 0s
+                if new_x1 < 0:
+                    dx -= new_x1  # ajuste dx pour que new_x1 soit 0
+
+                self.canvas.move(clip["rect_id"], dx, 0)
+                self.canvas.move(clip["text_id"], dx, 0)
+                self.canvas.move(clip["left_handle"], dx, 0)
+                self.canvas.move(clip["right_handle"], dx, 0)
+                if clip.get("thumb_id"):
+                    self.canvas.move(clip["thumb_id"], dx, 0)
+
+                # Met à jour le delay logique
+                x1, _, _, _ = self.canvas.coords(clip["rect_id"])
+                clip["object"].step.delay = round(x1 / 50.0, 2)
+
+                # === Détection de la piste sous la souris ===
+                new_track = int(y // self.track_height)
+                if 0 <= new_track < self.num_tracks and new_track != old_track:
+                    dy = (new_track - old_track) * self.track_height
+                    self.canvas.move(clip["rect_id"], 0, dy)
+                    self.canvas.move(clip["text_id"], 0, dy)
+                    self.canvas.move(clip["left_handle"], 0, dy)
+                    self.canvas.move(clip["right_handle"], 0, dy)
+                    if clip.get("thumb_id"):
+                        self.canvas.move(clip["thumb_id"], 0, dy)
+                    clip["track"] = new_track
+                break
 
 
     def _reorder_background_clips(self):
@@ -615,7 +650,7 @@ class Timeline(ttk.Frame):
 
             # Met à jour le start logique
             obj.step.delay = current_time  # utile si delay est utilisé aussi
-            obj.data.setdefault("step", {})["start"] = current_time
+            #obj.data.setdefault("step", {})["start"] = current_time
 
             # Convertit en pixels
             x1 = current_time * 50
@@ -633,19 +668,6 @@ class Timeline(ttk.Frame):
                 self.canvas.coords(clip["thumb_id"], x1, y1)
 
             current_time += duration
-
-
-    def _on_clip_click(self, event):
-        item = self.canvas.find_closest(event.x, event.y)[0]
-        for clip in self.clips:
-            if item in (clip["rect_id"], clip["text_id"]):
-                if self._selected_clip:
-                    self.canvas.itemconfig(self._selected_clip["rect_id"], fill="skyblue")
-                self.canvas.itemconfig(clip["rect_id"], fill="orange")
-                self._selected_clip = clip
-                if self.on_clip_click:
-                    self.on_clip_click(clip["object"])
-                break
 
 
     def redraw(self):
@@ -755,7 +777,7 @@ class Timeline(ttk.Frame):
             if next_start < current_end:
                 new_start = current_end
                 next_clip["object"].step.delay = new_start
-                next_clip["object"].data.setdefault("step", {})["start"] = new_start
+                #next_clip["object"].data.setdefault("step", {})["start"] = new_start
 
                 # met à jour position canvas
                 x1 = new_start * 50
@@ -779,6 +801,7 @@ class Timeline(ttk.Frame):
             return
 
         clip = self._selected_clip
+        self.clear_selection()
 
         # Supprime les éléments du canvas
         for key in ("rect_id", "text_id", "left_handle", "right_handle", "thumb_id"):
@@ -792,7 +815,6 @@ class Timeline(ttk.Frame):
         if self.on_clip_removed:
             self.on_clip_removed(clip["object"])
 
-        self._selected_clip = None
         self._reorder_background_clips()
         self.redraw()
 
@@ -809,4 +831,48 @@ class Timeline(ttk.Frame):
                         return obj.get_image(time-start)
                     return self.on_video_update(obj,time-start)
                 
+
+    def remove_focus(self):
+        for clip in self.clips:            
+            self.canvas.itemconfig(clip["rect_id"], fill=self.style_clip_bg, outline=self.style_clip_bd)
                 
+                
+
+    def select_clip(self, clip):
+        """Applique le style selected au clip, et unselected aux autres"""
+        if self._selected_clip and self._selected_clip != clip:
+            self.canvas.itemconfig(
+                self._selected_clip["rect_id"],
+                fill=self.style_clip_bg,
+                outline=self.style_clip_bd
+            )
+        
+        self.canvas.itemconfig(
+            clip["rect_id"],
+            fill=self.style_clip_selected_bg,
+            outline=self.style_clip_selected_bd
+        )
+        self._selected_clip = clip
+
+    def clear_selection(self):
+        if self._selected_clip:
+            self.canvas.itemconfig(
+                self._selected_clip["rect_id"],
+                fill=self.style_clip_bg,
+                outline=self.style_clip_bd
+            )
+            self._selected_clip = None
+                
+    def _on_enter_clip(self, event):
+        self.canvas.config(cursor="fleur")        
+        item = self.canvas.find_closest(event.x, event.y)[0]
+        for clip in self.clips:
+            if item in (clip["rect_id"], clip["text_id"]): # and clip != self._selected_clip:
+                self.canvas.itemconfig(clip["rect_id"], fill=darken(self.style_clip_bg, 1.2))
+                break
+
+    def _on_leave_clip(self, event):
+        self.canvas.config(cursor="")
+        #item = self.canvas.find_closest(event.x, event.y)[0]
+        for clip in self.clips:
+            self.canvas.itemconfig(clip["rect_id"], fill=self.style_clip_bg)

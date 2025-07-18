@@ -114,3 +114,10 @@ class VideoLibraryPanel(ttk.Frame):
             self._current_selected_frame.config(style="Unselected.TFrame")
         frame.config(style="Selected.TFrame")
         self._current_selected_frame = frame
+
+
+    def remove_focus(self):
+        if self._current_selected_frame:
+            self._current_selected_frame.config(style="Unselected.TFrame")
+        
+        

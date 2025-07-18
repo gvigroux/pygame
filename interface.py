@@ -20,7 +20,7 @@ from object.video import Video
 from background.video import Video as BackgroundVideo
 from ui.frame.clip_library import ClipLibrary
 from ui.frame.empty_panel import EmptyPanel
-from ui.frame.library_panel import VideoLibraryPanel
+from ui.frame.library_panel_OLD import VideoLibraryPanel
 from ui.frame.preview_panel import PreviewPanel
 from ui.frame.property_panel import PropertyPanel
 from ui.helper import center_window, lighten_color
@@ -564,8 +564,14 @@ paned = ttk.PanedWindow(vertical_paned, orient="horizontal")
 # Créer les 3 zones verticales
 
 def on_library_clip_click(object):
+    timeline.remove_focus()
     preview_panel.show_preview(object)
     property_panel.show_object(object)
+
+def on_timeline_clip_click(object):
+    library_panel.remove_focus()
+    property_panel.show_object(object)
+
 
 preview_panel = PreviewPanel(paned)
 library_panel = ClipLibrary(paned, on_drop_callback=handle_video_drop, on_click=on_library_clip_click) 
@@ -585,7 +591,7 @@ timeline_zone.rowconfigure(1, weight=1)  # Timeline (extensible si nécessaire)
 
 
 timeline = Timeline(timeline_zone, num_tracks=0, length=120,
-                    on_clip_click=property_panel.show_object,
+                    on_clip_click=on_timeline_clip_click,
                     on_clip_add=game.add_object,
                     on_clip_removed=game.remove_object,
                     on_time_click=handle_time_click, on_video_update=handle_video_update)   

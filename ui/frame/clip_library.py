@@ -27,8 +27,10 @@ class ClipLibrary(ttk.Frame):
 
         # Styles
         style = ttk.Style()
-        style.configure("Selected.TFrame", relief="solid", borderwidth=2)
+        style.configure("Selected.TFrame", relief="solid", borderwidth=1)
         style.configure("Unselected.TFrame", relief="flat", borderwidth=0)
+        style.configure("Hovered.TFrame", relief="ridge", borderwidth=1)
+
 
     def _create_sidebar_buttons(self):
         filters = [
@@ -157,9 +159,20 @@ class ClipLibrary(ttk.Frame):
         def on_release(event):
             self._end_drag(top_frame, event, clip)
 
+        def on_enter(event):
+            if top_frame != self._current_selected_frame:
+                top_frame.config(style="Hovered.TFrame")
+
+        def on_leave(event):
+            if top_frame != self._current_selected_frame:
+                top_frame.config(style="Unselected.TFrame")
+
+
         widget.bind("<Button-1>", on_click)
         widget.bind("<B1-Motion>", on_motion)
         widget.bind("<ButtonRelease-1>", on_release)
+        widget.bind("<Enter>", on_enter)
+        widget.bind("<Leave>", on_leave)
 
         for child in widget.winfo_children():
             self._bind_all(child, clip, top_frame)
@@ -210,3 +223,9 @@ class ClipLibrary(ttk.Frame):
         self._current_selected_frame = None
         self._current_filter = None
         self._apply_filter("all")  # si tu veux forcer le filtre "Tous"
+
+    def remove_focus(self):
+        if self._current_selected_frame:
+            self._current_selected_frame.config(style="Unselected.TFrame")
+        
+        
