@@ -1,6 +1,7 @@
 import os
 import threading
 import queue
+import time
 import cv2
 import numpy as np
 import cairo
@@ -21,6 +22,7 @@ class Video(Object):
             self.label = os.path.basename(self.path)
         self.reverse = self.config("reverse", False)
         self.loop = self.config("loop", False)
+        self.play_sound = self.config("play_sound", False)
         self.freeze_frame = self.config("freeze_frame", 0)
         self.freeze_duration = self.config("freeze_duration", 0)
         self.start_frame = self.config("start_frame", 0)
@@ -160,9 +162,22 @@ class Video(Object):
                 if not ret:
                     break
 
-                frame = cv2.resize(frame, self.size.get(), interpolation=cv2.INTER_AREA)
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2BGRA)
-                surface = self.numpy_to_cairo_surface(frame)
+                h, w = frame.shape[:2]
+                target_w, target_h = self.size.get()
+
+                if (w, h) != (target_w, target_h):
+                    frame = cv2.resize(frame, (target_w, target_h), interpolation=cv2.INTER_AREA)
+    
+                #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2BGRA)
+                #surface = self.numpy_to_cairo_surface(frame)
+
+                                
+                # Convertir pour Pygame
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                #surface = pygame.surfarray.make_surface(np.flipud(np.rot90(frame_rgb)))
+                surface = pygame.image.frombuffer(frame_rgb.tobytes(), (target_w, target_h), 'RGB')
+                #surface = surface.convert()
+
                 temp_frames.append(surface)
                 current_frame += 1
 
@@ -233,18 +248,14 @@ class Video(Object):
 
     def _draw(self, ctx):
         """Dessin thread-safe"""
-        if( self.current_frame ):
-            ctx.set_source_surface(self.current_frame, 0, 0)
-            ctx.paint()
+        #if( self.current_frame ):
+        #    ctx.set_source_surface(self.current_frame, 0, 0)
+        #    ctx.paint()
+        pass
 
-
-
-    # def __del__(self):
-    #     """Nettoyage des ressources"""
-    #     self._should_stop.set()
-    #     if self._load_thread:
-    #         self._load_thread.join()
-
+    def _draw_surface(self, screen):
+        if self.current_frame:
+            screen.blit(self.current_frame, (0, 0))    
 
     def schema(self):
         return {
@@ -253,6 +264,7 @@ class Video(Object):
             "path": ("str", "path"),
             "reverse": ("bool", "reverse"),
             "loop": ("bool", "loop"),
+            "play_sound": ("bool", "Play sound"),
             "fps": ("int", "FPS"),
             "freeze_frame": ("int", "Freeze frame"),
             "freeze_duration": ("float", "Freeze duration"),

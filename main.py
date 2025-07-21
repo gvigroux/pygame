@@ -13,6 +13,7 @@ game = Game(pygame)
 
 # Load config
 game.load()
+game.load_objects()
 
 # Cairo surface et contexte réutilisables
 surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, *game.window_size)
@@ -29,8 +30,6 @@ running = True
 current_step = 0
 obj_block = game.block_count(0)
 
-
-game.debug(False)
 
 while running:
     t0 = time.perf_counter()
@@ -80,9 +79,13 @@ while running:
     #***********************************************************************
     # Check collisions 
 
+    t1 = time.perf_counter()
     game.check_collisions()
    
     game.update(dt, current_step, clock, obj_block)
+
+    
+    t2 = time.perf_counter()
 
     #***********************************************************************
     # Cairo rendering
@@ -92,13 +95,17 @@ while running:
     ctx.paint()
     ctx.restore()
 
+    
+    t3 = time.perf_counter()
+
     #***********************************************************************
     # Draw
 
-    game.draw_on_context(ctx, current_time)
+    #ga0me.draw_on_context(ctx, current_time)
+    game.draw(screen, ctx, current_time)
 
-  
-    
+    t4 = time.perf_counter()
+
     # Step 3 : Cairo to Pygame
     raw_buf = surface.get_data()
     img = pygame.image.frombuffer(raw_buf, game.window_size, "BGRA").convert_alpha()
@@ -107,21 +114,18 @@ while running:
     # Step 4 : Affichage
     screen.blit(img, (0, 0))
 
-
-    for object in game.objects:
-        object.draw_surface(screen)
+    #for object in game.objects:
+    #    object.draw_surface(screen)
 
 
     pygame.display.flip()
-    t7 = time.perf_counter()
+    t5 = time.perf_counter()
     clock.tick(60)
  
     # Debug print
     #fps = clock.get_fps()
-    if( (t7-t0)*1000 > 14000 ):
-        print("WARNING")
-    #print(f"FIRST: {(t1 - t0)*1000:.2f} ms | UPDATE: {(t2 - t1)*1000:.2f} ms | DRAW: {(t3 - t2)*1000:.2f} ms - SURFACE {(t10 - t2)*1000:.2f}/BACK {(t11 - t10)*1000:.2f}/OBJECTS {(t3 - t11)*1000:.2f}| CONVERT: {(t4 - t3)*1000:.2f} ms | BLIT+DISPLAY: {(t5 - t4)*1000:.2f} ms | TEXT DRAW: {(t6 - t5)*1000:.2f} ms | FLIP : {(t7 - t6)*1000:.2f} ms | TOTAL: {(t7 - t0)*1000:.2f} ms | dt={dt*1000:.2f}ms | FPS={fps:.2f}")
-
+    #print(f"FIRST: {(t1 - t0)*1000:.2f} ms | UPDATE: {(t2 - t1)*1000:.2f} ms | BACK: {(t3 - t2)*1000:.2f} ms | DRAW {(t4 - t3)*1000:.2f} | BLIT {(t5 - t4)*1000:.2f} | TOTAL: {(t5 - t0)*1000:.2f} ms | dt={dt*1000:.2f}ms | FPS={fps:.2f}")
+    #print(fps)
 pygame.quit()
 
 

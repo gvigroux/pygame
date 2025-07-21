@@ -54,7 +54,7 @@ class TextDraw(Object):
             safe_globals["step"] = int(step)
             safe_globals["blocked"] = int(blocked)
             safe_globals["timing"] = self.age / 1000.0
-            x, y = self.pygame.mouse.get_pos()
+            x, y = pygame.mouse.get_pos()
             safe_globals["mouse"] = f"{x * 100 / self.window_size[0]:.1f}% / {y * 100 / self.window_size[1]:.1f}%"
 
             val = str(eval(self.text.update, {"__builtins__": {}}, safe_globals))

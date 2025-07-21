@@ -5,6 +5,7 @@ from background.backgrounds import BackgroundFactory
 from object.arc import Arc
 from object.ball import Ball
 from object.object_factory import ObjectFactory
+from object.text_surface import TextSurface
 from object.video import Video
 
 
@@ -94,6 +95,8 @@ class Game:
             self.config = json.load(f)
 
         self._load_params(avoid_debug, load_background)
+
+    def load_objects(self):
         self._load_objects()
 
         # Wait first video to be loaded
@@ -110,16 +113,18 @@ class Game:
         settings = self.config.get("settings", {})
         self.end_step = settings.get("end_step", -1)
         self.window_size = settings.get("window_size", [540, 960])
-        if( settings.get("debug", False) ) and avoid_debug:
+        if( settings.get("debug", False) ) and not avoid_debug:
             self.debug(True)
         
         ############### Background ###############     
         if( load_background ):
+            print("Load Background") 
             background_config = self.config.get("background", {})
             self.background = BackgroundFactory.create(self.pygame, background_config.get("type", "concentric_wave"),*self.window_size, background_config)
 
             while not self.background.ready:
                 time.sleep(0.01)
+            print("Background ready")
 
         ############### Music ###############
         self.music_stated = False
@@ -217,6 +222,27 @@ class Game:
         
         for object in self.objects:
             object.draw(ctx)
+
+    def draw(self, screen, ctx, current_time):
+
+        #if( self.background is not None):
+        #   self.background.draw(ctx, current_time)
+        
+        for object in self.objects:
+            t0 = time.perf_counter()
+            if( isinstance(object, Video) ):
+                object.draw_surface(screen)
+            elif( isinstance(object, TextSurface) ):
+                object.draw_surface(screen)
+            else:
+                object.draw(ctx)
+            t1 = time.perf_counter()
+            if( t1 - t0 > 0.01 ):
+                print(f"SLOW Draw {object.label}: {(t1 - t0)*1000:.2f} ms")
+
+    def reorder_objects(self):
+        print("Reorder objects")
+        self.objects.sort(key=lambda obj: (-obj.track_id, obj.step.delay))
 
         
     def block_count(self, step):

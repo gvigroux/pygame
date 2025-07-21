@@ -19,14 +19,13 @@ from object.object_factory import ObjectFactory
 from object.video import Video
 from background.video import Video as BackgroundVideo
 from ui.frame.clip_library import ClipLibrary
-from ui.frame.empty_panel import EmptyPanel
-from ui.frame.library_panel_OLD import VideoLibraryPanel
 from ui.frame.preview_panel import PreviewPanel
 from ui.frame.property_panel import PropertyPanel
 from ui.helper import center_window, lighten_color
 from ui.log import log_message
 from ui.tools.downloader import DownloaderWindow
 from ui.tools.disk_library import DiskLibraryWindow
+from ui.tools.import_video import ImportVideoTool
 from ui.tools.xdownloader import XDownloader
 from ui.frame.scrollable_frame import ScrollableFrame
 from ui.frame.timeline import Timeline
@@ -58,11 +57,13 @@ def save_scene(state, scene_filepath, game):
     with open(scene_filepath, "r", encoding="utf-8") as f:
         data = json.load(f)
 
+    game.reorder_objects()
+
     data["objects"] = []
     for object in game.objects:
         obj = serialize_object(object, True)
         #obj = object.data
-        obj["track"] = object.track
+        obj["track_id"] = object.track_id
         data["objects"].append(obj) 
         
     # 3️⃣ Réécrire le fichier avec la nouvelle config
@@ -125,7 +126,6 @@ def load_scene(state, game, filename):
     game.reset()
     #game.load(file_path, avoid_debug=False)
       
-      
     file_path = os.path.dirname(os.path.realpath(__file__))
     file = os.path.join(file_path, filename)
     
@@ -139,11 +139,13 @@ def load_scene(state, game, filename):
     game.window_size    = settings.get("window_size", [540, 960])
 
 
+    track_count = 0
     for data in config.get("objects", []):
         object = library_panel.get_video(data.get("path"))
         if object is None:
             # When Video not in path or any other object (beacause no path as well)
             object = ObjectFactory.create(data, game.window_size, 0, 0)
+            track_count = max(object.track_id,track_count)
             library_panel.add_clip(object)
         else:
             object = object.clone()
@@ -151,12 +153,19 @@ def load_scene(state, game, filename):
         game.objects.append(object)
 
 
-    i = len(game.objects)-1
-    for object in game.objects:
-        timeline.add_track_top(False)
-        timeline.add_clip(object, track=i, start=object.step.delay, duration=object.step.duration)
-        #library_panel.add_clip(object)
-        i-=1
+    # Legacy import rule
+    if( track_count == 0) :
+        i = len(game.objects)-1
+        for object in game.objects:
+            timeline.add_track_top(False)
+            timeline.add_clip(object, track=i, start=object.step.delay, duration=object.step.duration)
+            i-=1
+    else:
+        for i in range(track_count+1):
+            timeline.add_track_top(False)
+        for object in game.objects:
+            timeline.add_clip(object, track=object.track_id, start=object.step.delay, duration=object.step.duration)
+
   
 
     return
@@ -594,6 +603,7 @@ timeline = Timeline(timeline_zone, num_tracks=0, length=120,
                     on_clip_click=on_timeline_clip_click,
                     on_clip_add=game.add_object,
                     on_clip_removed=game.remove_object,
+                    on_clip_update=game.reorder_objects,
                     on_time_click=handle_time_click, on_video_update=handle_video_update)   
 
 timeline_toolbar = Toolbar(timeline_zone)
@@ -621,6 +631,8 @@ toolbar.add_icon("ui/icons/icons8-document-24.png", lambda: load_scene_dialog(st
 toolbar.add_icon("ui/icons/icons8-save-24.png", lambda: save_scene(state, "config.json", game), tooltip="Save scene")
 toolbar.add_separator()
 toolbar.add_text("TOOLS")
+
+toolbar.add_icon("ui/icons/icons8-importer-24.png", lambda: ImportVideoTool(state), tooltip="Downloader & Splitter")
 toolbar.add_icon("ui/icons/icons8-download-from-the-cloud-24.png", lambda: DownloaderWindow(state), tooltip="Downloader & Splitter")
 toolbar.add_icon("ui/icons/icons8-video-gallery-24.png", lambda: DiskLibraryWindow(state, on_double_click=on_video_selected), tooltip="Media Library")
 toolbar.add_icon("ui/icons/icons8-video-gallery-24.png", lambda: XDownloader(state), tooltip="X Downloader")

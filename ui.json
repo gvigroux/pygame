@@ -2,19 +2,19 @@
     "config": {
         "downloader": {
             "url": "",
-            "split": ""
+            "split": "C:/Users/gvigroux/Downloads/a34Nr51_460sv.mp4"
         }
     },
     "layout": {
         "pane_sizes": [
-            622,
-            1252
+            661,
+            1307
         ],
         "vertical_sash": 448,
         "window_size": [
             1920,
             1017
         ],
-        "maximized": false
+        "maximized": true
     }
 }

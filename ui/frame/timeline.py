@@ -26,7 +26,7 @@ def darken(hex_color, factor=0.8):
 
 
 class Timeline(ttk.Frame):
-    def __init__(self, master, num_tracks=3, length=60, height=300, on_clip_click=None, on_clip_add=None, on_clip_removed=None, on_time_click = None, on_video_update = None ,**kwargs):
+    def __init__(self, master, num_tracks=3, length=60, height=300, on_clip_click=None, on_clip_add=None, on_clip_removed=None, on_clip_update=None, on_time_click = None, on_video_update = None ,**kwargs):
         self.on_clip_click = on_clip_click
         self.num_tracks = num_tracks
         self.length = length
@@ -37,6 +37,7 @@ class Timeline(ttk.Frame):
         self.on_time_click = on_time_click
         self.on_video_update = on_video_update
         self.on_clip_add = on_clip_add
+        self.on_clip_update = on_clip_update
 
         super().__init__(master, **kwargs)
 
@@ -284,7 +285,7 @@ class Timeline(ttk.Frame):
 
     def _remove_track(self, track_index):
         # Supprimer tous les clips de cette piste
-        clips_to_remove = [clip for clip in self.clips if clip["track"] == track_index]
+        clips_to_remove = [clip for clip in self.clips if clip["track_id"] == track_index]
         for clip in clips_to_remove:
             for key in ("rect_id", "text_id", "left_handle", "right_handle"):
                 self.canvas.delete(clip[key])
@@ -294,12 +295,12 @@ class Timeline(ttk.Frame):
             
         # Décaler toutes les pistes et clips en dessous vers le haut
         for clip in self.clips:
-            if( isinstance(clip["track"], str) ):
+            if( isinstance(clip["track_id"], str) ):
                 continue
             if( isinstance(track_index, str) ):
                 continue
-            if clip["track"] > track_index:
-                clip["track"] -= 1
+            if clip["track_id"] > track_index:
+                clip["track_id"] -= 1
                 self.canvas.move(clip["rect_id"], 0, -self.track_height)
                 self.canvas.move(clip["text_id"], 0, -self.track_height)
                 self.canvas.move(clip["left_handle"], 0, -self.track_height)
@@ -307,7 +308,7 @@ class Timeline(ttk.Frame):
 
         if self.has_background:
             for clip in self.clips:
-                if clip["track"] == "background":
+                if clip["track_id"] == "background":
                     self.canvas.move(clip["rect_id"], 0, -self.track_height)
                     self.canvas.move(clip["text_id"], 0, -self.track_height)
                     self.canvas.move(clip["left_handle"], 0, -self.track_height)
@@ -338,15 +339,15 @@ class Timeline(ttk.Frame):
         # Décale tous les clips existants vers le bas
         if( move_clips ):
             for clip in self.clips:
-                #clip["track"] += 1
+                #clip["track_id"] += 1
                 self.canvas.move(clip["rect_id"], 0, self.track_height)
                 self.canvas.move(clip["text_id"], 0, self.track_height)
                 self.canvas.move(clip["left_handle"], 0, self.track_height)
                 self.canvas.move(clip["right_handle"], 0, self.track_height)
                 if clip.get("thumb_id"):
                     self.canvas.move(clip["thumb_id"], 0, self.track_height)
-                if( isinstance(clip["track"], int) ):
-                    clip["track"] += 1
+                if( isinstance(clip["track_id"], int) ):
+                    clip["track_id"] += 1
 
 
         # Décale l'échelle de temps vers le bas
@@ -374,8 +375,9 @@ class Timeline(ttk.Frame):
         if self._drag_data["item"]:
             return  # ignore si drag en cours
         x = self.canvas.canvasx(event.x)  # CORRECTION
-        y = self.canvas.canvasy(event.y)
-        item = self.canvas.find_closest(x, y)[0]
+        #y = self.canvas.canvasy(event.y)
+        #item = self.canvas.find_closest(x, y)[0]
+        item = self._find_closest(event)
         for clip in self.clips:
             if item in (clip["left_handle"], clip["right_handle"]):
                 self._resize_data = {"clip": clip, "side": side, "start_x": x}
@@ -430,9 +432,9 @@ class Timeline(ttk.Frame):
 
     def _on_resize_end(self, event):
         clip = self._resize_data.get("clip")
-        if clip and clip["track"] != "background":
-            self._resolve_overlaps_on_track(clip["track"])
-        elif clip and clip["track"] == "background":
+        if clip and clip["track_id"] != "background":
+            self._resolve_overlaps_on_track(clip["track_id"])
+        elif clip and clip["track_id"] == "background":
             self._reorder_background_clips()
         self._resize_data = {"clip": None, "side": None, "start_x": 0}
 
@@ -450,7 +452,7 @@ class Timeline(ttk.Frame):
         if track == "background":
             y1 = self.num_tracks * self.track_height + 5
         else:
-            y1 = track_index * self.track_height + 5
+            y1 = (track_index) * self.track_height + 5
         y2 = y1 + self.track_height - 10
         
         thumb_id = None
@@ -463,15 +465,12 @@ class Timeline(ttk.Frame):
         font = tkfont.Font(family="Arial", size=10)
         max_text_width = (x2 - x1) - 10  # 10 pixels de marge à droite
         
-        display_text = self.truncate_text(object.label, max_text_width, font)
-
-        text_id = self.canvas.create_text(x1 + 5, (y1 + y2) / 2, text=display_text, anchor="w", font=font, fill=self.style_clip_fg)
-
+        display_text    = self.truncate_text(object.label, max_text_width, font)
+        text_id         = self.canvas.create_text(x1 + 5, (y1 + y2) / 2, text=display_text, anchor="w", font=font, fill=self.style_clip_fg)
         
         handle_size = 5
-        left_handle = self.canvas.create_rectangle(x1 - handle_size, y1, x1 + handle_size, y2, fill="", outline="")
-        right_handle = self.canvas.create_rectangle(x2 - handle_size, y1, x2 + handle_size, y2, fill="", outline="")
-
+        left_handle     = self.canvas.create_rectangle(x1 - handle_size, y1, x1 + handle_size, y2, fill="", outline="")
+        right_handle    = self.canvas.create_rectangle(x2 - handle_size, y1, x2 + handle_size, y2, fill="", outline="")
 
         self.clips.append({
             "rect_id": rect_id,
@@ -479,7 +478,7 @@ class Timeline(ttk.Frame):
             "left_handle": left_handle,
             "right_handle": right_handle,
             "object": object,
-            "track": track_index,
+            "track_id": track_index,
             "thumb_id": thumb_id
         })
 
@@ -499,7 +498,8 @@ class Timeline(ttk.Frame):
 
     def _on_clip_press(self, event):
         x = self.canvas.canvasx(event.x) 
-        item = self.canvas.find_closest(x, event.y)[0]
+        #item = self.canvas.find_closest(x, event.y)[0]
+        item = self._find_closest(event)
         self._drag_data["item"] = item
         self._drag_data["x"] = x
         self._drag_data["start_x"] = x
@@ -525,20 +525,28 @@ class Timeline(ttk.Frame):
                         self.on_clip_click(clip["object"])
                 else:
                     # DRAG terminé → réaligner si besoin
-                    if clip["track"] != "background":
-                        self._resolve_overlaps_on_track(clip["track"])
+                    if clip["track_id"] != "background":
+                        self._resolve_overlaps_on_track(clip["track_id"])
                     else:
                         self._reorder_background_clips()
                 break
 
         self._drag_data = {"x": 0, "item": None, "start_x": 0}
 
+        for clip in self.clips:
+            clip["object"].track_id = clip["track_id"]
+            print(f"Track {clip['track_id']} → {clip['object'].track_id}")
+
+        if( self.on_clip_update ):
+            self.on_clip_update()
+
 
     def _on_start_drag(self, event):
         if self._resize_data["clip"]:
             return  # ignore drag si resize actif
         x = self.canvas.canvasx(event.x)  # CORRECTION
-        item = self.canvas.find_closest(x, event.y)[0]
+        #item = self.canvas.find_closest(x, event.y)[0]
+        item = self._find_closest(event)
         self._drag_data = {"item": item, "x": x, "start_x": event.x}
   
    
@@ -555,7 +563,7 @@ class Timeline(ttk.Frame):
 
         for clip in self.clips:
             if item in (clip["rect_id"], clip["text_id"]):
-                old_track = clip["track"]
+                old_track = clip["track_id"]
 
                 # === Mouvement horizontal
                 self.canvas.move(clip["rect_id"], dx, 0)
@@ -581,7 +589,7 @@ class Timeline(ttk.Frame):
                     if clip.get("thumb_id"):
                         self.canvas.move(clip["thumb_id"], 0, dy)
 
-                    clip["track"] = new_track
+                    clip["track_id"] = new_track
                 break
 
     def _on_drag(self, event):
@@ -597,7 +605,7 @@ class Timeline(ttk.Frame):
 
         for clip in self.clips:
             if item in (clip["rect_id"], clip["text_id"]):
-                old_track = clip["track"]
+                old_track = clip["track_id"]
 
                 # === Mouvement horizontal sécurisé ===
                 x1, _, x2, _ = self.canvas.coords(clip["rect_id"])
@@ -629,45 +637,9 @@ class Timeline(ttk.Frame):
                     self.canvas.move(clip["right_handle"], 0, dy)
                     if clip.get("thumb_id"):
                         self.canvas.move(clip["thumb_id"], 0, dy)
-                    clip["track"] = new_track
+                    clip["track_id"] = new_track
                 break
 
-
-    def _reorder_background_clips(self):
-        """Réorganise les clips de la piste 'background' sans chevauchement et met à jour leur step.delay"""
-      
-        # 1. Récupérer et trier les clips de la piste 'background' par leur position logique (step.delay)
-        background_clips = [
-            clip for clip in self.clips if clip["track"] == "background"
-        ]
-        background_clips.sort(key=lambda clip: clip["object"].step.delay)
-
-        # 2. Réaligner horizontalement tous les clips sans espace
-        current_time = 0
-        for clip in background_clips:
-            obj = clip["object"]
-            duration = obj.step.duration
-
-            # Met à jour le start logique
-            obj.step.delay = current_time  # utile si delay est utilisé aussi
-            #obj.data.setdefault("step", {})["start"] = current_time
-
-            # Convertit en pixels
-            x1 = current_time * 50
-            x2 = x1 + duration * 50
-            y1 = self.num_tracks * self.track_height + 5
-            y2 = y1 + self.track_height - 10
-
-            # Met à jour les éléments Canvas
-            self.canvas.coords(clip["rect_id"], x1, y1, x2, y2)
-            self.canvas.coords(clip["left_handle"], x1 - 5, y1, x1 + 5, y2)
-            self.canvas.coords(clip["right_handle"], x2 - 5, y1, x2 + 5, y2)
-            self.canvas.coords(clip["text_id"], x1 + 5, (y1 + y2) / 2)
-
-            if clip.get("thumb_id"):
-                self.canvas.coords(clip["thumb_id"], x1, y1)
-
-            current_time += duration
 
 
     def redraw(self):
@@ -682,10 +654,10 @@ class Timeline(ttk.Frame):
             if( duration < 0 ):
                 x2 =  self.length * 50 - x1
 
-            if clip["track"] == "background":
+            if clip["track_id"] == "background":
                 y1 = self.num_tracks * self.track_height + 5
             else:
-                y1 = clip["track"] * self.track_height + 5
+                y1 = clip["track_id"] * self.track_height + 5
             y2 = y1 + self.track_height - 10
 
             # Redessine les formes
@@ -753,7 +725,7 @@ class Timeline(ttk.Frame):
         # 1. Récupère les clips de la track concernée
         clips = [
             clip for clip in self.clips
-            if clip["track"] == track_index and clip["object"].step.duration > 0
+            if clip["track_id"] == track_index and clip["object"].step.duration > 0
         ]
 
         # 2. Trie les clips par start time
@@ -821,7 +793,7 @@ class Timeline(ttk.Frame):
 
     def get_background_image(self, time):
         for clip in self.clips:
-            if( clip["track"] == "background" ):
+            if( clip["track_id"] == "background" ):
                 obj     = clip["object"]
                 start    = obj.step.delay
                 duration = obj.step.duration
@@ -865,7 +837,8 @@ class Timeline(ttk.Frame):
                 
     def _on_enter_clip(self, event):
         self.canvas.config(cursor="fleur")        
-        item = self.canvas.find_closest(event.x, event.y)[0]
+        #item = self.canvas.find_closest(event.x, event.y)[0]
+        item = self._find_closest(event)
         for clip in self.clips:
             if item in (clip["rect_id"], clip["text_id"]): # and clip != self._selected_clip:
                 self.canvas.itemconfig(clip["rect_id"], fill=darken(self.style_clip_bg, 1.2))
@@ -873,6 +846,48 @@ class Timeline(ttk.Frame):
 
     def _on_leave_clip(self, event):
         self.canvas.config(cursor="")
-        #item = self.canvas.find_closest(event.x, event.y)[0]
         for clip in self.clips:
             self.canvas.itemconfig(clip["rect_id"], fill=self.style_clip_bg)
+
+
+    def _find_closest(self, event):
+        cx = self.canvas.canvasx(event.x)
+        cy = self.canvas.canvasy(event.y)
+        return self.canvas.find_closest(cx, cy)[0]
+
+
+    def _reorder_background_clips(self):
+        """Réorganise les clips de la piste 'background' sans chevauchement et met à jour leur step.delay"""
+      
+        # 1. Récupérer et trier les clips de la piste 'background' par leur position logique (step.delay)
+        background_clips = [
+            clip for clip in self.clips if clip["track_id"] == "background"
+        ]
+        background_clips.sort(key=lambda clip: clip["object"].step.delay)
+
+        # 2. Réaligner horizontalement tous les clips sans espace
+        current_time = 0
+        for clip in background_clips:
+            obj = clip["object"]
+            duration = obj.step.duration
+
+            # Met à jour le start logique
+            obj.step.delay = current_time  # utile si delay est utilisé aussi
+            #obj.data.setdefault("step", {})["start"] = current_time
+
+            # Convertit en pixels
+            x1 = current_time * 50
+            x2 = x1 + duration * 50
+            y1 = self.num_tracks * self.track_height + 5
+            y2 = y1 + self.track_height - 10
+
+            # Met à jour les éléments Canvas
+            self.canvas.coords(clip["rect_id"], x1, y1, x2, y2)
+            self.canvas.coords(clip["left_handle"], x1 - 5, y1, x1 + 5, y2)
+            self.canvas.coords(clip["right_handle"], x2 - 5, y1, x2 + 5, y2)
+            self.canvas.coords(clip["text_id"], x1 + 5, (y1 + y2) / 2)
+
+            if clip.get("thumb_id"):
+                self.canvas.coords(clip["thumb_id"], x1, y1)
+
+            current_time += duration
