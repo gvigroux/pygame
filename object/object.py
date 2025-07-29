@@ -25,6 +25,7 @@ safe_globals = {
 
 class Object:
     def __init__(self, data, window_size, amount =1, i = 1):
+        t0 = time.perf_counter()
         cls = self.__class__
         if not hasattr(cls, "_count"):
             cls._count = 0
@@ -47,6 +48,7 @@ class Object:
         self.on_spawn              = eEvent(**self.config("on_spawn", {}))
         self.on_destroy            = eEvent(**self.config("on_destroy", {}))
         self.on_collision          = eEvent(**self.config("on_collision", {}))
+        t1 = time.perf_counter()
 
         # Timing management
         self.enable     = self.config("enable", True)
@@ -75,6 +77,13 @@ class Object:
         self.log_draw_durations = []
         self.t0 = 0
         self.t1 = 0
+        t2 = time.perf_counter()
+        if( t1 - t0 > 0.01 ):
+            print(f"SLOW Object.__init__1: {(t1 - t0)*1000:.2f} ms")
+        if( t2 - t1 > 0.01 ):            
+            print(f"SLOW Object.__init__2: {(t2 - t1)*1000:.2f} ms")
+        if( t2 - t0 > 0.01 ):            
+            print(f"SLOW Object.__init__total: {(t2 - t0)*1000:.2f} ms")
 
     def prepare(self):     
         self.color      = self.config("color", (255, 255, 255, 255))
@@ -257,38 +266,55 @@ class Object:
         pass
 
 
+    
+    def serialize_object(self, object = None):
+
+        if( object == None ):
+            object = self
+
+        if not hasattr(self, "schema") or not callable(object.schema):
+            raise ValueError("L'objet n'a pas de méthode .schema()")
+
+        result = {}
+        schema = object.schema()
+
+        if( object == self ):
+            result["type"] = object.__class__.__name__
+
+        for key in schema:
+            try:
+                value = getattr(object, key)
+            except AttributeError:
+                continue
+
+            if hasattr(value, "schema") and callable(value.schema):
+                if( value.enabled()):
+                    result[key] = self.serialize_object(value)  # appel récursif
+            elif isinstance(value, (str, int, float, bool)): # or value is None:
+                result[key] = value
+            elif isinstance(value, list):
+                # Liste d'objets ou de primitives
+                serialized_list = []
+                for item in value:
+                    if hasattr(item, "schema") and callable(item.schema):
+                        if( item.enabled()):
+                            serialized_list.append(self.serialize_object(item))
+                    elif isinstance(item, (str, int, float, bool)):
+                        serialized_list.append(item)
+                result[key] = serialized_list
+
+            # On ignore les autres types (ex: objets non listés ou non sérialisables)
+
+        return result
+
+
     def clone(self):
-        # new_obj = self.__class__.__new__(self.__class__)
-        # for key, value in self.__dict__.items():
-        #     try:
-        #         copied_value = copy.deepcopy(value)
-        #     except Exception as e:
-        #         print(f"[clone] Failed to deepcopy attribute '{key}' of type {type(value)}: {e}")
-        #         copied_value = value  # fallback: shallow copy
-        #     setattr(new_obj, key, copied_value)
-        # return new_obj
-
-
         try:
             obj = copy.deepcopy(self)
         except Exception as e:
             print(f"[clone] Failed to deepcopy': {e}")
         return obj
        
-        obj = self.__class__.__new__(self.__class__)        
-        for key, value in self.__dict__.items():
-            if key in ("font_emoji"):
-                obj.set_font_emoji()
-                continue
-            if key in ("thumb"):
-                continue
-            try:
-                copied_value = copy.deepcopy(value)
-            except Exception as e:
-                print(f"[clone] Failed to deepcopy attribute '{key}': {e}")
-                copied_value = value  # fallback: shallow copy
-            setattr(obj, key, copied_value)
-        return obj
     
     def draw(self, ctx):
         t0 = time.perf_counter()
@@ -310,7 +336,6 @@ class Object:
             particle.draw(ctx)
         self.log_draw_durations.append(time.perf_counter() - t0)
         
-
 
 
     def draw_surface(self, screen):

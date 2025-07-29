@@ -7,8 +7,6 @@ from tkinter import filedialog
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 
-from ui.video import detect_and_cut_scenes
-
 
 
 class ImportVideoTool:

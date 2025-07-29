@@ -1,11 +1,105 @@
 
+import os
+import re
+import subprocess
 import threading
 from tkinter import filedialog
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 
 from ui.download import download_video
-from ui.video import detect_and_cut_scenes
+from ui.log import log_message
+
+
+
+def detect_and_cut_scenes(state, input_path, output_base_dir):
+    if not os.path.isfile(input_path):
+        log_message(state, f"[ERREUR] Fichier introuvable : {input_path}")
+        return
+
+    if not os.path.exists(output_base_dir):
+        os.makedirs(output_base_dir)
+
+    video_name = os.path.basename(input_path)
+    base_name = os.path.splitext(video_name)[0]
+    output_dir = os.path.join(output_base_dir, base_name)[:50]
+
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    log_message(state, f"Analysing: {video_name}...")
+
+    # Étape 1 : Détection des cuts avec ffmpeg
+    try:
+        with open("scene_changes.txt", "w", encoding="utf-8") as log_file:
+            subprocess.run([
+                "ffmpeg", "-i", input_path,
+                "-filter_complex", "select='gt(scene,0.35)',showinfo",
+                "-f", "null", "-"
+            ], stderr=log_file, stdout=subprocess.DEVNULL, check=True)
+    except subprocess.CalledProcessError:
+        log_message(state, "[ERROR] Échec de l'exécution de ffmpeg.")
+        return
+
+    if not os.path.exists("scene_changes.txt"):
+        log_message(state, "[ERROR] Le fichier scene_changes.txt est manquant.")
+        return
+
+    # Étape 2 : Lecture des timestamps
+    timestamps = []
+    with open("scene_changes.txt", "r", encoding="utf-8") as f:
+        for line in f:
+            match = re.search(r"pts_time:(\d+(\.\d+)?)", line)
+            if match:
+                timestamps.append(float(match.group(1)))
+
+    # Étape 3 : Récupération de la durée totale
+    result = subprocess.run([
+        "ffprobe", "-v", "error",
+        "-show_entries", "format=duration",
+        "-of", "default=noprint_wrappers=1:nokey=1",
+        input_path
+    ], capture_output=True, text=True)
+
+    try:
+        duration = float(result.stdout.strip())
+    except:
+        log_message(state, "[ERREUR] Unable to read video duration.")
+        return
+
+    if not timestamps:
+        log_message(state, f"No cuts detected, will convert the whole video.")
+    
+    # Forcer découpe « 1 clip » si aucun cut détecté :
+    timestamps = [0.0] + timestamps + [duration]
+
+    log_message(state, f"[{len(timestamps)-1}] segments to generate.")
+
+    # Étape 4 : Découpe des scènes
+    log_message(state, "Cut, scale and crop in progress...")
+    for i in range(len(timestamps) - 1):
+        start = timestamps[i]
+        end = timestamps[i + 1]
+        length = end - start
+
+        output_file = os.path.join(output_dir, f"clip_{i}.mp4")
+        log_message(state, f"Working on Clip [{i+1}/{len(timestamps)-1}], Start={start:.2f}s, Duration={length:.2f}s")
+
+        try:
+            subprocess.run([
+                "ffmpeg", "-i", input_path,
+                "-ss", str(start), "-t", str(length),
+                "-vf", "scale=w=608:h=1080:force_original_aspect_ratio=increase,crop=608:1080",
+                "-c:v", "libx264", "-preset", "ultrafast", "-crf", "18",
+                "-c:a", "aac", output_file
+            ], check=True)
+        except subprocess.CalledProcessError:
+            log_message(state, f"[ERROR] Échec de la découpe du segment {i}")
+
+    log_message(state, f"Done for : {video_name}")
+
+
+
 
 class DownloaderWindow:
     def __init__(self, state) :

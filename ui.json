@@ -3,14 +3,17 @@
         "downloader": {
             "url": "",
             "split": "C:/Users/gvigroux/Downloads/a34Nr51_460sv.mp4"
+        },
+        "current": {
+            "file_path": "C:/Users/gvigroux/OneDrive - THALES SA/Documents/Projects/pygame/config.json"
         }
     },
     "layout": {
         "pane_sizes": [
-            661,
-            1307
+            648,
+            1338
         ],
-        "vertical_sash": 448,
+        "vertical_sash": 398,
         "window_size": [
             1920,
             1017

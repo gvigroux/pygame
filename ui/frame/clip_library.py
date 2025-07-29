@@ -106,6 +106,12 @@ class ClipLibrary(ttk.Frame):
                     self._create_video_widget(clip)
                 else:
                     self._create_clip_widget(clip)
+                        
+    def _update_thumb_image(self, label_widget, clip):
+        thumb = clip.get_thumb()
+        label_widget.config(image=thumb)
+        label_widget.image = thumb 
+
 
     def _create_video_widget(self, clip):
         container = ttk.Frame(self.scroll_frame.get_content_frame(), padding=5, style="Unselected.TFrame")
@@ -115,6 +121,11 @@ class ClipLibrary(ttk.Frame):
         label_img = ttk.Label(container, image=img)
         label_img.image = img
         label_img.pack(side="left")
+        
+        # Enregistre le callback pour MAJ plus tard
+        def on_thumb_ready():
+            self.after(0, lambda: self._update_thumb_image(label_img, clip))
+        clip.on_thumb_ready_callbacks.append(on_thumb_ready)
 
         text_frame = ttk.Frame(container)
         text_frame.pack(side="left", fill="x", expand=True, padx=10)

@@ -14,7 +14,7 @@ import pygame
 
 
 class Video(Object):
-    def __init__(self, data, window_size, count, id):
+    def __init__(self, data, window_size, count, id, on_thumb_ready= None, on_ready=None):
         super().__init__(data, window_size, count, id)
         # Configuration originale
         self.path = self.config("path", "")
@@ -29,8 +29,14 @@ class Video(Object):
         self.end_frame = self.config("end_frame", -1)
         self.fps = self.config("fps", -1)
         self.thumb = None
-        self.is_copy = False
 
+
+        self.on_thumb_ready_callbacks = []
+        self.on_ready_callbacks = []
+        if( on_thumb_ready ):
+            self.on_thumb_ready_callbacks.append(on_thumb_ready)
+        if( on_ready ):
+            self.on_ready_callbacks.append(on_ready)
         
         self.position   = ePosition(window_size, count, id, **self.config("position", { "x": 0, "y": 0 }))
         self.raw_size   = eSize(window_size, count, id, **self.config("size", {"width": "100%", "height": "100%"}))
@@ -43,16 +49,36 @@ class Video(Object):
         self.surface_frames = []
         
         self.target_size = None
+        self.thumb_pil  = None
 
         # Initialisation
         print(f"[INIT VIDEO] label={self.label} path={self.path}")
-        self._init_video_metadata()
+        self._metadata_thread = None
+        # threading.Thread(
+        #     target=self._init_video_metadata_threadsafe,
+        #     daemon=True,
+        #     name=f"VideoMetadataLoader-{os.path.basename(self.path)}"
+        # )
+
+    def load_metadata_async(self):
+        self._metadata_thread = threading.Thread(
+            target=self._init_video_metadata_threadsafe,
+            daemon=True,
+            name=f"VideoMetadataLoader-{os.path.basename(self.path)}"
+        )
+        self._metadata_thread.start()
+
+
+    def load(self):
+        """Démarre le chargement asynchrone si pas déjà fait."""
+        if self._load_thread and self._load_thread.is_alive():
+            return  # déjà en cours
         self._start_async_load()
 
     def __getstate__(self):
         state = self.__dict__.copy()
         # Supprimer les attributs non-copiables
-        for key in ['_load_thread', '_should_stop', '_frames_ready', 'thumb', 'surface_frames', 'current_frame']:
+        for key in ['_load_thread', '_should_stop', '_frames_ready', 'thumb', 'surface_frames', 'current_frame', '_metadata_thread']:
             if key in state:
                 del state[key]
         return state
@@ -67,61 +93,103 @@ class Video(Object):
         self.surface_frames = []
         self.current_frame = None
         self.is_copy = True
-        #self._start_async_load()
 
-    def _init_video_metadata(self):
-        """Charge les métadonnées de la vidéo (synchrone, rapide)"""
+    def _init_video_metadata_threadsafe(self):
         cap = cv2.VideoCapture(self.path)
         if not cap.isOpened():
             print(f"[ERROR] Impossible d'ouvrir la vidéo: {self.path}")
             return
 
-        # FPS
-        original_fps = cap.get(cv2.CAP_PROP_FPS) or 25  # fallback utile
+        # FPS & dimensions
+        original_fps = cap.get(cv2.CAP_PROP_FPS) or 25
         self.fps = self.fps if self.fps > 0 else original_fps
 
-        # Nombre de frames total
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         usable_frames = total_frames
         if self.end_frame > 0:
             usable_frames = max(0, min(total_frames, self.end_frame) - self.start_frame)
 
-        # Définir la durée
         if self.freeze_duration > 0:
             self.step.duration = self.freeze_duration
         elif self.step.duration <= 0:
             self.step.duration = round(usable_frames / self.fps, 2)
 
-        # Déterminer quelle frame utiliser pour la miniature
-        target_frame_idx = self.freeze_frame if self.freeze_duration > 0 else self.start_frame
-        cap.set(cv2.CAP_PROP_POS_FRAMES, target_frame_idx)
+        w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        self.raw_size.width = w
+        self.raw_size.height = h
+        self.size.width = w
+        self.size.height = h
 
         self.thumb_pil = None
-        #self.target_size = (640, 480)  # fallback
-        #self.size.x = self.size.width
-
-        ret, frame = cap.read()
-        if ret and frame is not None:
-            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            h, w = frame_rgb.shape[:2]
-            #self.target_size = (w, h)
-            self.raw_size.width = w
-            self.raw_size.height = h
-            self.size.width = w
-            self.size.height = h
-
-            # Création miniature PIL (30px hauteur)
-            thumb_height = 30
-            thumb_width = int(w * (thumb_height / h))
-            resized = cv2.resize(frame_rgb, (thumb_width, thumb_height), interpolation=cv2.INTER_AREA)
-            self.thumb_pil = Image.fromarray(resized)
+        if w > 0 and h > 0:
+            target_frame_idx = self.freeze_frame if self.freeze_duration > 0 else self.start_frame
+            cap.set(cv2.CAP_PROP_POS_FRAMES, target_frame_idx)
+            ret, frame = cap.read()
+            if ret and frame is not None:
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                thumb_height = 30
+                thumb_width = int(w * (thumb_height / h))
+                self.thumb_pil = Image.fromarray(frame_rgb).resize((thumb_width, thumb_height), Image.LANCZOS)
 
         cap.release()
+
+        for cb in self.on_thumb_ready_callbacks:
+            cb()
+
+    # def _init_video_metadata(self, load_thumb=True):
+    #     """Charge les métadonnées vidéo, version optimisée"""
+    #     cap = cv2.VideoCapture(self.path)
+    #     if not cap.isOpened():
+    #         print(f"[ERROR] Impossible d'ouvrir la vidéo: {self.path}")
+    #         return
+
+    #     # FPS
+    #     original_fps = cap.get(cv2.CAP_PROP_FPS) or 25
+    #     self.fps = self.fps if self.fps > 0 else original_fps
+
+    #     # Nombre de frames total
+    #     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    #     usable_frames = total_frames
+    #     if self.end_frame > 0:
+    #         usable_frames = max(0, min(total_frames, self.end_frame) - self.start_frame)
+
+    #     # Durée
+    #     if self.freeze_duration > 0:
+    #         self.step.duration = self.freeze_duration
+    #     elif self.step.duration <= 0:
+    #         self.step.duration = round(usable_frames / self.fps, 2)
+
+    #     # Dimensions sans lire de frame
+    #     w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    #     h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    #     self.raw_size.width = w
+    #     self.raw_size.height = h
+    #     self.size.width = w
+    #     self.size.height = h
+
+    #     # Miniature seulement si demandé
+    #     self.thumb_pil = None
+    #     if load_thumb and w > 0 and h > 0:
+    #         target_frame_idx = self.freeze_frame if self.freeze_duration > 0 else self.start_frame
+    #         cap.set(cv2.CAP_PROP_POS_FRAMES, target_frame_idx)
+    #         ret, frame = cap.read()
+    #         if ret and frame is not None:
+    #             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    #             thumb_height = 30
+    #             thumb_width = int(w * (thumb_height / h))
+    #             self.thumb_pil = Image.fromarray(frame_rgb).resize((thumb_width, thumb_height), Image.LANCZOS)
+    #             self.thumb = self.get_thumb()
+    #             if( self.on_thumb_ready ):
+    #                 self.on_thumb_ready(self.thumb)
+
+    #     cap.release()
+
 
 
     def get_thumb(self):
         """Retourne la miniature (attend si nécessaire)"""
-        if( self.thumb is None ):
+        if( self.thumb is None ) and ( self.thumb_pil is not None ):
             self.thumb = ImageTk.PhotoImage(self.thumb_pil)
         return  self.thumb
 
@@ -174,9 +242,7 @@ class Video(Object):
                                 
                 # Convertir pour Pygame
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                #surface = pygame.surfarray.make_surface(np.flipud(np.rot90(frame_rgb)))
                 surface = pygame.image.frombuffer(frame_rgb.tobytes(), (target_w, target_h), 'RGB')
-                #surface = surface.convert()
 
                 temp_frames.append(surface)
                 current_frame += 1
@@ -189,7 +255,9 @@ class Video(Object):
             self.surface_frames = temp_frames
             self._frames_ready.set()
             
-            print(f"[VIDEO OK] label={self.label} path={self.path}")
+            for cb in self.on_ready_callbacks:
+                cb(self)
+            print(f"[VIDEO OK] label={self.label} path={self.path} frames={len(self.surface_frames)}")
 
         except Exception as e:
             print(f"[VIDEO LOAD ERROR] {self.path}: {str(e)}")
@@ -218,7 +286,8 @@ class Video(Object):
 
     def is_ready(self):
         """Vérifie si le chargement est terminé"""
-        return self._frames_ready.is_set()
+        #return self._frames_ready.is_set()
+        return len(self.surface_frames) > 0
 
     def get_image(self, seconds):
         """Version thread-safe"""

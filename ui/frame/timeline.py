@@ -7,7 +7,7 @@ from ttkbootstrap.constants import *
 import tkinter as tk
 import tkinter.font as tkfont
 
-from background.video import Video
+from object.video import Video
 from ui.helper import colorize_icon
 
 
@@ -49,7 +49,9 @@ class Timeline(ttk.Frame):
         self.style_clip_selected_bg = self.style_clip_bg
         self.style_clip_selected_fg = self.style_clip_fg
         self.style_clip_selected_bd = colors.get("primary")
-
+        self.style_clip_loading_bg = colors.get("warning")  # par ex. jaune/orange
+        self.style_clip_loading_fg = "black"
+        self.style_clip_loading_bd = darken(self.style_clip_loading_bg)
 
         # === Zone des headers ===
         self.headers_frame = ttk.Frame(self)
@@ -305,6 +307,8 @@ class Timeline(ttk.Frame):
                 self.canvas.move(clip["text_id"], 0, -self.track_height)
                 self.canvas.move(clip["left_handle"], 0, -self.track_height)
                 self.canvas.move(clip["right_handle"], 0, -self.track_height)
+                if clip.get("thumb_id"):
+                    self.canvas.move(clip["thumb_id"], 0, -self.track_height)
 
         if self.has_background:
             for clip in self.clips:
@@ -427,7 +431,6 @@ class Timeline(ttk.Frame):
         pixels_per_second = 50
         duration = (new_x2 - new_x1) / pixels_per_second
         clip["object"].step.duration = round(duration, 1)
-        #clip["object"].data.setdefault("step", {})["duration"] = clip["object"].step.duration
 
 
     def _on_resize_end(self, event):
@@ -438,12 +441,26 @@ class Timeline(ttk.Frame):
             self._reorder_background_clips()
         self._resize_data = {"clip": None, "side": None, "start_x": 0}
 
+    def _update_thumb_image(self, clip):
+        # Supprime l'ancien si présent
+        if clip["thumb_id"] is not None:
+            self.canvas.delete(clip["thumb_id"])
+        thumb_id  = self.canvas.create_image(clip["x1"], clip["y1"], anchor="nw", image=clip["object"].get_thumb())
+        clip["thumb_id"] = thumb_id 
+        
+    def _on_video_ready(self, clip):
+        self._clip_itemconfig(clip)
+        for _clip in self.clips:
+            if( isinstance(_clip["object"], Video) and _clip["object"].path == clip["object"].path ) and not _clip["object"].is_ready():
+                self.on_video_update(_clip["object"],0)
+                self._clip_itemconfig(_clip)
+
+
     def add_clip(self, object, track, start, duration):
         if track == "background":
             track_index = "background" #self.num_tracks  # dernière ligne
         else:
-            track_index = track
-    
+            track_index = track    
         
         x1 = start * 50
         x2 = x1 + duration * 50
@@ -461,6 +478,7 @@ class Timeline(ttk.Frame):
             thumb_id    = self.canvas.create_image(x1, y1, anchor="nw", image=object.get_thumb())
         else:
             rect_id     = self.canvas.create_rectangle(x1, y1, x2, y2, fill=self.style_clip_bg, outline=self.style_clip_bd)
+        
          
         font = tkfont.Font(family="Arial", size=10)
         max_text_width = (x2 - x1) - 10  # 10 pixels de marge à droite
@@ -472,15 +490,29 @@ class Timeline(ttk.Frame):
         left_handle     = self.canvas.create_rectangle(x1 - handle_size, y1, x1 + handle_size, y2, fill="", outline="")
         right_handle    = self.canvas.create_rectangle(x2 - handle_size, y1, x2 + handle_size, y2, fill="", outline="")
 
-        self.clips.append({
+        clip = {
             "rect_id": rect_id,
             "text_id": text_id,
             "left_handle": left_handle,
             "right_handle": right_handle,
             "object": object,
             "track_id": track_index,
-            "thumb_id": thumb_id
-        })
+            "thumb_id": thumb_id,
+            "x1": x1,
+            "y1": y1
+        }
+        self.clips.append(clip)
+        self._clip_itemconfig(clip)
+
+        
+        # Enregistre le callback pour MAJ plus tard
+        def on_thumb_ready():
+            self.after(0, lambda: self._update_thumb_image(clip))
+        def on_ready(object):
+            self.after(0, lambda: self._on_video_ready(clip))
+        if( isinstance(object, Video) ):
+            object.on_ready_callbacks.append(on_ready)
+            object.on_thumb_ready_callbacks.append(on_thumb_ready)
 
         for item_id in (rect_id, text_id):
             self.canvas.tag_bind(item_id, "<ButtonPress-1>", self._on_clip_press)
@@ -535,7 +567,6 @@ class Timeline(ttk.Frame):
 
         for clip in self.clips:
             clip["object"].track_id = clip["track_id"]
-            print(f"Track {clip['track_id']} → {clip['object'].track_id}")
 
         if( self.on_clip_update ):
             self.on_clip_update()
@@ -545,52 +576,9 @@ class Timeline(ttk.Frame):
         if self._resize_data["clip"]:
             return  # ignore drag si resize actif
         x = self.canvas.canvasx(event.x)  # CORRECTION
-        #item = self.canvas.find_closest(x, event.y)[0]
         item = self._find_closest(event)
         self._drag_data = {"item": item, "x": x, "start_x": event.x}
   
-   
-    def _on_drag2(self, event):
-        if not self._drag_data["item"]:
-            return
-
-        item = self._drag_data["item"]
-        x = self.canvas.canvasx(event.x)
-        y = self.canvas.canvasy(event.y)
-
-        dx = x - self._drag_data["x"]
-        self._drag_data["x"] = x
-
-        for clip in self.clips:
-            if item in (clip["rect_id"], clip["text_id"]):
-                old_track = clip["track_id"]
-
-                # === Mouvement horizontal
-                self.canvas.move(clip["rect_id"], dx, 0)
-                self.canvas.move(clip["text_id"], dx, 0)
-                self.canvas.move(clip["left_handle"], dx, 0)
-                self.canvas.move(clip["right_handle"], dx, 0)
-                if clip.get("thumb_id"):
-                    self.canvas.move(clip["thumb_id"], dx, 0)
-
-                # === Met à jour le delay
-                x1, _, _, _ = self.canvas.coords(clip["rect_id"])
-                clip["object"].step.delay = round(x1 / 50.0, 2)
-
-                # === Détection de track actuelle
-                new_track = int(y // self.track_height)
-                if 0 <= new_track < self.num_tracks and new_track != old_track:
-                    # Décalage vertical
-                    dy = (new_track - old_track) * self.track_height
-                    self.canvas.move(clip["rect_id"], 0, dy)
-                    self.canvas.move(clip["text_id"], 0, dy)
-                    self.canvas.move(clip["left_handle"], 0, dy)
-                    self.canvas.move(clip["right_handle"], 0, dy)
-                    if clip.get("thumb_id"):
-                        self.canvas.move(clip["thumb_id"], 0, dy)
-
-                    clip["track_id"] = new_track
-                break
 
     def _on_drag(self, event):
         if not self._drag_data["item"]:
@@ -686,6 +674,7 @@ class Timeline(ttk.Frame):
         self._reorder_background_clips()
         self.redraw()
 
+
     def get_track_at_y(self, y):
         # Trouve la position du canvas dans la fenêtre globale
         canvas_y_on_screen = self.canvas.winfo_rooty()
@@ -761,6 +750,8 @@ class Timeline(ttk.Frame):
                 self.canvas.coords(next_clip["left_handle"], x1 - 5, y1, x1 + 5, y2)
                 self.canvas.coords(next_clip["right_handle"], x2 - 5, y1, x2 + 5, y2)
                 self.canvas.coords(next_clip["text_id"], x1 + 5, (y1 + y2) / 2)
+                if next_clip["thumb_id"]:
+                    self.canvas.coords(next_clip["thumb_id"], x1, y1)
 
                 # Reboucle pour résoudre overlap en chaîne
                 self._resolve_overlaps_on_track(track_index)
@@ -802,37 +793,61 @@ class Timeline(ttk.Frame):
                     if( obj.is_ready() ):
                         return obj.get_image(time-start)
                     return self.on_video_update(obj,time-start)
+
+    def _clip_itemconfig(self, clip ):
+        """Met à jour la configuration d'un clip"""
+
+        object = clip["object"]
+
+        rect_bd = self.style_clip_bd
+        fg_color = self.style_clip_fg
+        rect_color = self.style_clip_bg
+
+        if self._selected_clip and self._selected_clip == clip:
+            rect_bd = self.style_clip_selected_bd
+            fg_color = self.style_clip_selected_fg  
+            rect_color = self.style_clip_selected_bg
+
+        if( isinstance(object, Video) ) and not object.is_ready():
+            rect_bd = self.style_clip_loading_bd
+            fg_color = self.style_clip_loading_fg
+            rect_color = self.style_clip_loading_bg
+
+        self.canvas.itemconfig(clip["rect_id"], fill=rect_color, outline=rect_bd)
+
                 
 
     def remove_focus(self):
-        for clip in self.clips:            
-            self.canvas.itemconfig(clip["rect_id"], fill=self.style_clip_bg, outline=self.style_clip_bd)
-                
-                
+        for clip in self.clips:
+            self._clip_itemconfig(clip)
+            #self.canvas.itemconfig(clip["rect_id"], fill=self.style_clip_bg, outline=self.style_clip_bd)
+
 
     def select_clip(self, clip):
         """Applique le style selected au clip, et unselected aux autres"""
-        if self._selected_clip and self._selected_clip != clip:
-            self.canvas.itemconfig(
-                self._selected_clip["rect_id"],
-                fill=self.style_clip_bg,
-                outline=self.style_clip_bd
-            )
+        self._clip_itemconfig(clip)
+        # if self._selected_clip and self._selected_clip != clip:
+        #     self.canvas.itemconfig(
+        #         self._selected_clip["rect_id"],
+        #         fill=self.style_clip_bg,
+        #         outline=self.style_clip_bd
+        #     )
         
-        self.canvas.itemconfig(
-            clip["rect_id"],
-            fill=self.style_clip_selected_bg,
-            outline=self.style_clip_selected_bd
-        )
+        # self.canvas.itemconfig(
+        #     clip["rect_id"],
+        #     fill=self.style_clip_selected_bg,
+        #     outline=self.style_clip_selected_bd
+        # )
         self._selected_clip = clip
 
     def clear_selection(self):
         if self._selected_clip:
-            self.canvas.itemconfig(
-                self._selected_clip["rect_id"],
-                fill=self.style_clip_bg,
-                outline=self.style_clip_bd
-            )
+            # self.canvas.itemconfig(
+            #     self._selected_clip["rect_id"],
+            #     fill=self.style_clip_bg,
+            #     outline=self.style_clip_bd
+            # )
+            self._clip_itemconfig(self._selected_clip)
             self._selected_clip = None
                 
     def _on_enter_clip(self, event):
@@ -847,7 +862,8 @@ class Timeline(ttk.Frame):
     def _on_leave_clip(self, event):
         self.canvas.config(cursor="")
         for clip in self.clips:
-            self.canvas.itemconfig(clip["rect_id"], fill=self.style_clip_bg)
+            self._clip_itemconfig(clip)
+            #self.canvas.itemconfig(clip["rect_id"], fill=self.style_clip_bg)
 
 
     def _find_closest(self, event):

@@ -1,6 +1,9 @@
 import json
 import os
+import threading
 import time
+
+import cairo
 from background.backgrounds import BackgroundFactory
 from object.arc import Arc
 from object.ball import Ball
@@ -58,46 +61,167 @@ data_mouse = json.loads('''{
 
 
 class Game:
-    def __init__(self, pygame): 
+    def __init__(self, pygame):
+        pygame.init()
         self.pygame = pygame
-
-        self.start_delay = 0
-
+        pygame.font.init()
+        pygame.font.get_fonts()
         pygame.mixer.init()
         pygame.mixer.music.set_volume(0.2)  # 50% du volume
 
         self.objects = []
         self.has_music  = False
         self.background = None
+        self.end_step   = 1
+        self.debug      = False
+
+    
+    def deactivate_window(self):        
+        os.environ["SDL_VIDEODRIVER"] = "dummy"
+        #self.pygame.quit()
+        self.pygame.display.quit()
+        self.pygame.init()
+
+    def run(self):
+        os.environ.pop("SDL_VIDEODRIVER", None)
+        #self.pygame.quit()
+        self.pygame.display.quit()
+        self.pygame.init()
+        self.pygame.font.init()
+        self.pygame.font.get_fonts()
+
+        self.start_time = time.time()        
+        for object in self.objects:
+            object.reset(time.time(), 0)
+                
+        # Cairo surface et contexte réutilisables
+        surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, *self.window_size)
+        ctx     = cairo.Context(surface)
+        screen  = self.pygame.display.set_mode((self.window_size[0], self.window_size[1]), self.pygame.DOUBLEBUF | self.pygame.SRCALPHA)
+                
+        dt_history = []
+        clock = self.pygame.time.Clock()
+        last_time = time.perf_counter()
+        running = True
+        current_step = 0
+        obj_block = self.block_count(0)
+
+
+        while running:
+            t0 = time.perf_counter()
+
+            for event in self.pygame.event.get():
+                if event.type == self.pygame.QUIT:
+                    running = False           
+                    
+                elif event.type == self.pygame.MOUSEBUTTONDOWN:
+                    if event.button == 1:  
+                        x, y = event.pos
+                        print(f"{x*100/self.window_size[0]:.1f}% / {y*100/self.window_size[1]:.1f}% at {self.age:.1f}s")
+                    
+                elif event.type == self.pygame.KEYDOWN:
+                    if event.key == self.pygame.K_c and (self.pygame.key.get_mods() & self.pygame.KMOD_CTRL):
+                        print("Ctrl+C détecté via clavier (pas SIGINT)")
+                        running = False
+
+            current_time = time.perf_counter()
+            dt = current_time - last_time
+            last_time = current_time
+
+            # ajustement du dt pour éviter les dépassements
+            dt_history.append(dt)
+            if len(dt_history) > 5:
+                dt_history.pop(0)
+            dt = sum(dt_history) / len(dt_history)
+
+            # End of game
+            if( self.is_finished(current_step) ):
+                running = False
+
+            #self.clean()
+
+            # Comptage des objets bloquants avant mise à jour
+            prev_block_count = obj_block
+            obj_block = self.block_count(current_step)
+
+            # Avancement du step si plus de blocage
+            if prev_block_count > 0 and obj_block == 0:
+                current_step += 1
+
+            #***********************************************************************
+            # Check collisions 
+
+            t1 = time.perf_counter()
+            self.check_collisions()        
+            self.update(dt, current_step, clock, obj_block)            
+            t2 = time.perf_counter()
+
+            #***********************************************************************
+            # Cairo rendering
+
+            ctx.save()
+            ctx.set_operator(cairo.OPERATOR_CLEAR)
+            ctx.paint()
+            ctx.restore()
+            
+            t3 = time.perf_counter()
+
+            #***********************************************************************
+            # Draw
+
+            self.draw(screen, ctx, current_time)
+            t4 = time.perf_counter()
+
+            # Step 3 : Cairo to Pygame
+            raw_buf = surface.get_data()
+            img     = self.pygame.image.frombuffer(raw_buf, self.window_size, "BGRA").convert_alpha()
+        
+            # Step 4 : Affichage
+            screen.blit(img, (0, 0))
+
+            self.pygame.display.flip()
+            t5 = time.perf_counter()
+            clock.tick(60)
+        
+            # Debug print
+            #fps = clock.get_fps()
+            #print(f"FIRST: {(t1 - t0)*1000:.2f} ms | UPDATE: {(t2 - t1)*1000:.2f} ms | BACK: {(t3 - t2)*1000:.2f} ms | DRAW {(t4 - t3)*1000:.2f} | BLIT {(t5 - t4)*1000:.2f} | TOTAL: {(t5 - t0)*1000:.2f} ms | dt={dt*1000:.2f}ms | FPS={fps:.2f}")
+            #print(fps)
+        self.pygame.display.quit()
+        #self.pygame.quit()
 
     def reset(self):
         self.objects = []
         self.has_music  = False
         self.background = None
     
-    def debug(self, value = False):        
+    def set_debug(self, value = False):        
         if( value ):
             self.objects.append(ObjectFactory.create(data_fps, self.window_size,0,0))
             self.objects.append(ObjectFactory.create(data_step, self.window_size,0,0))
             self.objects.append(ObjectFactory.create(data_mouse, self.window_size,0,0))
             self.objects.append(ObjectFactory.create(data_timing, self.window_size,0,0))
             self.objects.append(ObjectFactory.create(data_blocked, self.window_size,0,0))
-            
-    def load(self, filename = "config.json", avoid_debug = False, load_background = True):
 
-        file_path = os.path.dirname(os.path.realpath(__file__))
-        file = os.path.join(file_path, filename)
-        if( os.path.isfile(file) == False ):
-            exit()
+    def get_settings(self):
+        return {
+                "end_step": self.end_step,
+                "debug": self.debug,
+                "window_size": self.window_size
+        }
+            
+    def load(self, filepath = "C:\\Users\\gvigroux\\OneDrive - THALES SA\\Documents\\Projects\\pygame\\config.json", avoid_debug = False, load_background = True):
 
         # Lecture avec encodage UTF-8 explicite et gestion d'erreur
-        with open(file, 'r', encoding='utf-8') as f:
+        with open(filepath, 'r', encoding='utf-8') as f:
             self.config = json.load(f)
 
         self._load_params(avoid_debug, load_background)
 
-    def load_objects(self):
+    def load_objects(self, waitVideo = True):
         self._load_objects()
+
+        self.start_lazy_loading()
 
         # Wait first video to be loaded
         for object in self.objects:
@@ -113,8 +237,9 @@ class Game:
         settings = self.config.get("settings", {})
         self.end_step = settings.get("end_step", -1)
         self.window_size = settings.get("window_size", [540, 960])
-        if( settings.get("debug", False) ) and not avoid_debug:
-            self.debug(True)
+        self.debug = settings.get("debug", False)
+        if( self.debug and not avoid_debug):
+            self.set_debug(True)
         
         ############### Background ###############     
         if( load_background ):
@@ -146,7 +271,7 @@ class Game:
         for data in self.config.get("objects", []):
             count = data.get("count", 1) 
             # Automatically split text
-            if( data.get("type") == "text" ) and data.get("split", False):
+            if( data.get("type", "").lower() == "text" ) and data.get("split", False):
                 if( count > 1 ):
                     print(f"\033[38;5;208mWarning (Text): The count property is ignored for text objects!\033[0m")
                 parts = data.get("text").get("value").split('\\n')
@@ -155,10 +280,10 @@ class Game:
             for i in range(count):
 
                 # Update text value
-                if( data.get("type") == "text" ) and data.get("split", False):
+                if( data.get("type", "").lower() == "text" ) and data.get("split", False):
                     data["text"]["value"] = parts[i]
 
-                if( data.get("type") == "video" and data.get("path") in added_video_paths ):
+                if( data.get("type", "").lower() == "video" and data.get("path") in added_video_paths ):
                     tmp = next((obj for obj in self.objects if getattr(obj, "path", None) == data.get("path")), None)
                     object = tmp.clone()
                     object.step.delay = data.get("step", {}).get("delay", 0)
@@ -166,16 +291,37 @@ class Game:
                 else:
                     object = ObjectFactory.create(data, self.window_size, count, i)
 
-
                 if( isinstance(object, Ball) ):
                     if not any(object.check_ball_collision(other) for other in self.objects if isinstance(other, Ball)):
                         self.objects.append(object)
                 elif( isinstance(object, Video) ):
                     added_video_paths.add(object.path)
                     self.objects.append(object)
-                    pass
                 else:
                     self.objects.append(object)
+
+
+    def start_lazy_loading(self):
+        threading.Thread(target=self._load_videos_sequentially, args=(), daemon=True).start()
+
+
+    def _on_video_ready(self, object):
+        print(object.path)
+        for _object in self.objects:
+            if isinstance(_object, Video) and object.path == _object.path and object != _object:        
+                _object.surface_frames = object.surface_frames
+                _object._frames_ready.set()
+
+    def _load_videos_sequentially(self):
+        added_video_paths = set()
+        for object in self.objects:
+            if isinstance(object, Video) and object.path not in added_video_paths:
+                object.load()
+                object.on_ready_callbacks.append(self._on_video_ready)
+                added_video_paths.add(object.path)
+                while not object.is_ready():
+                    time.sleep(0.1)
+        
 
     def add_object_factory(self, data):
         object = ObjectFactory.create(data, self.window_size, 1, 0)

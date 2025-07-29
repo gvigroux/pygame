@@ -58,7 +58,7 @@
                 "duration": 6.0,
                 "fade_in": 0,
                 "fade_out": 0,
-                "delay": 6.0,
+                "delay": 12.0,
                 "block": false,
                 "explode": false,
                 "update_delay": 0
@@ -97,7 +97,7 @@
                 "duration": 6.0,
                 "fade_in": 0,
                 "fade_out": 0,
-                "delay": 12.0,
+                "delay": 18.0,
                 "block": false,
                 "explode": false,
                 "update_delay": 0
@@ -136,7 +136,7 @@
                 "duration": 6.0,
                 "fade_in": 0,
                 "fade_out": 0,
-                "delay": 18.0,
+                "delay": 24.0,
                 "block": false,
                 "explode": false,
                 "update_delay": 0
@@ -175,7 +175,7 @@
                 "duration": 6.0,
                 "fade_in": 0,
                 "fade_out": 0,
-                "delay": 24.0,
+                "delay": 30.0,
                 "block": false,
                 "explode": false,
                 "update_delay": 0
@@ -214,7 +214,7 @@
                 "duration": 2.02,
                 "fade_in": 0,
                 "fade_out": 0,
-                "delay": 30.0,
+                "delay": 36.0,
                 "block": false,
                 "explode": false,
                 "update_delay": 0
@@ -339,7 +339,7 @@
     ],
     "settings": {
         "end_step": 1,
-        "debug": true,
+        "debug": false,
         "window_size": [
             608,
             1080

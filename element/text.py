@@ -1,3 +1,4 @@
+import time
 from element.background import eBackground
 from element.font import eFont
 from element.outline import eOutline
@@ -11,10 +12,20 @@ class eText:
         self.update     = update 
         self.padding    = padding
         self.margin     = margin
+        t0 = time.perf_counter()
         self.font       = eFont(**font)
+        t1 = time.perf_counter()
         self.outline    = eOutline(**outline)
+        t2 = time.perf_counter()
         self.background = eBackground(**background)
+        t3 = time.perf_counter()
         self.prepare()
+        if( t1 - t0 > 0.01 ):
+            print(f"SLOW eText.init1: {(t1 - t0)*1000:.2f} ms")
+        if( t2 - t1 > 0.01 ):            
+            print(f"SLOW eText.init2: {(t2 - t1)*1000:.2f} ms")
+        if( t3 - t2 > 0.01 ):            
+            print(f"SLOW eText.init3: {(t3 - t2)*1000:.2f} ms")
 
 
     def enabled(self):

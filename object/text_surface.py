@@ -1,5 +1,6 @@
 import math
 import random
+import time
 import cairo
 import pygame
 from element.background import eBackground
@@ -20,9 +21,11 @@ safe_globals = {
 
 class TextSurface(Object):
     def __init__(self, data, window_size, count, id):
+        to = time.perf_counter()
         super().__init__(data, window_size, count, id)
-
+        t1 = time.perf_counter()
         self.text = eText(**self.config("text", {}))
+        t2  = time.perf_counter()
         self.title = eText(**self.config("title", {}))
         self.background = eBackground(**self.config("background", {}))
         self.surfaces = []
@@ -31,8 +34,17 @@ class TextSurface(Object):
         self.surface_background = None
         self.surface_title = None
         self.font_emoji = pygame.font.SysFont("Segoe UI Emoji", self.text.font.point_size)
+        t3  = time.perf_counter()
         self._prepare()
-
+        t4  = time.perf_counter()
+        if( t1 - to > 0.02 ):            
+            print(f"SLOW TextSurface.init1: {(t1 - to)*1000:.2f} ms")
+        if( t2 - t1 > 0.02 ):
+            print(f"SLOW TextSurface.init2: {(t2 - t1)*1000:.2f} ms")
+        if( t3 - t2 > 0.02 ):            
+            print(f"SLOW TextSurface.init3: {(t3 - t2)*1000:.2f} ms")
+        if( t4 - t3 > 0.02 ):            
+            print(f"SLOW TextSurface.init4: {(t4 - t3)*1000:.2f} ms")
 
     def __getstate__(self):
         state = self.__dict__.copy()
@@ -94,7 +106,7 @@ class TextSurface(Object):
             self.surface_title = self.title.font.render(self.title.value, True, (28, 161, 242)).convert_alpha()
             self.surface_title.set_alpha(self.alpha * 255)
             self.height_position += self.title.font.point_size + self.title.padding[2] + self.title.padding[0]
-
+    
         # Préparer toutes les lignes
         for line in lines:
             bg_surf, txt_surf = self.render_text_with_outline(line, self.text.color, self.text.outline)
@@ -103,6 +115,7 @@ class TextSurface(Object):
             if txt_surf:
                 txt_surf.set_alpha(self.alpha * 255)
                 self.surfaces.append(txt_surf)
+
 
     def render_text_with_outline(self, text, text_color, outline):
         font_normal = self.text.font.sysFont
