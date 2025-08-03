@@ -26,8 +26,8 @@ class eSound:
             del state["sound"]
         if "tmp_sound" in state:
             del state["tmp_sound"]
-        if "channel" in state:
-            del state["channel"]
+        if "sound_channel" in state:
+            del state["sound_channel"]
         return state
 
     def __setstate__(self, state):
@@ -97,3 +97,11 @@ class eSound:
                 output_file
             ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return pygame.mixer.Sound(output_file)
+
+
+    @classmethod
+    def parameter_fields(cls):
+        return [
+            {"name": "path", "type": "file"},
+            {"name": "volume", "type": "float", "default": 0.5}
+        ]

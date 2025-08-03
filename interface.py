@@ -1,40 +1,33 @@
-import shutil
-import sys
-import threading
 import time
-from tkinter import filedialog, messagebox
 import cairo
-import cv2
-import numpy as np
 import pygame
-import tkinter as tk
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 import json
 import os
-import tkinter as tk
-from PIL import Image, ImageTk
-from concurrent.futures import ThreadPoolExecutor
+
 
 from game import Game
 from object.object import Object
 from object.object_factory import ObjectFactory
 from object.video import Video
 from ui.config import load_config, save_config
-from ui.frame.clip_library import ClipLibrary
 from ui.frame.custom_menu import CustomMenu
-from ui.frame.preview_panel import PreviewPanel
-from ui.frame.property_panel import PropertyPanel
+from ui.panel.preview import PreviewPanel
+from ui.panel.property import PropertyPanel
 from ui.helper import center_window, lighten_color
-from ui.log import log_message
 from ui.tools.downloader import DownloaderWindow
 from ui.tools.disk_library import DiskLibraryWindow
 from ui.tools.import_video import ImportVideoTool
 from ui.tools.xdownloader import XDownloader
-from ui.frame.scrollable_frame import ScrollableFrame
-from ui.frame.timeline import Timeline
 from ui.frame.toolbar import Toolbar
 from ui.frame.type_chooser import TypeChooser
+
+
+from ui.panel.timeline import TimelinePanel
+from ui.panel.preview import PreviewPanel
+from ui.panel.library import LibraryPanel
+from ui.panel.property import PropertyPanel
 
 import os
 
@@ -62,58 +55,7 @@ game = Game(pygame)
 # Callbacks
 
 def handle_time_click(seconds):
-
-    current_time = 0
-
-    for object in game.objects:
-        object.reset(time.time()-seconds, 0)
-
-    # Cairo surface et contexte réutilisables
-    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, *game.window_size)
-    ctx     = cairo.Context(surface)
-    screen  = pygame.display.set_mode((game.window_size[0], game.window_size[1]), pygame.DOUBLEBUF | pygame.SRCALPHA)
-        
-    ctx.save()
-    ctx.set_operator(cairo.OPERATOR_CLEAR)
-    ctx.paint()
-    ctx.restore()
-
-    # 2. Dessin du background_image si présent
-    background_image = timeline.get_background_image(seconds)
-    if background_image:
-        ctx.save()
-        ctx.set_source_surface(background_image, 0, 0)
-        ctx.paint()
-        ctx.restore()
-      
-    dt = (seconds * 0.016 * 60) # - object.step.delay
-    game.update(dt, 0, None, 0)
-
-    for object in game.objects:
-        if( isinstance(object, Video) ):
-            if( not object.is_ready() ):
-                original = library_panel.get_video(object.path)
-                object.surface_frames = original.surface_frames
-                if( len(object.surface_frames) > 0 ):
-                    object._frames_ready.set() 
-
-    game.background = None
-
-    
-    game.draw(screen, ctx, current_time)
-    #game.draw_on_context(ctx, current_time)
-
-    # Cairo → Pygame Surface
-    raw_buf = surface.get_data()
-    img = pygame.image.frombuffer(raw_buf, game.window_size, "BGRA").convert_alpha()
-    
-    # Dessine les objets sur la surface pygame (si nécessaire)
-    #screen = pygame.Surface(game.window_size, pygame.SRCALPHA)
-    screen.blit(img, (0, 0))
-
-    #for obj in game.objects:
-    #    obj.draw_surface(temp_surface)
-
+    screen = game.image_at_time(seconds) 
     preview_panel.show_preview(screen)
     
 ######################################
@@ -124,13 +66,29 @@ def handle_video_drop(video, x, y):
 
 ######################################
 
-def on_video_selected(path):
+def add_video_to_library(path):
     data = {
         "type": "video",
         "path": path
     }    
     object = ObjectFactory.create(data, game.window_size, 1, 0) 
+    object.load_metadata_sync()
+    object.load()
     library_panel.add_clip(object)
+
+    
+    base, _ = os.path.splitext(path)
+    mp3_path = base + ".mp3"
+    if(os.path.isfile(mp3_path)):
+        data = {
+            "type": "sound",
+            "label": os.path.basename(mp3_path),
+            "sound": {"path": mp3_path}
+        }    
+        object = ObjectFactory.create(data, game.window_size, 1, 0) 
+        #object.load_metadata_sync()
+        #object.load()
+        library_panel.add_clip(object)
 
 
 ############################################
@@ -220,23 +178,6 @@ menu = CustomMenu(app, state)
 menu.pack(fill="x")
 
 
-# # Crée la barre de menu principale
-# menubar = tk.Menu(app, bg="#0a283b", fg="white", activebackground="#1a3b5c", activeforeground="white", borderwidth=0, relief="flat")
-
-# # Menu "Fichier"
-# file_menu = tk.Menu(menubar, tearoff=0, bg="#0a283b", fg="white", activebackground="#1a3b5c", activeforeground="white", borderwidth=0, relief="flat")
-
-# file_menu.add_command(label="Open", command=lambda: load_scene_dialog(state))
-# file_menu.add_command(label="Save", command=lambda: save_scene(state))
-# file_menu.add_command(label="Save As...", command=lambda: save_as_scene_dialog(state))
-# file_menu.add_separator()
-# file_menu.add_command(label="Exit", command=app.quit)
-
-# menubar.add_cascade(label="File", menu=file_menu)
-
-# # Assigne la barre de menu à la fenêtre
-# app.config(menu=menubar)
-
 
  # Frame principale qui contient tout
 main_frame = ttk.Frame(app)
@@ -284,14 +225,21 @@ def on_timeline_clip_click(object):
     library_panel.remove_focus()
     property_panel.show_object(object)
 
+def on_property_panel_update(object):
+    timeline.redraw()
+    handle_time_click(timeline.current_time)
+    #preview_panel.show_preview(object)
+
 
 preview_panel = PreviewPanel(paned)
-library_panel = ClipLibrary(paned, on_drop_callback=handle_video_drop, on_click=on_library_clip_click) 
-property_panel = PropertyPanel(state, paned, update_callback=lambda: timeline.redraw())
+library_panel = LibraryPanel(state, paned, on_drop_callback=handle_video_drop, on_click=on_library_clip_click) 
+property_panel = PropertyPanel(state, paned, update_callback=on_property_panel_update)
 
 paned.add(library_panel, weight=1)
 paned.add(preview_panel, weight=1)
 paned.add(property_panel, weight=1)
+
+
 
 ############################################
 
@@ -302,7 +250,7 @@ timeline_zone.rowconfigure(0, weight=0)  # Toolbar (fixe)
 timeline_zone.rowconfigure(1, weight=1)  # Timeline (extensible si nécessaire)
 
 
-timeline = Timeline(timeline_zone, num_tracks=0, length=120,
+timeline = TimelinePanel(timeline_zone, num_tracks=0, length=120,
                     on_clip_click=on_timeline_clip_click,
                     on_clip_add=game.add_object,
                     on_clip_removed=game.remove_object,
@@ -324,9 +272,6 @@ vertical_paned.add(timeline_zone, weight=1)  # bas
 
 #################################################
 
-def reset():
-    timeline.reset()
-    library_panel.reset()
 
 def test():
     game.run()
@@ -338,7 +283,7 @@ toolbar.add_text("TOOLS")
 
 toolbar.add_icon("ui/icons/icons8-importer-24.png", lambda: ImportVideoTool(state), tooltip="Downloader & Splitter")
 toolbar.add_icon("ui/icons/icons8-download-from-the-cloud-24.png", lambda: DownloaderWindow(state), tooltip="Downloader & Splitter")
-toolbar.add_icon("ui/icons/icons8-video-gallery-24.png", lambda: DiskLibraryWindow(state, on_double_click=on_video_selected), tooltip="Media Library")
+toolbar.add_icon("ui/icons/icons8-video-gallery-24.png", lambda: DiskLibraryWindow(state, on_double_click=add_video_to_library), tooltip="Media Library")
 toolbar.add_icon("ui/icons/icons8-video-gallery-24.png", lambda: XDownloader(state), tooltip="X Downloader")
 toolbar.add_icon("ui/icons/icons8-video-gallery-24.png", lambda: test(), tooltip="TEST")
 toolbar.add_separator()
@@ -383,6 +328,28 @@ state["vertical_paned"]     = vertical_paned
 ############################################
 
 load_config(state)
+
+
+def read_templates(directory):
+    fichiers_json = [f for f in os.listdir(directory) if f.endswith('.json')]
+    resultats = []
+
+    for nom_fichier in fichiers_json:
+        chemin_complet = os.path.join(directory, nom_fichier)
+        try:
+            with open(chemin_complet, 'r', encoding='utf-8') as f:
+                donnees = json.load(f)
+                resultats.append((nom_fichier, donnees))
+        except Exception as e:
+            print(f"Erreur dans {nom_fichier} : {e}")
+
+    return resultats
+
+
+jsons = read_templates("templates")
+
+for nom, contenu in jsons:
+    library_panel.add_clip(ObjectFactory.create(contenu, state["game"].window_size, 1, 0))
 
 # Sauvegarder à la fermeture
 app.protocol("WM_DELETE_WINDOW", lambda: (save_config(state), app.destroy()))

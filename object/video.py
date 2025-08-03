@@ -48,7 +48,6 @@ class Video(Object):
         self._frames_ready = threading.Event()
         self.surface_frames = []
         
-        self.target_size = None
         self.thumb_pil  = None
 
         # Initialisation
@@ -60,6 +59,25 @@ class Video(Object):
         #     name=f"VideoMetadataLoader-{os.path.basename(self.path)}"
         # )
 
+    @classmethod
+    def parameter_fields(cls):
+        return {
+            
+            "label" :  {"name": "label", "type": "str", "default": ""},
+            "path" :    {"name": "path", "type": "file", "default": ""},
+            "reverse":     {"name": "reverse", "type": "bool", "default": False},
+            
+            "step": eStep.parameter_fields(),
+        }
+    
+    def _prepare(self):
+        if( len(self.surface_frames) == 0 ):
+            return
+        if( self.surface_frames[0].size[0] != self.size.width  or self.surface_frames[0].size[1] != self.size.height):
+            print(f"Recalculating Video size to: {self.size}")
+            self.load()
+        pass
+
     def load_metadata_async(self):
         self._metadata_thread = threading.Thread(
             target=self._init_video_metadata_threadsafe,
@@ -68,6 +86,8 @@ class Video(Object):
         )
         self._metadata_thread.start()
 
+    def load_metadata_sync(self):
+        self._init_video_metadata_threadsafe()
 
     def load(self):
         """Démarre le chargement asynchrone si pas déjà fait."""
@@ -78,7 +98,7 @@ class Video(Object):
     def __getstate__(self):
         state = self.__dict__.copy()
         # Supprimer les attributs non-copiables
-        for key in ['_load_thread', '_should_stop', '_frames_ready', 'thumb', 'surface_frames', 'current_frame', '_metadata_thread']:
+        for key in ['_load_thread', '_should_stop', '_frames_ready', 'thumb', 'surface_frames', 'current_frame', '_metadata_thread', 'on_ready_callbacks']:
             if key in state:
                 del state[key]
         return state
@@ -93,6 +113,7 @@ class Video(Object):
         self.surface_frames = []
         self.current_frame = None
         self.is_copy = True
+        self.on_ready_callbacks = [] 
 
     def _init_video_metadata_threadsafe(self):
         cap = cv2.VideoCapture(self.path)
@@ -136,55 +157,6 @@ class Video(Object):
 
         for cb in self.on_thumb_ready_callbacks:
             cb()
-
-    # def _init_video_metadata(self, load_thumb=True):
-    #     """Charge les métadonnées vidéo, version optimisée"""
-    #     cap = cv2.VideoCapture(self.path)
-    #     if not cap.isOpened():
-    #         print(f"[ERROR] Impossible d'ouvrir la vidéo: {self.path}")
-    #         return
-
-    #     # FPS
-    #     original_fps = cap.get(cv2.CAP_PROP_FPS) or 25
-    #     self.fps = self.fps if self.fps > 0 else original_fps
-
-    #     # Nombre de frames total
-    #     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    #     usable_frames = total_frames
-    #     if self.end_frame > 0:
-    #         usable_frames = max(0, min(total_frames, self.end_frame) - self.start_frame)
-
-    #     # Durée
-    #     if self.freeze_duration > 0:
-    #         self.step.duration = self.freeze_duration
-    #     elif self.step.duration <= 0:
-    #         self.step.duration = round(usable_frames / self.fps, 2)
-
-    #     # Dimensions sans lire de frame
-    #     w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    #     h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    #     self.raw_size.width = w
-    #     self.raw_size.height = h
-    #     self.size.width = w
-    #     self.size.height = h
-
-    #     # Miniature seulement si demandé
-    #     self.thumb_pil = None
-    #     if load_thumb and w > 0 and h > 0:
-    #         target_frame_idx = self.freeze_frame if self.freeze_duration > 0 else self.start_frame
-    #         cap.set(cv2.CAP_PROP_POS_FRAMES, target_frame_idx)
-    #         ret, frame = cap.read()
-    #         if ret and frame is not None:
-    #             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    #             thumb_height = 30
-    #             thumb_width = int(w * (thumb_height / h))
-    #             self.thumb_pil = Image.fromarray(frame_rgb).resize((thumb_width, thumb_height), Image.LANCZOS)
-    #             self.thumb = self.get_thumb()
-    #             if( self.on_thumb_ready ):
-    #                 self.on_thumb_ready(self.thumb)
-
-    #     cap.release()
-
 
 
     def get_thumb(self):
@@ -249,8 +221,8 @@ class Video(Object):
 
             cap.release()
 
-            if self.reverse:
-                temp_frames.reverse()
+            #if self.reverse:
+            #    temp_frames.reverse()
 
             self.surface_frames = temp_frames
             self._frames_ready.set()
@@ -286,8 +258,8 @@ class Video(Object):
 
     def is_ready(self):
         """Vérifie si le chargement est terminé"""
-        #return self._frames_ready.is_set()
-        return len(self.surface_frames) > 0
+        return self._frames_ready.is_set()
+        #return len(self.surface_frames) > 0
 
     def get_image(self, seconds):
         """Version thread-safe"""
@@ -298,12 +270,16 @@ class Video(Object):
             return self.surface_frames[0]
 
         frame_index = int(seconds * self.fps)
+        frame_count = len(self.surface_frames)
         
         if self.loop:
-            frame_index %= len(self.surface_frames)
+            frame_index %= frame_count
         else:
-            frame_index = max(0, min(frame_index, len(self.surface_frames) - 1))
+            frame_index = max(0, min(frame_index, frame_count - 1))
 
+        if self.reverse:
+            frame_index = frame_count - 1 - frame_index
+            
         return self.surface_frames[frame_index]
 
     def numpy_to_cairo_surface(self, bgra):
@@ -324,7 +300,7 @@ class Video(Object):
 
     def _draw_surface(self, screen):
         if self.current_frame:
-            screen.blit(self.current_frame, (0, 0))    
+            screen.blit(self.current_frame, (self.position.x, self.position.y))    
 
     def schema(self):
         return {
@@ -340,7 +316,7 @@ class Video(Object):
             "start_frame": ("int", "Start frame"),
             "end_frame": ("int", "End frame"),
             "step": ("step", "Step"),
-            "raw_size": ("size", "Orginal Size"),
+            "raw_size": ("size", "Orginal Size", False),
             "size": ("size", "Size"),
             "position": ("position", "Position"),
             "on_spawn": ("event", "On Spawn"),

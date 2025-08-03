@@ -15,11 +15,15 @@ class eSize:
         self.window_size = window_size
         self.raw_width  = width
         self.raw_height = height
+        self.total = total
+        self.i = i
         safe_globals["total"] = total
         safe_globals["i"] = i
         self.width  = self._resolve_coord(width, window_size[0])
         self.height = self._resolve_coord(height, window_size[1])
        
+    def __repr__(self):
+        return f"eSize(width={self.width}, height={self.height})"
 
     def _resolve_coord(self, val, total):
         if isinstance(val, str) and val.endswith("%"):
@@ -32,6 +36,12 @@ class eSize:
            return int(eval(val, {"__builtins__": {}}, safe_globals))
         return int(val)
     
+    def prepare(self):
+        safe_globals["total"] = self.total
+        safe_globals["i"] = self.i
+        self.width  = self._resolve_coord(self.width, self.window_size[0])
+        self.height = self._resolve_coord(self.height, self.window_size[1])
+    
     def get(self):
         return (self.width, self.height)
     
@@ -40,6 +50,6 @@ class eSize:
 
     def schema(self):
         return {
-            "width": ("float", "Width"),
-            "height": ("float", "Height"),
+            "width": ("inteval", "Width"),
+            "height": ("inteval", "Height"),
         }

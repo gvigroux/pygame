@@ -11,20 +11,6 @@ from object.object_factory import ObjectFactory
 
 
 
-def load_videos_sequentially(videos):
-    """
-    Charge chaque vidéo une par une.
-    La fonction attend que le chargement de chaque vidéo soit terminé avant de passer à la suivante.
-    """
-    for video in videos:
-        #print(f"[LOAD] Début du chargement de: {video.label}")
-        video.load()
-        
-        # Boucle d'attente pendant le chargement
-        while not video.is_ready():
-            time.sleep(0.1)  # petit sleep pour ne pas bloquer complètement
-        
-
 ######################################
 
 
@@ -65,8 +51,11 @@ def load_scene(state):
             track_count = max(object.track_id,track_count)
             state["library"].add_clip(object)
         else:
-            object = object.clone()
-            object.step.delay = data.get("step", {}).get("delay", 0)
+            # TODO: I should not clone here, but if it's a video, I need I should not launch 
+            #object = object.clone()
+            object = ObjectFactory.create(data, state["game"].window_size, 0, 0)
+            track_count = max(object.track_id,track_count)
+            #object.step.delay = data.get("step", {}).get("delay", 0)
         state["game"].objects.append(object)
 
     # Legacy import rule
@@ -89,8 +78,6 @@ def load_scene(state):
             object.load_metadata_async()
 
     state["game"].start_lazy_loading()
-    #threading.Thread(target=load_videos_sequentially, args=(videos,), daemon=True).start()
-  
 
 
 ######################################
@@ -103,7 +90,7 @@ def save_scene(state):
 
     # Vérifie que c’est bien une chaîne non vide
     if not isinstance(file_path, str) or not file_path.strip():
-        return
+        return False
 
     # 1️⃣ Charger le JSON existant
     data = {}
@@ -122,6 +109,7 @@ def save_scene(state):
     with open(file_path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
 
+    return True
 
 ######################################
 

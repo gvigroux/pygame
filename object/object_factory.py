@@ -1,7 +1,9 @@
 import time
+
 from object.arc import Arc
 from object.ball import Ball
 from object.explosion import Explosion
+from object.sound import Sound
 from object.spark import Spark
 from object.text_draw import TextDraw
 from object.text_surface import TextSurface
@@ -20,6 +22,7 @@ OBJECT_CLASSES = {
     "voice": Voice,
     "spark": Spark,
     "video": Video,
+    "sound": Sound,
 }
 
 class ObjectFactory:

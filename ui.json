@@ -2,10 +2,10 @@
     "config": {
         "downloader": {
             "url": "",
-            "split": "C:/Users/gvigroux/Downloads/a34Nr51_460sv.mp4"
+            "split": "C:/Users/gvigroux/Downloads/IMG_4614.MP4"
         },
         "current": {
-            "file_path": "C:/Users/gvigroux/OneDrive - THALES SA/Documents/Projects/pygame/config.json"
+            "file_path": "C:/PYGAME/scenes/2025-05-02-chat voleur.json"
         }
     },
     "layout": {

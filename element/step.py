@@ -71,3 +71,11 @@ class eStep:
             "explode": ("bool", "Explode"),
             "update_delay": ("float", "Update Delay")
         }
+
+    @classmethod
+    def parameter_fields(cls):
+        return [
+            {"name": "start", "type": "float", "default": 0},
+            {"name": "stop", "type": "float", "default": -1}
+        ]
+        #{"name": "duration", "type": "float", "default": 0}

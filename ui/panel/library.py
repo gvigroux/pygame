@@ -1,12 +1,18 @@
+import json
 import tkinter as tk
 import ttkbootstrap as ttk
+from object.object import Object
+from object.sound import Sound
 from object.video import Video
-from ui.frame.scrollable_frame import ScrollableFrame  # tu dois avoir cette classe déjà
+from ui.frame.parameter_form import ParameterForm
+from ui.frame.scrollable_frame import ScrollableFrame
+from ui.frame.type_chooser import TypeChooser  # tu dois avoir cette classe déjà
 
 
-class ClipLibrary(ttk.Frame):
-    def __init__(self, parent, on_drop_callback=None, on_click=None, **kwargs):
+class LibraryPanel(ttk.Frame):
+    def __init__(self, state, parent, on_drop_callback=None, on_click=None, **kwargs):
         super().__init__(parent, **kwargs)
+        self.state = state
         self.on_drop_callback = on_drop_callback
         self.on_click = on_click
         self._current_selected_frame = None
@@ -32,7 +38,90 @@ class ClipLibrary(ttk.Frame):
         style.configure("Hovered.TFrame", relief="ridge", borderwidth=1)
 
 
+        
+    ############################################
+
+    def get_subclasses(self, cls):
+        subclasses = set()
+        work = [cls]
+        while work:
+            parent = work.pop()
+            for child in parent.__subclasses__():
+                if child not in subclasses:
+                    subclasses.add(child)
+                    work.append(child)
+        return subclasses
+
+    ######################################
+
+    def open_parameter_form(self, cls):
+        def on_submit(result):
+            data = {
+                "type": cls.__name__,
+                "label": f"New {cls.__name__}"
+            }
+            # On ajoute chaque section dans data
+            for key, value in result.items():
+                data[key] = value
+
+            object = self.state["game"].add_object_factory(data)
+            if( isinstance(object, Sound) ):
+                object.step.duration = object.sound.sound.get_length()
+            elif( isinstance(object, Video) ):
+                # It's done in the Video class
+                object.load_metadata_sync()
+                
+                pass
+            else:
+                object.step.duration = 1
+            self.add_clip(object)
+
+        fields = cls.parameter_fields()
+        ParameterForm(self.state["app"], fields, on_submit)
+
+
+
+    def open_type_chooser(self):
+        def handle_choice(choice):
+                    
+            subclasses = self.get_subclasses(Object)
+            cls_dict = {cls.__name__: cls for cls in subclasses}
+            cls = cls_dict[choice]
+
+            if hasattr(cls, "parameter_fields"):
+                self.open_parameter_form(cls)
+            else:
+                # fallback : objet avec données par défaut
+                data = {
+                    "type": choice,
+                    "label": f"New {choice}",
+                    "step": {"duration": 2}
+                }
+                object = self.state["game"].add_object_factory(data)
+                self.add_clip(object)
+                
+
+        subclasses = self.get_subclasses(Object)
+        type_list = sorted([cls.__name__ for cls in subclasses])
+        TypeChooser(self.state["app"], type_list, handle_choice)
+
+
+
     def _create_sidebar_buttons(self):
+
+        #Add button
+        btn = ttk.Button(
+                self.sidebar,
+                text="+",
+                width=4,
+                command=lambda: self.open_type_chooser(),
+                style="Tool.TButton"
+            )
+        btn.pack(pady=4)
+
+        # timeline_toolbar.add_icon("ui/icons/icons8-ajouter-24.png", open_type_chooser)
+
+
         filters = [
             ("all", "🧩", "Tous"),
             ("video", "🎥", "Vidéos"),
@@ -69,6 +158,10 @@ class ClipLibrary(ttk.Frame):
         self.add_clip(new_clip)
 
     def add_clip(self, clip):
+
+        if( isinstance(clip, Sound) and clip.step.duration == -1 and clip.sound.sound.get_length() > 0 ):
+            clip.step.duration = clip.sound.sound.get_length()
+            
         if( isinstance(clip, Video) ):
             if( clip.path in self._added_video_paths ):
                 return

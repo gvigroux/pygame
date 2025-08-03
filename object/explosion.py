@@ -13,7 +13,6 @@ from object.object import Object
 class Explosion(Object):
     def __init__(self, data, window_size, count, id):
         super().__init__(data, window_size, count, id)
-        
 
     def _draw(self, ctx):
         if( self.first_draw ):
@@ -21,5 +20,7 @@ class Explosion(Object):
 
     def _schema(self):
         return {}
-
+    
+    def _prepare(self):
+        pass
 

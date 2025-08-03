@@ -74,13 +74,60 @@ class Game:
         self.background = None
         self.end_step   = 1
         self.debug      = False
-
+        self.window_size = [608, 1080]
+        
     
     def deactivate_window(self):        
         os.environ["SDL_VIDEODRIVER"] = "dummy"
         #self.pygame.quit()
         self.pygame.display.quit()
         self.pygame.init()
+
+    def image_at_time(self, seconds):
+        
+        current_time = 0
+
+        for object in self.objects:
+            object.reset(time.time()-seconds, 0)
+
+        # Cairo surface et contexte réutilisables
+        surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, *self.window_size)
+        ctx     = cairo.Context(surface)
+        screen  = self.pygame.display.set_mode((self.window_size[0], self.window_size[1]), self.pygame.DOUBLEBUF | self.pygame.SRCALPHA)
+            
+        ctx.save()
+        ctx.set_operator(cairo.OPERATOR_CLEAR)
+        ctx.paint()
+        ctx.restore()
+
+        
+        dt = (seconds * 0.016 * 60) # - object.step.delay
+        self.update(dt, 0, None, 0)
+
+        # for object in self.objects:
+        #     if( isinstance(object, Video) ):
+        #         if( not object.is_ready() ):
+        #             original = library_panel.get_video(object.path)
+        #             object.surface_frames = original.surface_frames
+        #             if( len(object.surface_frames) > 0 ):
+        #                 object._frames_ready.set() 
+
+        self.background = None
+
+        
+        self.draw(screen, ctx, current_time)
+        #game.draw_on_context(ctx, current_time)
+
+        # Cairo → Pygame Surface
+        raw_buf = surface.get_data()
+        img = self.pygame.image.frombuffer(raw_buf, self.window_size, "BGRA").convert_alpha()
+        
+        # Dessine les objets sur la surface pygame (si nécessaire)
+        #screen = pygame.Surface(game.window_size, pygame.SRCALPHA)
+        screen.blit(img, (0, 0))
+        
+        return screen
+    
 
     def run(self):
         os.environ.pop("SDL_VIDEODRIVER", None)
@@ -188,7 +235,7 @@ class Game:
             #print(f"FIRST: {(t1 - t0)*1000:.2f} ms | UPDATE: {(t2 - t1)*1000:.2f} ms | BACK: {(t3 - t2)*1000:.2f} ms | DRAW {(t4 - t3)*1000:.2f} | BLIT {(t5 - t4)*1000:.2f} | TOTAL: {(t5 - t0)*1000:.2f} ms | dt={dt*1000:.2f}ms | FPS={fps:.2f}")
             #print(fps)
         self.pygame.display.quit()
-        #self.pygame.quit()
+        self.pygame.quit()
 
     def reset(self):
         self.objects = []
@@ -209,6 +256,8 @@ class Game:
                 "debug": self.debug,
                 "window_size": self.window_size
         }
+    
+
             
     def load(self, filepath = "C:\\Users\\gvigroux\\OneDrive - THALES SA\\Documents\\Projects\\pygame\\config.json", avoid_debug = False, load_background = True):
 
@@ -306,9 +355,10 @@ class Game:
 
 
     def _on_video_ready(self, object):
-        print(object.path)
+        print(f"Video {object.path} ready")
         for _object in self.objects:
-            if isinstance(_object, Video) and object.path == _object.path and object != _object:        
+            if isinstance(_object, Video) and object.path == _object.path and object != _object:  
+                print(f"Copiing surface_frames from {object.label} to {_object.label}")
                 _object.surface_frames = object.surface_frames
                 _object._frames_ready.set()
 

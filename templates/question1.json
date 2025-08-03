@@ -1,0 +1,24 @@
+{
+  "label": "######################### QUESTION ########################",
+  "type": "text",
+  "text": {
+    "value": "🐰 Combien de dents a un lapin ? ",
+    "color": "(255, 255, 255, 255)",
+    "font": {
+      "size": 50,
+      "family": "lobsterregular"
+    },
+    "outline": {
+      "color": "(0, 0, 0, 255)",
+      "width": 2
+    },
+    "margin": "(0, 20, 0, 20)",
+    "padding": "(10, 10, 10, 10)",
+    "background": { "color": "(200, 20, 20,255)", "radius": 10 }
+  },
+  "position": { "x": 0, "y": "18%" },
+  "step": {
+    "delay": 0.5,
+    "block": false
+  }
+}

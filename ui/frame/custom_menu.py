@@ -50,7 +50,9 @@ class CustomMenu(tk.Frame):
         )
         
         # Options du menu
-        options = [("Open", self.open_cmd),
+        options = [ ("New", self.new_cmd),
+                    ("-", None), 
+                    ("Open", self.open_cmd),
                     ("Save", self.save_cmd),
                     ("Save As...", self.save_as_cmd),
                     ("-", None), 
@@ -76,7 +78,7 @@ class CustomMenu(tk.Frame):
             )
             lbl.pack(fill="x")
             #lbl.bind("<Button-1>", lambda e, c=cmd: c())
-            lbl.bind("<Button-1>", lambda e, c=cmd, t=text: (print(f"Click on: {t}"), c())[1])
+            lbl.bind("<Button-1>", lambda e, c=cmd: (self.hide_menu(), c())[1])
             lbl.bind("<Enter>", lambda e: e.widget.config(bg=self.hover_bg))
             lbl.bind("<Leave>", lambda e: e.widget.config(bg=self.menu_bg))
         
@@ -84,7 +86,8 @@ class CustomMenu(tk.Frame):
         self.file_menu.update_idletasks()
         
         self.menu_visible = False
-        self.master.bind("<Button-1>", self.on_click_outside)
+        #self.master.bind("<Button-1>", self.on_click_outside)
+        self.master.bind_all("<Button-1>", self.on_click_outside, add="+")
         self.file_menu.bind("<Button-1>", lambda e: "break")
     
     def toggle_file_menu(self, event=None):
@@ -112,20 +115,53 @@ class CustomMenu(tk.Frame):
             self.menu_visible = True
         return "break"
     
+    def hide_menu(self):
+        self.file_menu.place_forget()
+        self.menu_visible = False
+
     def safe_quit(self):
         """Ferme proprement l'application en sauvegardant"""
         save_config(self.state)  # Sauvegarde d'abord
         self.master.destroy()    # Puis fermeture
         
+    # def on_click_outside(self, event):
+    #     if self.menu_visible:
+    #         if (not self.btn_file.winfo_containing(event.x_root, event.y_root) and 
+    #             not self.file_menu.winfo_containing(event.x_root, event.y_root)):
+    #             self.file_menu.place_forget()
+    #             self.menu_visible = False
+
     def on_click_outside(self, event):
-        if self.menu_visible:
-            if (not self.btn_file.winfo_containing(event.x_root, event.y_root) and 
-                not self.file_menu.winfo_containing(event.x_root, event.y_root)):
-                self.file_menu.place_forget()
-                self.menu_visible = False
+        if not self.menu_visible:
+            return
+
+        widget = event.widget.winfo_containing(event.x_root, event.y_root)
+
+        # Si le clic est sur le menu ou un de ses enfants -> ne rien faire
+        if self._is_descendant(widget, self.file_menu) or self._is_descendant(widget, self.btn_file):
+            return
+
+        # Sinon on ferme le menu
+        self.hide_menu()
+
+    def _is_descendant(self, widget, parent):
+        """Retourne True si widget est parent ou enfant de parent"""
+        while widget:
+            if widget == parent:
+                return True
+            widget = widget.master
+        return False
+
     
+    def new_cmd(self):
+        self.state["config"].setdefault("current", {})["file_path"] = ""
+        self.state["game"].reset()
+        self.state["library"].reset()
+        self.state["timeline"].reset()
+        save_config(self.state)
+        
+
     def open_cmd(self):
-        self.toggle_file_menu()
         filepath = filedialog.askopenfilename(
         title="Open scene",
         defaultextension=".json",
@@ -135,11 +171,10 @@ class CustomMenu(tk.Frame):
             load_scene(self.state)
     
     def save_cmd(self):
-        save_scene(self.state)
-        self.toggle_file_menu()
+        if( not save_scene(self.state) ):            
+            self.save_as_cmd()
     
     def save_as_cmd(self):
-        self.toggle_file_menu()
         filepath = filedialog.asksaveasfilename(
                 defaultextension=".json", 
                 filetypes=[("JSON files", "*.json")] )

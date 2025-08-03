@@ -38,8 +38,8 @@ class ePosition:
 
     def schema(self):
         return {
-            "x": ("float", "X"),
-            "y": ("float", "Y"),
+            "x": ("floateval", "X"),
+            "y": ("floateval", "Y"),
             "justify": ("str", "Justify"),
         }
     

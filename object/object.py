@@ -74,6 +74,7 @@ class Object:
         self.fade_speed = 5.0  # vitesse de disparition (1.0 = lent, 5.0 = rapide)
         self.track_id   = self.config("track_id", 0)
 
+        self.on_ready_callbacks = []
         self.log_draw_durations = []
         self.t0 = 0
         self.t1 = 0
@@ -86,11 +87,12 @@ class Object:
             print(f"SLOW Object.__init__total: {(t2 - t0)*1000:.2f} ms")
 
     def prepare(self):     
-        self.color      = self.config("color", (255, 255, 255, 255))
-        self.label      = self.config("label", "")
-        if( len(self.color) == 3 ):
-            self.color = (self.color[0], self.color[1], self.color[2], 255)   
-        self.position       = ePosition(self.window_size, self.amount, self.index, **self.config("position", {"x": "50%","y": "50%"}))   
+        #self.color      = self.config("color", (255, 255, 255, 255))
+        #self.label      = self.config("label", "")
+        #if( len(self.color) == 3 ):
+        #    self.color = (self.color[0], self.color[1], self.color[2], 255)   
+        #self.position       = ePosition(self.window_size, self.amount, self.index, **self.config("position", {"x": "50%","y": "50%"}))
+        self._prepare()
 
     def enabled(self):
         return True
@@ -290,7 +292,7 @@ class Object:
             if hasattr(value, "schema") and callable(value.schema):
                 if( value.enabled()):
                     result[key] = self.serialize_object(value)  # appel récursif
-            elif isinstance(value, (str, int, float, bool)): # or value is None:
+            elif isinstance(value, (str, int, float, bool, tuple)): # or value is None:
                 result[key] = value
             elif isinstance(value, list):
                 # Liste d'objets ou de primitives
@@ -311,6 +313,9 @@ class Object:
     def clone(self):
         try:
             obj = copy.deepcopy(self)
+            obj.on_ready_callbacks = self.on_ready_callbacks.copy()
+            if( type(obj).__name__ == "Video"):
+                obj.surface_frames = self.surface_frames.copy()
         except Exception as e:
             print(f"[clone] Failed to deepcopy': {e}")
         return obj

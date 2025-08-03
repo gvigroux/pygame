@@ -1,0 +1,167 @@
+{
+    "objects": [
+        {
+            "type": "Video",
+            "label": "clip_0.mp4",
+            "enable": true,
+            "path": "C:\\PYGAME\\clips\\a5QDZyG_460sv\\clip_0.mp4",
+            "reverse": false,
+            "loop": false,
+            "play_sound": false,
+            "fps": 29.97002997002997,
+            "freeze_frame": 0,
+            "freeze_duration": 0,
+            "start_frame": 0,
+            "end_frame": -1,
+            "step": {
+                "start": 0,
+                "stop": -1,
+                "duration": 10.1,
+                "fade_in": 0,
+                "fade_out": 0,
+                "delay": 0.0,
+                "block": false,
+                "explode": false,
+                "update_delay": 0
+            },
+            "raw_size": {
+                "width": 608,
+                "height": 1080
+            },
+            "size": {
+                "width": 608,
+                "height": 1080
+            },
+            "position": {
+                "x": 0,
+                "y": 0,
+                "justify": "H"
+            },
+            "track_id": 2
+        },
+        {
+            "type": "Video",
+            "label": "clip_0.mp4",
+            "enable": true,
+            "path": "C:\\PYGAME\\clips\\a5QDZyG_460sv\\clip_0.mp4",
+            "reverse": true,
+            "loop": false,
+            "play_sound": false,
+            "fps": 29.97002997002997,
+            "freeze_frame": 0,
+            "freeze_duration": 0,
+            "start_frame": 0,
+            "end_frame": -1,
+            "step": {
+                "start": 0,
+                "stop": -1,
+                "duration": 10.1,
+                "fade_in": 0,
+                "fade_out": 0,
+                "delay": 10.1,
+                "block": false,
+                "explode": false,
+                "update_delay": 0
+            },
+            "raw_size": {
+                "width": 608,
+                "height": 1080
+            },
+            "size": {
+                "width": 608,
+                "height": 1080
+            },
+            "position": {
+                "x": 0,
+                "y": 0,
+                "justify": "H"
+            },
+            "track_id": 2
+        },
+        {
+            "type": "TextSurface",
+            "label": "QUESTION",
+            "enable": true,
+            "color": [
+                255,
+                255,
+                255,
+                255
+            ],
+            "position": {
+                "x": 33,
+                "y": 100,
+                "justify": "H"
+            },
+            "step": {
+                "start": 0,
+                "stop": -1,
+                "duration": 20.2,
+                "fade_in": 0,
+                "fade_out": 0,
+                "delay": 0.0,
+                "block": false,
+                "explode": false,
+                "update_delay": 0
+            },
+            "text": {
+                "value": "À quel moment t’as réalisé qu’elle fait n’importe quoi ? 🤯🧠",
+                "color": [
+                    255,
+                    255,
+                    255,
+                    255
+                ],
+                "font": {
+                    "bold": false,
+                    "size": 50,
+                    "family": "lobsterregular"
+                },
+                "outline": {
+                    "color": [
+                        0,
+                        0,
+                        0,
+                        0
+                    ],
+                    "width": 2
+                },
+                "padding": [
+                    10,
+                    10,
+                    10,
+                    10
+                ],
+                "margin": [
+                    0,
+                    20,
+                    0,
+                    20
+                ],
+                "background": {
+                    "color": [
+                        200,
+                        20,
+                        20,
+                        255
+                    ],
+                    "size": [
+                        0,
+                        0
+                    ],
+                    "radius": 10
+                },
+                "update": ""
+            },
+            "track_id": 1
+        }
+    ],
+    "settings": {
+        "end_step": 1,
+        "debug": false,
+        "window_size": [
+            608,
+            1080
+        ]
+    }
+}

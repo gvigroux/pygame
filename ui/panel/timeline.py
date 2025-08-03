@@ -25,7 +25,7 @@ def darken(hex_color, factor=0.8):
     return rgb_to_color(dark_rgb)
 
 
-class Timeline(ttk.Frame):
+class TimelinePanel(ttk.Frame):
     def __init__(self, master, num_tracks=3, length=60, height=300, on_clip_click=None, on_clip_add=None, on_clip_removed=None, on_clip_update=None, on_time_click = None, on_video_update = None ,**kwargs):
         self.on_clip_click = on_clip_click
         self.num_tracks = num_tracks
@@ -134,6 +134,7 @@ class Timeline(ttk.Frame):
         total_height = (self.num_tracks + int(self.has_background)) * self.track_height + self.tick_height*2
         if self.playhead_line_id:
             self.canvas.coords(self.playhead_line_id, x, 0, x, total_height)
+            self.canvas.tag_raise(self.playhead_line_id)
         else:
             # Calcul de la hauteur de la ligne
             self.playhead_line_id = self.canvas.create_line(x, 0, x, total_height, fill="red", width=2, dash=(4, 2))            
@@ -613,7 +614,9 @@ class Timeline(ttk.Frame):
 
                 # Met à jour le delay logique
                 x1, _, _, _ = self.canvas.coords(clip["rect_id"])
-                clip["object"].step.delay = round(x1 / 50.0, 2)
+                #clip["object"].step.delay = round(x1 / 50.0, 2)
+                delay = round(round(x1 / 5) * 0.1, 1)  # arrondi à 0.1s
+                clip["object"].step.delay = delay
 
                 # === Détection de la piste sous la souris ===
                 new_track = int(y // self.track_height)
@@ -663,16 +666,6 @@ class Timeline(ttk.Frame):
             label = self.truncate_text(obj.label, max_text_width, font)
             self.canvas.coords(clip["text_id"], x1 + 5, (y1 + y2) / 2)
             self.canvas.itemconfig(clip["text_id"], text=label, font=font)
-
-
-
-    def add_background_video(self, video, at_position) :
-        video_copy = video.clone()
-        canvas_x = self.canvas.canvasx(at_position[0])
-        video_copy.step.delay = max((canvas_x / 50.0)-10, 0)
-        self.add_clip(video_copy, track="background", start=video_copy.step.delay, duration= video_copy.step.duration)
-        self._reorder_background_clips()
-        self.redraw()
 
 
     def get_track_at_y(self, y):
@@ -782,20 +775,9 @@ class Timeline(ttk.Frame):
         self.redraw()
 
 
-    def get_background_image(self, time):
-        for clip in self.clips:
-            if( clip["track_id"] == "background" ):
-                obj     = clip["object"]
-                start    = obj.step.delay
-                duration = obj.step.duration
-
-                if( time >= start and time < start + duration ):
-                    if( obj.is_ready() ):
-                        return obj.get_image(time-start)
-                    return self.on_video_update(obj,time-start)
 
     def _clip_itemconfig(self, clip ):
-        """Met à jour la configuration d'un clip"""
+        """Met à jour la couleur d'un clip"""
 
         object = clip["object"]
 
@@ -820,24 +802,11 @@ class Timeline(ttk.Frame):
     def remove_focus(self):
         for clip in self.clips:
             self._clip_itemconfig(clip)
-            #self.canvas.itemconfig(clip["rect_id"], fill=self.style_clip_bg, outline=self.style_clip_bd)
 
 
     def select_clip(self, clip):
         """Applique le style selected au clip, et unselected aux autres"""
         self._clip_itemconfig(clip)
-        # if self._selected_clip and self._selected_clip != clip:
-        #     self.canvas.itemconfig(
-        #         self._selected_clip["rect_id"],
-        #         fill=self.style_clip_bg,
-        #         outline=self.style_clip_bd
-        #     )
-        
-        # self.canvas.itemconfig(
-        #     clip["rect_id"],
-        #     fill=self.style_clip_selected_bg,
-        #     outline=self.style_clip_selected_bd
-        # )
         self._selected_clip = clip
 
     def clear_selection(self):

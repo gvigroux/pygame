@@ -1,0 +1,348 @@
+{
+    "objects": [
+        {
+            "type": "Video",
+            "label": "clip_0.mp4",
+            "enable": true,
+            "path": "C:\\PYGAME\\clips\\a34Nr51_460sv\\clip_0.mp4",
+            "reverse": false,
+            "loop": false,
+            "play_sound": false,
+            "fps": 60.0,
+            "freeze_frame": 0,
+            "freeze_duration": 0,
+            "start_frame": 0,
+            "end_frame": -1,
+            "step": {
+                "start": 0,
+                "stop": -1,
+                "duration": 6.0,
+                "fade_in": 0,
+                "fade_out": 0,
+                "delay": 0.0,
+                "block": false,
+                "explode": false,
+                "update_delay": 0
+            },
+            "raw_size": {
+                "width": 608,
+                "height": 1080
+            },
+            "size": {
+                "width": 608,
+                "height": 1080
+            },
+            "position": {
+                "x": 0,
+                "y": 0,
+                "justify": "H"
+            },
+            "track_id": 4
+        },
+        {
+            "type": "Video",
+            "label": "clip_1.mp4",
+            "enable": true,
+            "path": "C:\\PYGAME\\clips\\a34Nr51_460sv\\clip_1.mp4",
+            "reverse": false,
+            "loop": false,
+            "play_sound": false,
+            "fps": 60.0,
+            "freeze_frame": 0,
+            "freeze_duration": 0,
+            "start_frame": 0,
+            "end_frame": -1,
+            "step": {
+                "start": 0,
+                "stop": -1,
+                "duration": 6.0,
+                "fade_in": 0,
+                "fade_out": 0,
+                "delay": 6.0,
+                "block": false,
+                "explode": false,
+                "update_delay": 0
+            },
+            "raw_size": {
+                "width": 608,
+                "height": 1080
+            },
+            "size": {
+                "width": 608,
+                "height": 1080
+            },
+            "position": {
+                "x": 0,
+                "y": 0,
+                "justify": "H"
+            },
+            "track_id": 4
+        },
+        {
+            "type": "Video",
+            "label": "clip_2.mp4",
+            "enable": true,
+            "path": "C:\\PYGAME\\clips\\a34Nr51_460sv\\clip_2.mp4",
+            "reverse": false,
+            "loop": false,
+            "play_sound": false,
+            "fps": 60.0,
+            "freeze_frame": 0,
+            "freeze_duration": 0,
+            "start_frame": 0,
+            "end_frame": -1,
+            "step": {
+                "start": 0,
+                "stop": -1,
+                "duration": 6.0,
+                "fade_in": 0,
+                "fade_out": 0,
+                "delay": 12.0,
+                "block": false,
+                "explode": false,
+                "update_delay": 0
+            },
+            "raw_size": {
+                "width": 608,
+                "height": 1080
+            },
+            "size": {
+                "width": 608,
+                "height": 1080
+            },
+            "position": {
+                "x": 0,
+                "y": 0,
+                "justify": "H"
+            },
+            "track_id": 4
+        },
+        {
+            "type": "Video",
+            "label": "clip_3.mp4",
+            "enable": true,
+            "path": "C:\\PYGAME\\clips\\a34Nr51_460sv\\clip_3.mp4",
+            "reverse": false,
+            "loop": false,
+            "play_sound": false,
+            "fps": 60.0,
+            "freeze_frame": 0,
+            "freeze_duration": 0,
+            "start_frame": 0,
+            "end_frame": -1,
+            "step": {
+                "start": 0,
+                "stop": -1,
+                "duration": 6.0,
+                "fade_in": 0,
+                "fade_out": 0,
+                "delay": 18.0,
+                "block": false,
+                "explode": false,
+                "update_delay": 0
+            },
+            "raw_size": {
+                "width": 608,
+                "height": 1080
+            },
+            "size": {
+                "width": 608,
+                "height": 1080
+            },
+            "position": {
+                "x": 0,
+                "y": 0,
+                "justify": "H"
+            },
+            "track_id": 4
+        },
+        {
+            "type": "Video",
+            "label": "clip_4.mp4",
+            "enable": true,
+            "path": "C:\\PYGAME\\clips\\a34Nr51_460sv\\clip_4.mp4",
+            "reverse": false,
+            "loop": false,
+            "play_sound": false,
+            "fps": 60.0,
+            "freeze_frame": 0,
+            "freeze_duration": 0,
+            "start_frame": 0,
+            "end_frame": -1,
+            "step": {
+                "start": 0,
+                "stop": -1,
+                "duration": 6.0,
+                "fade_in": 0,
+                "fade_out": 0,
+                "delay": 24.0,
+                "block": false,
+                "explode": false,
+                "update_delay": 0
+            },
+            "raw_size": {
+                "width": 608,
+                "height": 1080
+            },
+            "size": {
+                "width": 608,
+                "height": 1080
+            },
+            "position": {
+                "x": 0,
+                "y": 0,
+                "justify": "H"
+            },
+            "track_id": 4
+        },
+        {
+            "type": "Video",
+            "label": "clip_5.mp4",
+            "enable": true,
+            "path": "C:\\PYGAME\\clips\\a34Nr51_460sv\\clip_5.mp4",
+            "reverse": false,
+            "loop": false,
+            "play_sound": false,
+            "fps": 60.0,
+            "freeze_frame": 0,
+            "freeze_duration": 0,
+            "start_frame": 0,
+            "end_frame": -1,
+            "step": {
+                "start": 0,
+                "stop": -1,
+                "duration": 2.02,
+                "fade_in": 0,
+                "fade_out": 0,
+                "delay": 30.0,
+                "block": false,
+                "explode": false,
+                "update_delay": 0
+            },
+            "raw_size": {
+                "width": 608,
+                "height": 1080
+            },
+            "size": {
+                "width": 608,
+                "height": 1080
+            },
+            "position": {
+                "x": 0,
+                "y": 0,
+                "justify": "H"
+            },
+            "track_id": 4
+        },
+        {
+            "type": "TextSurface",
+            "label": "HOOK",
+            "enable": true,
+            "position": {
+                "x": 20,
+                "y": 140,
+                "justify": "H"
+            },
+            "step": {
+                "start": 0,
+                "stop": -1,
+                "duration": 32.0,
+                "fade_in": 0,
+                "fade_out": 0,
+                "delay": 5.96,
+                "block": false,
+                "explode": false,
+                "update_delay": 0
+            },
+            "text": {
+                "value": "Regarde ce bateau… Mauvais nœud, gros dégâts ! ",
+                "font": {
+                    "bold": false,
+                    "size": 50,
+                    "family": "lobsterregular"
+                },
+                "outline": {
+                    "width": 2
+                },
+                "update": ""
+            },
+            "track_id": 3
+        },
+        {
+            "type": "TextSurface",
+            "label": "######################### RESPONSE TEXT ########################",
+            "enable": true,
+            "position": {
+                "x": 12,
+                "y": 540,
+                "justify": "H"
+            },
+            "step": {
+                "start": 0,
+                "stop": -1,
+                "duration": 13.1,
+                "fade_in": 0.2,
+                "fade_out": 0.2,
+                "delay": 11.8,
+                "block": true,
+                "explode": false,
+                "update_delay": 0
+            },
+            "text": {
+                "value": "Moi j’fais toujours un bon vieux nœud de taquet… et toi ? 👇",
+                "font": {
+                    "bold": true,
+                    "size": 45,
+                    "family": "Roboto"
+                },
+                "outline": {
+                    "width": 2
+                },
+                "update": ""
+            },
+            "track_id": 2
+        },
+        {
+            "type": "TextSurface",
+            "label": "######################### CTA ########################",
+            "enable": true,
+            "position": {
+                "x": 5,
+                "y": 756,
+                "justify": "H"
+            },
+            "step": {
+                "start": 0,
+                "stop": 0.9,
+                "duration": 11.2,
+                "fade_in": 0.2,
+                "fade_out": 0.2,
+                "delay": 26.66,
+                "block": true,
+                "explode": false,
+                "update_delay": 0
+            },
+            "text": {
+                "value": "Dis-moi ton nœud en com, j’veux voir les vrais marins ! 👇⚓️",
+                "font": {
+                    "bold": false,
+                    "size": 40,
+                    "family": "Anton Regular"
+                },
+                "outline": {
+                    "width": 2
+                },
+                "update": ""
+            },
+            "track_id": 1
+        }
+    ],
+    "settings": {
+        "end_step": 1,
+        "debug": true,
+        "window_size": [
+            608,
+            1080
+        ]
+    }
+}

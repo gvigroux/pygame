@@ -10,6 +10,18 @@ class eBackground:
 
     def enabled(self):
         return self.color[3] > 0
+    
+    
+    def prepare(self):
+        if( isinstance(self.radius, str) ):
+            self.radius = eval(self.radius)
+        if( isinstance(self.size, str) ):
+            self.size = eval(self.size)
+        if( isinstance(self.color, str) ):
+            self.color = eval(self.color)
+        if( len(self.color) == 3 ):
+            self.color = (self.color[0], self.color[1], self.color[2], 255)
+        #self.size   = eval(self.size)
 
     def getColor(self, alpha):
         return (self.color[0], self.color[1], self.color[2],  min(alpha, self.color[3]))
@@ -19,5 +31,5 @@ class eBackground:
         return {
             "color": ("str", "Color"),
             "size": ("str", "Size"),
-            "radius": ("float", "Radius"),
+            "radius": ("int", "Radius"),
         }

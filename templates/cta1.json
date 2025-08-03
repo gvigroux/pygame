@@ -1,0 +1,25 @@
+{
+  "label": "CTA 1",
+  "type": "text",
+  "text": {
+    "value": "Et toi, t’as déjà eu un lapin ? 🐰 Raconte !",
+    "font": {
+      "size": 40,
+      "family": "Anton Regular"
+    },
+    "outline": {
+      "color": "(0, 0, 0, 255)",
+      "width": 2
+    },
+    "padding": "(0, 20, 0, 20)"
+  },
+  "position": { "y": "70%" },
+  "step": {
+    "start": 0,
+    "stop": 0.9,
+    "duration": 6,
+    "delay": 10.5,
+    "fade_in": 0.2,
+    "fade_out": 0.2
+  }
+}
