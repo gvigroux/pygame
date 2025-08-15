@@ -7,8 +7,11 @@ from ttkbootstrap.constants import *
 import tkinter as tk
 import tkinter.font as tkfont
 
+from object.object import Object
 from object.video import Video
+from ui.components.context_menu import FlatContextMenu
 from ui.helper import colorize_icon
+from ui.log import log_message
 
 
 def color_to_rgb(hex_color):
@@ -26,14 +29,15 @@ def darken(hex_color, factor=0.8):
 
 
 class TimelinePanel(ttk.Frame):
-    def __init__(self, master, num_tracks=3, length=60, height=300, on_clip_click=None, on_clip_add=None, on_clip_removed=None, on_clip_update=None, on_time_click = None, on_video_update = None ,**kwargs):
+    def __init__(self, master, state, num_tracks=3, length=60, height=300, on_clip_click=None, on_clip_add=None, on_clip_removed=None, on_clip_update=None, on_time_click = None, on_video_update = None ,**kwargs):
+        self.state = state
         self.on_clip_click = on_clip_click
         self.num_tracks = num_tracks
         self.length = length
         self.track_height = 40
         self.tick_height = 20
         self.on_clip_removed = on_clip_removed
-        self.has_background = True  # ajoute une piste "background"
+        self.has_background = False  # ajoute une piste "background"
         self.on_time_click = on_time_click
         self.on_video_update = on_video_update
         self.on_clip_add = on_clip_add
@@ -101,6 +105,37 @@ class TimelinePanel(ttk.Frame):
         
         self.canvas.bind("<Delete>", self.delete_selected_clip) 
         self.canvas.bind("<Button-1>", self._on_canvas_click)
+
+   
+    
+    
+    def _menu_delete_clip(self):
+        if self._context_clip:
+            self.select_clip(self._context_clip)
+            self.delete_selected_clip()
+
+    def _menu_resize_to_frame(self):
+        if self._context_clip:
+            clip_obj = self._context_clip["object"]
+            print(clip_obj.step.duration)
+            clip_obj.adjust_duration()
+            print(clip_obj.step.duration)
+            self.redraw()
+
+    def _on_clip_right_click(self, event):
+        item = self._find_closest(event)
+        clip = self._get_clip_by_item(item)
+        if clip:
+            self._context_clip = clip
+            self.select_clip(clip)
+            if( isinstance(clip["object"], Video) ):
+                menu = FlatContextMenu(self, items=[ ("Delete", self._menu_delete_clip),
+                                                    ("Resize to frame", self._menu_resize_to_frame)])
+            else:
+                menu = FlatContextMenu(self,items=[("Delete", self._menu_delete_clip)])
+            menu.popup(event.x_root, event.y_root)
+
+
 
     def reset(self):
 
@@ -378,10 +413,8 @@ class TimelinePanel(ttk.Frame):
     
     def _on_resize_start(self, event, side):
         if self._drag_data["item"]:
-            return  # ignore si drag en cours
-        x = self.canvas.canvasx(event.x)  # CORRECTION
-        #y = self.canvas.canvasy(event.y)
-        #item = self.canvas.find_closest(x, y)[0]
+            return 
+        x = self.canvas.canvasx(event.x) 
         item = self._find_closest(event)
         for clip in self.clips:
             if item in (clip["left_handle"], clip["right_handle"]):
@@ -394,7 +427,7 @@ class TimelinePanel(ttk.Frame):
         if not clip:
             return
 
-        x = self.canvas.canvasx(event.x)  # CORRECTION
+        x = self.canvas.canvasx(event.x)
         x1, y1, x2, y2 = self.canvas.coords(clip["rect_id"])
 
         if side == "left":
@@ -490,6 +523,7 @@ class TimelinePanel(ttk.Frame):
         handle_size = 5
         left_handle     = self.canvas.create_rectangle(x1 - handle_size, y1, x1 + handle_size, y2, fill="", outline="")
         right_handle    = self.canvas.create_rectangle(x2 - handle_size, y1, x2 + handle_size, y2, fill="", outline="")
+        
 
         clip = {
             "rect_id": rect_id,
@@ -512,6 +546,7 @@ class TimelinePanel(ttk.Frame):
         def on_ready(object):
             self.after(0, lambda: self._on_video_ready(clip))
         if( isinstance(object, Video) ):
+            #TODO: maintenant que les videos de la timeline ne sont pas chargée (mais copiée depuis la libraries), on_ready n'est jamais appellé. C'est pas grave mais faut nettoyer
             object.on_ready_callbacks.append(on_ready)
             object.on_thumb_ready_callbacks.append(on_thumb_ready)
 
@@ -521,6 +556,7 @@ class TimelinePanel(ttk.Frame):
             self.canvas.tag_bind(item_id, "<ButtonRelease-1>", self._on_clip_release)
             self.canvas.tag_bind(item_id, "<Enter>", self._on_enter_clip)
             self.canvas.tag_bind(item_id, "<Leave>", self._on_leave_clip)
+            self.canvas.tag_bind(item_id, "<Button-3>", self._on_clip_right_click)
 
         for handle_id, side in ((left_handle, "left"), (right_handle, "right")):
             self.canvas.tag_bind(handle_id, "<ButtonPress-1>", lambda e, s=side: self._on_resize_start(e, s))
@@ -536,6 +572,16 @@ class TimelinePanel(ttk.Frame):
         self._drag_data["item"] = item
         self._drag_data["x"] = x
         self._drag_data["start_x"] = x
+
+        clip = self._get_clip_by_item(item)
+        if clip:
+            self._draw_clip_on_top(clip)
+
+    def _get_clip_by_item(self, item):
+        for clip in self.clips:
+            if item in (clip["rect_id"], clip["text_id"]):
+                return clip
+        return None
 
     def _save_internal_data(self, object):
         object.data.setdefault("step", {})["delay"]    = object.step.delay
@@ -614,9 +660,10 @@ class TimelinePanel(ttk.Frame):
 
                 # Met à jour le delay logique
                 x1, _, _, _ = self.canvas.coords(clip["rect_id"])
-                #clip["object"].step.delay = round(x1 / 50.0, 2)
                 delay = round(round(x1 / 5) * 0.1, 1)  # arrondi à 0.1s
                 clip["object"].step.delay = delay
+
+                self._draw_clip_on_top(clip)
 
                 # === Détection de la piste sous la souris ===
                 new_track = int(y // self.track_height)
@@ -632,6 +679,17 @@ class TimelinePanel(ttk.Frame):
                 break
 
 
+    def _draw_clip_on_top(self, clip):
+        """Met à jour la position du clip en haut de l'ordre de dessin"""
+        self.canvas.tag_raise(clip["rect_id"])
+        self.canvas.tag_raise(clip["text_id"])
+        self.canvas.tag_raise(clip["left_handle"])
+        self.canvas.tag_raise(clip["right_handle"])
+        if clip.get("thumb_id"):
+            self.canvas.tag_raise(clip["thumb_id"])
+        
+        if self.playhead_line_id:
+            self.canvas.tag_raise(self.playhead_line_id)
 
     def redraw(self):
         """Redessine tous les clips selon les valeurs de step.delay et step.duration"""
@@ -666,6 +724,7 @@ class TimelinePanel(ttk.Frame):
             label = self.truncate_text(obj.label, max_text_width, font)
             self.canvas.coords(clip["text_id"], x1 + 5, (y1 + y2) / 2)
             self.canvas.itemconfig(clip["text_id"], text=label, font=font)
+            self._clip_itemconfig(clip)
 
 
     def get_track_at_y(self, y):
@@ -710,8 +769,18 @@ class TimelinePanel(ttk.Frame):
             if clip["track_id"] == track_index and clip["object"].step.duration > 0
         ]
 
+        # Find dragged clip
+        dragged = None
+        item = self._drag_data["item"]
+        
+        for clip in self.clips:
+            if item in (clip["rect_id"], clip["text_id"]):
+                dragged = clip
+                break
+
         # 2. Trie les clips par start time
-        clips.sort(key=lambda c: c["object"].step.delay)
+        clips.sort(key=lambda c: (c["object"].step.delay, c != dragged))
+
 
         for clip in clips:
             self._save_internal_data(clip["object"])
@@ -757,7 +826,8 @@ class TimelinePanel(ttk.Frame):
             return
 
         clip = self._selected_clip
-        self.clear_selection()
+        #self.clear_selection()
+        self._selected_clip = None
 
         # Supprime les éléments du canvas
         for key in ("rect_id", "text_id", "left_handle", "right_handle", "thumb_id"):
@@ -779,7 +849,14 @@ class TimelinePanel(ttk.Frame):
     def _clip_itemconfig(self, clip ):
         """Met à jour la couleur d'un clip"""
 
-        object = clip["object"]
+        if( isinstance(clip, Object) ):
+            for _clip in self.clips:
+                if( clip == _clip["object"] ):
+                    object = clip
+                    clip = _clip
+                    break
+        else:
+            object = clip["object"]
 
         rect_bd = self.style_clip_bd
         fg_color = self.style_clip_fg
@@ -797,31 +874,25 @@ class TimelinePanel(ttk.Frame):
 
         self.canvas.itemconfig(clip["rect_id"], fill=rect_color, outline=rect_bd)
 
-                
 
     def remove_focus(self):
+        self._selected_clip = None
         for clip in self.clips:
             self._clip_itemconfig(clip)
 
-
     def select_clip(self, clip):
         """Applique le style selected au clip, et unselected aux autres"""
-        self._clip_itemconfig(clip)
         self._selected_clip = clip
+        for _clip in self.clips:
+            self._clip_itemconfig(_clip)
 
     def clear_selection(self):
         if self._selected_clip:
-            # self.canvas.itemconfig(
-            #     self._selected_clip["rect_id"],
-            #     fill=self.style_clip_bg,
-            #     outline=self.style_clip_bd
-            # )
             self._clip_itemconfig(self._selected_clip)
             self._selected_clip = None
                 
     def _on_enter_clip(self, event):
         self.canvas.config(cursor="fleur")        
-        #item = self.canvas.find_closest(event.x, event.y)[0]
         item = self._find_closest(event)
         for clip in self.clips:
             if item in (clip["rect_id"], clip["text_id"]): # and clip != self._selected_clip:

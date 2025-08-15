@@ -18,54 +18,37 @@ class eFragment:
         self.radius_range = radius_range
         self.color_range = color_range
         self.color = color
-        #if isinstance(self.lifetime, str):
-        #    self.lifetime = eval(self.lifetime, {"__builtins__": {}}, safe_globals)
-        #if isinstance(self.color, str):
-        #    self.color = eval(self.color, {"__builtins__": {}}, safe_globals)
-
-        if self.color is not None and len(self.color) == 3:
-            self.color = self.color + (255,)  # 255 = opaque
       
     def enabled(self):
         return self.count > 0
     
+    def prepare(self):
+        # The color is not calculated at launhc, but at each call of get_color 
+        #self.color = self.eval_color(self.color)
+        #self.lifetime = self.eval(self.lifetime)
+        self.radius = self.eval(self.radius)
+        self.radius_range = self.eval(self.radius_range)
+        self.count = self.eval(self.count)
+
     def get_color(self, main_color = None, backup_color = None):
         if( self.color is not None ):
-            color = self.color
-            if isinstance(self.color, str):
-                color = eval(self.color, {"__builtins__": {}}, safe_globals)
-            if color is not None and len(color) == 3:
-                color = color + (255,)  # 25
+            # Evaluate Color at each call
+            color = self.eval_color(self.color)
+            # color = self.color
+            # if isinstance(self.color, str):
+            #     color = eval(self.color, {"__builtins__": {}}, safe_globals)
+            # if color is not None and len(color) == 3:
+            #     color = color + (255,)  # 25
             return self.interpolate_color(color)
         if( main_color is not None ):
             return self.interpolate_color(main_color)
         return self.interpolate_color(backup_color)
     
     def get_lifetime(self):
-        if isinstance(self.lifetime, str):
-            return eval(self.lifetime, {"__builtins__": {}}, safe_globals)
-        return self.lifetime
-        
-    def interpolate_color(self, color):
-        r, g, b, a = self.normalize_color(color)
-        dr = random.uniform(-self.color_range, self.color_range)
-        dg = random.uniform(-self.color_range, self.color_range)
-        db = random.uniform(-self.color_range, self.color_range)
-        return (
-            min(max(r + dr, 0.0), 1.0),
-            min(max(g + dg, 0.0), 1.0),
-            min(max(b + db, 0.0), 1.0),
-            1.0
-        )
+        return self.eval(self.lifetime)
 
-    def prepare(self):
-        pass
-    
     def get_radius(self):
         return random.uniform(max(0.1,self.radius - self.radius_range), self.radius + self.radius_range)
-
-    def normalize_color(self, color):
-        return tuple(c / 255.0 for c in color)
     
     def schema(self):
         return {

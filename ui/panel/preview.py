@@ -4,6 +4,7 @@ import cairo
 import numpy as np
 import ttkbootstrap as ttk
 from object.object import Object
+from object.sound import Sound
 from object.video import Video
 from ui.frame.scrollable_frame import ScrollableFrame
 from PIL import Image, ImageTk
@@ -52,6 +53,9 @@ class PreviewPanel(ttk.Frame):
 
         elif( isinstance(media, Video) ):
             self._show_video(media.path)
+
+        elif( isinstance(media, Sound) ):
+            self._show_video(media.sound.path)
             
         elif isinstance(media, Image.Image):
             self._show_pil_image(media)

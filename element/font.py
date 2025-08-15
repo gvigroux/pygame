@@ -45,7 +45,7 @@ class eFont:
     def schema(self):
         return {
             "bold": ("bool", "Bold"),
-            "size": ("float", "Size"),
+            "size": ("int", "Size"),
             "family": ("str", "Family"),
         }
 
@@ -58,3 +58,7 @@ class eFont:
     def __setstate__(self, state):
         self.__dict__.update(state)
         self.sysFont = pygame.font.SysFont(self.family, self.size, bold=self.bold)
+
+    def prepare(self):
+        self.sysFont = pygame.font.SysFont(self.family, self.size, bold=self.bold)
+        self.point_size = self.sysFont.point_size

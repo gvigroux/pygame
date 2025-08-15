@@ -82,6 +82,10 @@ class Game:
         #self.pygame.quit()
         self.pygame.display.quit()
         self.pygame.init()
+        self.pygame.font.init()
+        self.pygame.font.get_fonts()
+        self.pygame.mixer.init()
+        self.pygame.mixer.music.set_volume(0.2)  # 50% du volume
 
     def image_at_time(self, seconds):
         
@@ -103,14 +107,6 @@ class Game:
         
         dt = (seconds * 0.016 * 60) # - object.step.delay
         self.update(dt, 0, None, 0)
-
-        # for object in self.objects:
-        #     if( isinstance(object, Video) ):
-        #         if( not object.is_ready() ):
-        #             original = library_panel.get_video(object.path)
-        #             object.surface_frames = original.surface_frames
-        #             if( len(object.surface_frames) > 0 ):
-        #                 object._frames_ready.set() 
 
         self.background = None
 
@@ -235,7 +231,6 @@ class Game:
             #print(f"FIRST: {(t1 - t0)*1000:.2f} ms | UPDATE: {(t2 - t1)*1000:.2f} ms | BACK: {(t3 - t2)*1000:.2f} ms | DRAW {(t4 - t3)*1000:.2f} | BLIT {(t5 - t4)*1000:.2f} | TOTAL: {(t5 - t0)*1000:.2f} ms | dt={dt*1000:.2f}ms | FPS={fps:.2f}")
             #print(fps)
         self.pygame.display.quit()
-        self.pygame.quit()
 
     def reset(self):
         self.objects = []
@@ -372,11 +367,9 @@ class Game:
                 while not object.is_ready():
                     time.sleep(0.1)
         
-
-    def add_object_factory(self, data):
-        object = ObjectFactory.create(data, self.window_size, 1, 0)
-        self.objects.append(object)
-        return object
+    
+    def create_object(self, data):
+        return ObjectFactory.create(data, self.window_size, 1, 0)
     
     def add_object(self, object):
         self.objects.append(object)
@@ -440,6 +433,11 @@ class Game:
         print("Reorder objects")
         self.objects.sort(key=lambda obj: (-obj.track_id, obj.step.delay))
 
+    def has_object_with_uid(self, uid):
+        for obj in self.objects:
+            if obj.uid == uid:
+                return True
+        return False
         
     def block_count(self, step):
         return sum(1 for obj in self.objects if obj.block(step))

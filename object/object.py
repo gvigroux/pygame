@@ -2,8 +2,9 @@
 import copy
 import math
 import random
+import threading
 import time
-
+import uuid
 import pygame
 
 from element.event import  eEvent
@@ -13,6 +14,7 @@ from element.shadow import eShadow
 from element.sound import eSound
 from element.step import eStep
 from object.inner_particle import InnerParticle
+from PIL import Image, ImageDraw, ImageFont, ImageTk
 
 
 safe_globals = {
@@ -26,17 +28,24 @@ safe_globals = {
 class Object:
     def __init__(self, data, window_size, amount =1, i = 1):
         t0 = time.perf_counter()
-        cls = self.__class__
-        if not hasattr(cls, "_count"):
-            cls._count = 0
-        cls._count += 1
+        #cls = self.__class__
+        #if not hasattr(cls, "_count"):
+        #    cls._count = 0
+        #cls._count += 1
+        
+        self.count       = 1
         self.window_size = window_size
         self.data       = data
         self.index      = i
         self.amount     = amount
+        self.thumb      = None
 
-        self.color      = self.config("color", (255, 255, 255, 255))
-        self.label      = self.config("label", "")
+        self.count      = self.config("count",  1)
+        self.color      = self.config("color",  (255, 255, 255, 255))
+        self.label      = self.config("label",  "")
+        self.uid        = self.config("uid",    str(uuid.uuid4()))
+        self.parent_uid = self.config("parent_uid", None)
+
         if( len(self.color) == 3 ):
             self.color = (self.color[0], self.color[1], self.color[2], 255)
         
@@ -70,7 +79,6 @@ class Object:
         self.exploded   = False
         self.destroyed  = False
         self.first_draw = True
-        #self.pygame     = pygame
         self.fade_speed = 5.0  # vitesse de disparition (1.0 = lent, 5.0 = rapide)
         self.track_id   = self.config("track_id", 0)
 
@@ -104,6 +112,7 @@ class Object:
         self.exploded   = False
         self.first_draw = True
         self.should_draw = False
+        self.enable     = True
         self.alpha      = 1.0
         self.particles  = []
         self.current_fade_in_time = 0.0
@@ -114,6 +123,8 @@ class Object:
         child_schema = self._schema()
         parent_schema = {
             "label": ("str", "Label"),
+            "uid": ("str", "UID"),
+            "parent_uid": ("str", "Parent UID"),
             "enable": ("bool", "Enable"),
             "color": ("str", "Color"),
             "position": ("position", "Position"),
@@ -125,19 +136,6 @@ class Object:
         }  
         return {**parent_schema, **child_schema}
      
-    # def schema(self):
-    #     return {
-    #         "lifetime": ("float", "Lifetime"),
-    #         "timer": ("float", "Timer"),
-    #         "color": ("color", "Color"),
-    #         "position": ("position", "Position"),
-    #         "shadow": ("shadow", "Shadow"),
-    #         "step": ("step", "Step"),
-    #         "on_spawn": ("event", "On Spawn"),
-    #         "on_destroy": ("event", "On Destroy"),
-    #         "on_collision": ("event", "On Collision"),
-    #         "enable": ("bool", "Enable"),
-    #     }  
 
     def gradient_color(self,color1, color2, t):
         """Retourne une couleur intermédiaire entre color1 et color2 selon t ∈ [0.0, 1.0]"""
@@ -147,8 +145,8 @@ class Object:
         )
 
 
-    def count(self):
-        return self.__class__._count
+    #def count(self):
+    #    return self.__class__._count
     
     @property
     def age(self):
@@ -209,21 +207,6 @@ class Object:
         else:
             self.alpha = 1.0  # une fois le fade-in terminé
 
-        #if( self.step.stop >= 0 and self.step.stop < step and self.step.fade_out > 0):
-        #    phase_out = True
-
-        # if( phase_out ):
-        #     if( self.step.fade_out <= 0 ):
-        #         self.alpha = 0.0
-        #     elif self.current_fade_out_time <= self.step.fade_out:
-        #         self.current_fade_out_time -= dt
-        #         self.alpha = max(self.current_fade_out_time / self.step.fade_out, 0.0) 
-        #         print("fadeout alpha", self.alpha)
-
-        #     if( self.alpha <= 0.0 ):
-        #         self.destroyed = True
-        #         self.explode()
-
         if( self.age >= self.step.duration - self.step.fade_out ) and ( self.age < self.step.duration ):
             time_in_fade_out = self.age - (self.step.duration - self.step.fade_out)
             self.alpha = max(1.0 - (time_in_fade_out / self.step.fade_out), 0.0)
@@ -232,20 +215,6 @@ class Object:
         if( self.age >= self.step.duration ) and ( self.step.duration >= 0):
             self.destroyed = True
             self.explode()
-
-        # if (self.step.stop >= 0 and self.step.stop < step and self.step.fade_out > 0) or (self.step.duration > 0 and self.age > self.step.duration - self.step.fade_out):
-        #     fade_out_start = self.age - self.step.duration - self.step.fade_out
-
-        #     if( self.step.fade_out <= 0 ):
-        #         self.alpha = 0.0
-
-        #     elif self.age >= self.step.duration - fade_out_start:
-        #         time_in_fade_out = self.age - fade_out_start
-        #         self.alpha = max(1.0 - (time_in_fade_out / self.step.fade_out), 0.0)
-            
-        #     if( self.alpha <= 0.0 ):
-        #         self.destroyed = True
-        #         self.explode()
 
         if self.destroyed:
             self.should_draw = False
@@ -268,6 +237,27 @@ class Object:
         pass
 
 
+    def get_description(self):
+        return "???"
+    
+    def get_thumb(self):
+        if self.thumb is None:
+            # Génère une image vide avec fond transparent
+            img = Image.new("RGBA", (17, 30), (255, 255, 255, 0))
+            draw = ImageDraw.Draw(img)
+
+            # Dessine une note de musique ou une forme
+            try:
+                # Essayons d’utiliser un emoji si le système supporte
+                font = ImageFont.truetype("seguiemj.ttf", 14)  # police emoji sur Windows
+                draw.text((0, 5), "❓", font=font, fill=(30, 144, 255, 255))  # bleu doux
+            except:
+                # Sinon, forme simple
+                draw.ellipse((16, 16, 48, 48), fill=(30, 144, 255, 255))
+                draw.line((36, 16, 36, 5), fill=(30, 144, 255, 255), width=4)
+
+            self.thumb = ImageTk.PhotoImage(img)
+        return self.thumb
     
     def serialize_object(self, object = None):
 
@@ -308,14 +298,37 @@ class Object:
             # On ignore les autres types (ex: objets non listés ou non sérialisables)
 
         return result
+    
+    def __deepcopy__(self, memo):
+        # Crée manuellement une copie sans les éléments Tkinter
+        cls = self.__class__
+        result = cls.__new__(cls)
+        memo[id(self)] = result
 
+        for k, v in self.__dict__.items():
+            if k in ['image', 'thumb', 'tk_instance','_load_thread','surface_frames', 'current_frame', '_metadata_thread', 'on_ready_callbacks']:
+                setattr(result, k, None)
+            elif k in [ '_should_stop', '_frames_ready']:
+                setattr(result, k, threading.Event())
+            elif k in [ 'font_emoji']:
+                # TODO: c'est moche d'utiliser self.text qui n'existe pas ici
+                setattr(result, k, pygame.font.SysFont("Segoe UI Emoji", self.text.font.point_size))
+            else:
+                setattr(result, k, copy.deepcopy(v, memo))
+
+        return result
+         
+    def _prepare(self):
+        pass
+        
+    def _clone(self, base):
+        pass
 
     def clone(self):
         try:
             obj = copy.deepcopy(self)
             obj.on_ready_callbacks = self.on_ready_callbacks.copy()
-            if( type(obj).__name__ == "Video"):
-                obj.surface_frames = self.surface_frames.copy()
+            obj._clone(self)
         except Exception as e:
             print(f"[clone] Failed to deepcopy': {e}")
         return obj
@@ -392,7 +405,7 @@ class Object:
         if( isinstance(values, dict) ):
             return values
         
-        safe_globals['total']   = self.count()
+        safe_globals['total']   = self.count
         safe_globals['i']       = self.index
         if isinstance(values, str):
             try:

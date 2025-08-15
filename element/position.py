@@ -2,36 +2,24 @@
 import math
 import random
 
+from element.element import Element
 
-safe_globals = {
-    "random": random,
-    "math": math,
-    "total": 0,
-    'i': 0
-}
 
-class ePosition:
+
+class ePosition(Element):
     def __init__(self, window_size, total = 0, i=0, x = "50%" , y = "50%", justify = "H"):
-        self.window_size = window_size
-        #self.raw_x = x
-        #self.raw_y = y
-        safe_globals["total"] = total
-        safe_globals["i"] = i
-        self.x = self._resolve_coord(x, window_size[0])
-        self.y = self._resolve_coord(y, window_size[1])
-        self.justify = justify
+        self.x  = x
+        self.y  = y
+        self.total         = total  
+        self.i             = i
+        self.window_size    = window_size
+        self.justify        = justify
+        self.prepare()
 
-    def _resolve_coord(self, val, total):
-        if isinstance(val, str) and val.endswith("%"):
-            try:
-                pct = float(val.strip("%")) / 100.0
-                return int(pct * total)
-            except ValueError:
-                return 0
-        elif isinstance(val, str):
-           return int(eval(val, {"__builtins__": {}}, safe_globals))
-        return int(val)
-    
+    def prepare(self):
+        self.x          = self.eval(self.x, self.window_size[0])
+        self.y          = self.eval(self.y, self.window_size[1])
+        # TODO: check if self.justify is valid    
     
     def enabled(self):
         return True
@@ -43,6 +31,3 @@ class ePosition:
             "justify": ("str", "Justify"),
         }
     
-    def prepare(self):
-        self.x = self._resolve_coord(self.x, self.window_size[0])
-        self.y = self._resolve_coord(self.y, self.window_size[1])

@@ -38,11 +38,13 @@ class Arc(Object):
             "width": ("float", "Width"),
             "speed": ("float", "Speed"),
         }
-    
-        
+
+    def _prepare(self):
+        pass
+
     def _update(self, dt, step, clock, blocked):
         # Angle tournant (ex: rotation)
-        self.current_angle_deg  = (self.speed * self.age / 1000) % 360
+        self.current_angle_deg  = (self.speed * self.age) % 360
 
         # Décale l’angle de départ par rapport à l’angle initial
         self.start_angle = math.radians(self.angle_start_deg + self.current_angle_deg)

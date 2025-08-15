@@ -31,6 +31,8 @@ def load_scene(state):
     filepath = current.get("file_path", "")
 
     if len(filepath) <= 0:
+        for i in range(4):
+            state["timeline"].add_track_top(False)
         return
     
     # Reset objects
@@ -41,20 +43,28 @@ def load_scene(state):
 
     state["game"].load(filepath, True, False)
 
+    track_count = 2
+    use_library = False
+    for data in state["game"].config.get("library", []):
+        object = ObjectFactory.create(data, state["game"].window_size, 0, 0)
+        track_count = max(object.track_id,track_count)
+        state["library"].add_clip(object)
+        use_library = True
 
-    track_count = 0
+
     for data in state["game"].config.get("objects", []):
-        object = state["library"].get_video(data.get("path"))
+        object = state["library"].get_clip_by_uid(data.get("uid"))
+        
         if object is None:
-            # When Video not in path or any other object (beacause no path as well)
+            # The Clip is not in Libray, we need to add it
             object = ObjectFactory.create(data, state["game"].window_size, 0, 0)
             track_count = max(object.track_id,track_count)
             state["library"].add_clip(object)
         else:
-            # TODO: I should not clone here, but if it's a video, I need I should not launch 
-            #object = object.clone()
+            # TODO: It's not really logical, I should clone and just copy position, step and trackId
             object = ObjectFactory.create(data, state["game"].window_size, 0, 0)
             track_count = max(object.track_id,track_count)
+            #object = object.clone()
             #object.step.delay = data.get("step", {}).get("delay", 0)
         state["game"].objects.append(object)
 
@@ -72,12 +82,26 @@ def load_scene(state):
             state["timeline"].add_clip(object, track=object.track_id, start=object.step.delay, duration=object.step.duration)
 
     
-    for object in state["game"].objects:
+    # TODO: je charge les metadatas plusieurs fois (au moins 2)
+    for object in state["library"]._all_clips:
         if( isinstance(object, Video) ):
-            # TODO: je charge les metadatas plusieurs fois si c'est le meme path
             object.load_metadata_async()
 
-    state["game"].start_lazy_loading()
+    for object in state["game"].objects:
+        if( isinstance(object, Video) ):
+            object.load_metadata_async()
+
+    # Reoder objects to be sure to start loading the first videos
+    state["game"].reorder_objects()
+    uid_order = {
+        obj.uid: index
+        for index, obj in enumerate(
+            sorted(state["game"].objects, key=lambda obj: obj.step.delay)
+        )
+    }
+    state["library"]._all_clips.sort(key=lambda obj: uid_order.get(obj.uid, float("inf")))
+    state["library"].start_lazy_loading()
+    # state["game"].start_lazy_loading()
 
 
 ######################################
@@ -101,7 +125,12 @@ def save_scene(state):
     for object in state["game"].objects:
         obj = object.serialize_object()
         obj["track_id"] = object.track_id
-        data["objects"].append(obj) 
+        data["objects"].append(obj)
+
+    data["library"] = []
+    for object in state["library"]._all_clips:
+        obj = object.serialize_object()
+        data["library"].append(obj)    
 
     data.setdefault("settings", {}).update(state["game"].get_settings())
         

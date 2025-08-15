@@ -72,9 +72,9 @@ def add_video_to_library(path):
         "path": path
     }    
     object = ObjectFactory.create(data, game.window_size, 1, 0) 
-    object.load_metadata_sync()
-    object.load()
     library_panel.add_clip(object)
+    object.load_metadata_async()
+    object.load()
 
     
     base, _ = os.path.splitext(path)
@@ -86,44 +86,7 @@ def add_video_to_library(path):
             "sound": {"path": mp3_path}
         }    
         object = ObjectFactory.create(data, game.window_size, 1, 0) 
-        #object.load_metadata_sync()
-        #object.load()
         library_panel.add_clip(object)
-
-
-############################################
-
-def get_subclasses(cls):
-    subclasses = set()
-    work = [cls]
-    while work:
-        parent = work.pop()
-        for child in parent.__subclasses__():
-            if child not in subclasses:
-                subclasses.add(child)
-                work.append(child)
-    return subclasses
-
-######################################
-
-def open_type_chooser():
-    def handle_choice(choice):
-        print("Vous avez choisi :", choice)
-        
-        track_index = timeline.add_track_top()
-        data = json.loads('''
-        {{
-            "type": "{choice}",
-            "label": "New {choice}", 
-            "step" : {{"duration": 2}}
-        }}
-        '''.format(choice=choice))
-        object = game.add_object_factory(data)
-        timeline.add_clip(object, track=track_index, start=object.step.delay, duration=object.step.duration)
-
-    subclasses = get_subclasses(Object)
-    type_list = sorted([cls.__name__ for cls in subclasses])
-    TypeChooser(app, type_list, handle_choice)
 
 ######################################
 
@@ -133,6 +96,7 @@ def handle_video_click(object):
 ######################################
           
 def handle_video_update(object, seconds):
+    #TODO: maintenant que les videos de la timeline ne sont pas chargée (mais copiée depuis la libraries), on_ready n'est jamais appellé. C'est pas grave mais faut nettoyer
     original = library_panel.get_video(object.path)
     object.surface_frames = original.surface_frames
     object._frames_ready.set()
@@ -149,6 +113,16 @@ app.resizable(True, True)
 
 
 style = ttk.Style("superhero")
+colors = style.colors    # Dictionnaire des couleurs
+
+state["colors"] = {
+    "selected_bg": lighten_color(colors.selectbg, -0.1),
+    "selected_border": colors.primary,
+    "unselected_bg": colors.bg,
+    "hovered_bg": colors.secondary,
+    "text_fg": "white"
+}
+
 
 
 style.configure("Titlebar.TFrame", background="#0a283b")
@@ -166,12 +140,57 @@ style.configure("Titlebar.Disabled.TLabel", background="#A55C21", foreground="#d
 style.configure("Titlebar.Error.TFrame", background="#ffcccc")
 style.configure("Titlebar.Error.TLabel", background="#ffcccc", foreground="red")
 
+# Library Styles
+
+# 1. Création de l'élément de bordure personnalisé
+style.element_create("FineBorder", "from", "default")
+
+
+
+
+# 2. Style SELECTED avec bordure fine (UNIQUEMENT ici)
+#style.layout("Selected.TFrame", [("FineBorder", {"sticky": "nswe", "border": "1", "children": [("Frame.border", {"sticky": "nswe"})]})])
+style.configure("Selected.TFrame", background=lighten_color(colors.selectbg, -0.1))   
+
+# 3. Styles sans bordure
+style.configure("Unselected.TFrame", background=colors.bg,relief="flat",borderwidth=0)
+
+style.configure("Hovered.TFrame",background=colors.secondary,relief="flat",borderwidth=0)
+
+# Styles des labels
+for _state in ["Selected", "Unselected", "Hovered"]:
+    style.configure(f"{_state}.TLabel",background=style.lookup(f"{_state}.TFrame", "background"),foreground="white")
+    style.configure(f"{_state}.TLabelBold",background=style.lookup(f"{_state}.TFrame", "background"),foreground="white",font=("Segoe UI", 10, "bold"))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 bg = style.colors.get("secondary")
 hover_bg = lighten_color(bg, 0.1)  # éclaircir légèrement pour le hover
 
 
 style.configure("Tool.TButton",background=bg,relief="flat")
 style.map("Tool.TButton", background=[("active", hover_bg)], relief=[("active", "flat")])
+
+
+
+
 
 
 menu = CustomMenu(app, state)
@@ -223,7 +242,19 @@ def on_library_clip_click(object):
 
 def on_timeline_clip_click(object):
     library_panel.remove_focus()
+    preview_panel.clear()
     property_panel.show_object(object)
+
+def on_library_clip_ready(clip):
+    for object in state["game"].objects:
+        if( clip.uid == object.uid ):
+            # TODO: creer une fonction generique pour copier les données récupérée de facon asynchrone
+            object.surface_frames = clip.surface_frames
+            object._frames_ready.set()
+            #state["timeline"]._clip_itemconfig(object)
+            state["timeline"].redraw()
+            pass
+    pass
 
 def on_property_panel_update(object):
     timeline.redraw()
@@ -232,7 +263,7 @@ def on_property_panel_update(object):
 
 
 preview_panel = PreviewPanel(paned)
-library_panel = LibraryPanel(state, paned, on_drop_callback=handle_video_drop, on_click=on_library_clip_click) 
+library_panel = LibraryPanel(state, paned, on_drop_callback=handle_video_drop, on_clip_ready=on_library_clip_ready, on_click=on_library_clip_click)
 property_panel = PropertyPanel(state, paned, update_callback=on_property_panel_update)
 
 paned.add(library_panel, weight=1)
@@ -250,7 +281,7 @@ timeline_zone.rowconfigure(0, weight=0)  # Toolbar (fixe)
 timeline_zone.rowconfigure(1, weight=1)  # Timeline (extensible si nécessaire)
 
 
-timeline = TimelinePanel(timeline_zone, num_tracks=0, length=120,
+timeline = TimelinePanel(timeline_zone, state, num_tracks=0, length=120,
                     on_clip_click=on_timeline_clip_click,
                     on_clip_add=game.add_object,
                     on_clip_removed=game.remove_object,
@@ -259,7 +290,6 @@ timeline = TimelinePanel(timeline_zone, num_tracks=0, length=120,
 
 timeline_toolbar = Toolbar(timeline_zone)
 timeline_toolbar.add_icon("ui/icons/icons8-ajouter-24.png", timeline.add_track_top)
-timeline_toolbar.add_icon("ui/icons/icons8-ajouter-24.png", open_type_chooser)
 
 
 #num_tracks = len(game.objects)
@@ -281,8 +311,8 @@ def test():
 toolbar = Toolbar(main_frame)
 toolbar.add_text("TOOLS")
 
-toolbar.add_icon("ui/icons/icons8-importer-24.png", lambda: ImportVideoTool(state), tooltip="Downloader & Splitter")
-toolbar.add_icon("ui/icons/icons8-download-from-the-cloud-24.png", lambda: DownloaderWindow(state), tooltip="Downloader & Splitter")
+toolbar.add_icon("ui/icons/icons8-download-from-the-cloud-24.png", lambda: DownloaderWindow(state), tooltip="Download")
+toolbar.add_icon("ui/icons/icons8-importer-24.png", lambda: ImportVideoTool(state, on_video_added=add_video_to_library), tooltip="Import")
 toolbar.add_icon("ui/icons/icons8-video-gallery-24.png", lambda: DiskLibraryWindow(state, on_double_click=add_video_to_library), tooltip="Media Library")
 toolbar.add_icon("ui/icons/icons8-video-gallery-24.png", lambda: XDownloader(state), tooltip="X Downloader")
 toolbar.add_icon("ui/icons/icons8-video-gallery-24.png", lambda: test(), tooltip="TEST")
@@ -330,26 +360,28 @@ state["vertical_paned"]     = vertical_paned
 load_config(state)
 
 
-def read_templates(directory):
-    fichiers_json = [f for f in os.listdir(directory) if f.endswith('.json')]
-    resultats = []
+# def read_templates(directory):
+#     fichiers_json = [f for f in os.listdir(directory) if f.endswith('.json')]
+#     resultats = []
 
-    for nom_fichier in fichiers_json:
-        chemin_complet = os.path.join(directory, nom_fichier)
-        try:
-            with open(chemin_complet, 'r', encoding='utf-8') as f:
-                donnees = json.load(f)
-                resultats.append((nom_fichier, donnees))
-        except Exception as e:
-            print(f"Erreur dans {nom_fichier} : {e}")
+#     for nom_fichier in fichiers_json:
+#         chemin_complet = os.path.join(directory, nom_fichier)
+#         try:
+#             with open(chemin_complet, 'r', encoding='utf-8') as f:
+#                 donnees = json.load(f)
+#                 resultats.append((nom_fichier, donnees))
+#         except Exception as e:
+#             print(f"Erreur dans {nom_fichier} : {e}")
 
-    return resultats
+#     return resultats
 
 
-jsons = read_templates("templates")
+# jsons = read_templates("templates")
 
-for nom, contenu in jsons:
-    library_panel.add_clip(ObjectFactory.create(contenu, state["game"].window_size, 1, 0))
+# for nom, contenu in jsons:
+#     library_panel.add_clip(ObjectFactory.create(contenu, state["game"].window_size, 1, 0))
+
+
 
 # Sauvegarder à la fermeture
 app.protocol("WM_DELETE_WINDOW", lambda: (save_config(state), app.destroy()))

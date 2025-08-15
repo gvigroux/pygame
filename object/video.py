@@ -27,6 +27,7 @@ class Video(Object):
         self.freeze_duration = self.config("freeze_duration", 0)
         self.start_frame = self.config("start_frame", 0)
         self.end_frame = self.config("end_frame", -1)
+        self.total_frame = 0
         self.fps = self.config("fps", -1)
         self.thumb = None
 
@@ -71,6 +72,7 @@ class Video(Object):
         }
     
     def _prepare(self):
+        self.total_frame = len(self.surface_frames)
         if( len(self.surface_frames) == 0 ):
             return
         if( self.surface_frames[0].size[0] != self.size.width  or self.surface_frames[0].size[1] != self.size.height):
@@ -95,25 +97,6 @@ class Video(Object):
             return  # déjà en cours
         self._start_async_load()
 
-    def __getstate__(self):
-        state = self.__dict__.copy()
-        # Supprimer les attributs non-copiables
-        for key in ['_load_thread', '_should_stop', '_frames_ready', 'thumb', 'surface_frames', 'current_frame', '_metadata_thread', 'on_ready_callbacks']:
-            if key in state:
-                del state[key]
-        return state
-
-    def __setstate__(self, state):
-        self.__dict__.update(state)
-        # Recrée les éléments exclus
-        self._should_stop = threading.Event()
-        self._frames_ready = threading.Event()
-        self._load_thread = None
-        self.thumb = None
-        self.surface_frames = []
-        self.current_frame = None
-        self.is_copy = True
-        self.on_ready_callbacks = [] 
 
     def _init_video_metadata_threadsafe(self):
         cap = cv2.VideoCapture(self.path)
@@ -126,6 +109,7 @@ class Video(Object):
         self.fps = self.fps if self.fps > 0 else original_fps
 
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        self.total_frame = total_frames
         usable_frames = total_frames
         if self.end_frame > 0:
             usable_frames = max(0, min(total_frames, self.end_frame) - self.start_frame)
@@ -150,7 +134,7 @@ class Video(Object):
             if ret and frame is not None:
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 thumb_height = 30
-                thumb_width = int(w * (thumb_height / h))
+                thumb_width = min(int(30*9/16),int(w * (thumb_height / h)))
                 self.thumb_pil = Image.fromarray(frame_rgb).resize((thumb_width, thumb_height), Image.LANCZOS)
 
         cap.release()
@@ -158,12 +142,14 @@ class Video(Object):
         for cb in self.on_thumb_ready_callbacks:
             cb()
 
+    def get_description(self):
+        return self.path
 
     def get_thumb(self):
         """Retourne la miniature (attend si nécessaire)"""
         if( self.thumb is None ) and ( self.thumb_pil is not None ):
             self.thumb = ImageTk.PhotoImage(self.thumb_pil)
-        return  self.thumb
+        return self.thumb
 
     def _start_async_load(self):
         """Démarre le chargement en arrière-plan"""
@@ -207,11 +193,7 @@ class Video(Object):
 
                 if (w, h) != (target_w, target_h):
                     frame = cv2.resize(frame, (target_w, target_h), interpolation=cv2.INTER_AREA)
-    
-                #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2BGRA)
-                #surface = self.numpy_to_cairo_surface(frame)
-
-                                
+                                    
                 # Convertir pour Pygame
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 surface = pygame.image.frombuffer(frame_rgb.tobytes(), (target_w, target_h), 'RGB')
@@ -220,9 +202,6 @@ class Video(Object):
                 current_frame += 1
 
             cap.release()
-
-            #if self.reverse:
-            #    temp_frames.reverse()
 
             self.surface_frames = temp_frames
             self._frames_ready.set()
@@ -261,6 +240,10 @@ class Video(Object):
         return self._frames_ready.is_set()
         #return len(self.surface_frames) > 0
 
+    def _clone(self, base):
+        self.surface_frames = base.surface_frames.copy()
+        self._frames_ready.set()
+
     def get_image(self, seconds):
         """Version thread-safe"""
         if not self.is_ready() or not self.surface_frames:
@@ -271,15 +254,17 @@ class Video(Object):
 
         frame_index = int(seconds * self.fps)
         frame_count = len(self.surface_frames)
+        if( self.end_frame >= 0 ):
+            frame_count = min(frame_count, self.end_frame + 1)
         
         if self.loop:
             frame_index %= frame_count
         else:
-            frame_index = max(0, min(frame_index, frame_count - 1))
+            frame_index = max(0, min(frame_index + self.start_frame, frame_count - 1))
 
         if self.reverse:
-            frame_index = frame_count - 1 - frame_index
-            
+            frame_index = max(0, frame_count - 1 - (frame_index + self.start_frame))
+        
         return self.surface_frames[frame_index]
 
     def numpy_to_cairo_surface(self, bgra):
@@ -300,12 +285,30 @@ class Video(Object):
 
     def _draw_surface(self, screen):
         if self.current_frame:
-            screen.blit(self.current_frame, (self.position.x, self.position.y))    
+            screen.blit(self.current_frame, (self.position.x, self.position.y))  
 
-    def schema(self):
+
+    def adjust_duration(self):
+        """Ajuste la durée de la vidéo en fonction de la position du curseur."""
+
+        if self.start_frame < 0:
+            start = 0
+        else:
+            start = self.start_frame
+        
+        if self.end_frame >= 0 and self.end_frame >= start:
+            frame_count = self.end_frame - start + 1
+        else:
+            frame_count = self.total_frame - start
+
+        frame_count = max(frame_count, 0)  # éviter négatif
+
+        duration = frame_count / self.fps
+        self.step.duration = duration
+
+        
+    def _schema(self):
         return {
-            "label": ("str", "Label"),
-            "enable": ("bool", "Enable"),
             "path": ("str", "path"),
             "reverse": ("bool", "reverse"),
             "loop": ("bool", "loop"),
@@ -313,15 +316,12 @@ class Video(Object):
             "fps": ("int", "FPS"),
             "freeze_frame": ("int", "Freeze frame"),
             "freeze_duration": ("float", "Freeze duration"),
+            "total_frame": ("int", "Total frame", False),
             "start_frame": ("int", "Start frame"),
-            "end_frame": ("int", "End frame"),
-            "step": ("step", "Step"),
+            "end_frame": ("int", "End frame"),           
             "raw_size": ("size", "Orginal Size", False),
             "size": ("size", "Size"),
             "position": ("position", "Position"),
-            "on_spawn": ("event", "On Spawn"),
-            "on_destroy": ("event", "On Destroy"),
-            "on_collision": ("event", "On Collision"),
         }
 
 

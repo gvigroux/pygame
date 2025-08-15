@@ -2,12 +2,13 @@ import os
 import subprocess
 import pygame
 
-class eSound:
-    def __init__(self, path = None, volume = 0.5, loop = False):
-        self.path = path
-        self.volume = volume
-        self.loop = loop
+from element.element import Element
 
+class eSound(Element):
+    def __init__(self, path = None, volume = 0.5, loop = False):
+        self.path   = path
+        self.loop   = loop
+        self.volume = volume
 
         self.tmp_sound = None
         self.sound_channel = None
@@ -19,6 +20,8 @@ class eSound:
             self.sound.set_volume(volume)
             self.sound_length = self.sound.get_length()
 
+    def prepare(self):
+        pass
 
     def __getstate__(self):
         state = self.__dict__.copy()

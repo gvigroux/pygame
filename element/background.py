@@ -1,27 +1,20 @@
-class eBackground:
+from element.element import Element
+
+
+class eBackground(Element):
     def __init__(self, color = (0, 0, 0, 0), size = (0,0), radius= 5):
-        self.color = color
-        if( isinstance(color, str) ):   
-            self.color = eval(color)
-        if( len(self.color) == 3 ):
-            self.color = (self.color[0], self.color[1], self.color[2], 255)
+        self.color  = color
         self.size   = size
         self.radius = radius
+        self.prepare()
 
     def enabled(self):
         return self.color[3] > 0
-    
-    
+
     def prepare(self):
-        if( isinstance(self.radius, str) ):
-            self.radius = eval(self.radius)
-        if( isinstance(self.size, str) ):
-            self.size = eval(self.size)
-        if( isinstance(self.color, str) ):
-            self.color = eval(self.color)
-        if( len(self.color) == 3 ):
-            self.color = (self.color[0], self.color[1], self.color[2], 255)
-        #self.size   = eval(self.size)
+        self.radius = self.eval(self.radius)
+        self.size   = self.eval(self.size)
+        self.color  = self.eval_color(self.color)
 
     def getColor(self, alpha):
         return (self.color[0], self.color[1], self.color[2],  min(alpha, self.color[3]))

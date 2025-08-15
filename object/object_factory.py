@@ -1,7 +1,9 @@
 import time
 
 from object.arc import Arc
+from object.arcs import Arcs
 from object.ball import Ball
+from object.balls import Balls
 from object.explosion import Explosion
 from object.sound import Sound
 from object.spark import Spark
@@ -14,7 +16,9 @@ from object.voice import Voice
 OBJECT_CLASSES = {
     "explosion": Explosion,
     "arc": Arc,
+    "arcs": Arcs,
     "ball": Ball,
+    "balls": Balls,
     "textDraw": TextDraw,
     "text": TextSurface,
     "TextSurface": TextSurface,

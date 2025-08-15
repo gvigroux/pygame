@@ -16,7 +16,14 @@ class Ball(Object):
         self.velocity   = self.config("velocity", [random.uniform(-150, 150), random.uniform(-150, 150)])
         self.text       = eText(**self.config("text", {}))
         #self.collision_margin = 1.5
-          
+              
+    def _schema(self):
+        return {
+            "radius": ("floateval", "Radius"),
+            "velocity": ("floateval", "Velocity"),
+            "text": ("str", "Text")
+        }
+    
 
     def _update(self, dt, step, clock, blocked):
 

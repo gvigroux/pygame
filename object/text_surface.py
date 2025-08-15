@@ -29,8 +29,6 @@ class TextSurface(Object):
         self.title = eText(**self.config("title", {}))
         self.background = eBackground(**self.config("background", {}))
         self.surfaces = []
-
-        self.line_height = self.text.font.point_size + 4
         self.surface_background = None
         self.surface_title = None
         self.font_emoji = pygame.font.SysFont("Segoe UI Emoji", self.text.font.point_size)
@@ -46,14 +44,14 @@ class TextSurface(Object):
         if( t4 - t3 > 0.02 ):            
             print(f"SLOW TextSurface.init4: {(t4 - t3)*1000:.2f} ms")
 
-    def __getstate__(self):
-        state = self.__dict__.copy()
-        del state["font_emoji"]
-        return state
+    # def __getstate__(self):
+    #     state = self.__dict__.copy()
+    #     del state["font_emoji"]
+    #     return state
 
-    def __setstate__(self, state):
-        self.__dict__.update(state)
-        self.font_emoji = pygame.font.SysFont("Segoe UI Emoji", self.text.font.point_size)
+    # def __setstate__(self, state):
+    #     self.__dict__.update(state)
+    #     self.font_emoji = pygame.font.SysFont("Segoe UI Emoji", self.text.font.point_size)
 
     def _schema(self):
         return {
@@ -63,6 +61,10 @@ class TextSurface(Object):
         }
 
     def _prepare(self):
+        # Rcreate the font for emojis with the right size
+        if( self.font_emoji is not None ) and ( self.font_emoji.point_size != self.text.font.point_size ):
+            self.font_emoji = pygame.font.SysFont("Segoe UI Emoji", self.text.font.point_size)
+
         self.surfaces = []
         self.background_surfaces = []
 
@@ -74,7 +76,7 @@ class TextSurface(Object):
         )
 
         lines, width = self._wrap_text(self.text.value, max_text_width)
-        text_height = len(lines) * self.line_height
+        text_height = len(lines) * (self.text.font.point_size + 4)
 
         height = text_height + self.text.padding[0] + self.text.padding[2] + self.text.outline.width * 2
         if self.title.enabled():
@@ -261,7 +263,7 @@ class TextSurface(Object):
             if "H" in self.position.justify:
                 x = (self.window_size[0] - bg.get_width()) // 2
 
-            y = self.position.y + self.height_position + i * self.line_height
+            y = self.position.y + self.height_position + i * (self.text.font.point_size + 4)
             bg.set_alpha(self.alpha * 255)
             screen.blit(bg, (x, y))
 
@@ -270,7 +272,7 @@ class TextSurface(Object):
             if "H" in self.position.justify:
                 x = (self.window_size[0] - txt.get_width()) // 2
 
-            y = self.position.y + self.height_position + i * self.line_height
+            y = self.position.y + self.height_position + i * (self.text.font.point_size + 4)
             txt.set_alpha(self.alpha * 255)
             screen.blit(txt, (x, y))
 

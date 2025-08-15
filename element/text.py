@@ -1,11 +1,11 @@
 import time
 from element.background import eBackground
+from element.element import Element
 from element.font import eFont
 from element.outline import eOutline
-import pygame
 
 
-class eText:
+class eText(Element):
     def __init__(self, value= "", color = (255, 255, 255, 255), font= {}, outline = {}, padding= (0,0,0,0), margin= (0,0,0,0), background = {}, update= ""):
         self.value      = value
         self.color      = color
@@ -35,16 +35,9 @@ class eText:
         return (self.color[0], self.color[1], self.color[2],  min(alpha, self.color[3]))
     
     def prepare(self):
-        if( isinstance(self.color, str) ):
-            self.color = eval(self.color)
-        if( len(self.color) == 3 ):
-            self.color = (self.color[0], self.color[1], self.color[2], 255)  
-        if( isinstance(self.padding, str) ):
-            self.padding = eval(self.padding)
-        if( isinstance(self.padding, str) ):
-            self.padding = eval(self.padding)
-        if( isinstance(self.margin, str) ):
-            self.margin = eval(self.margin)
+        self.color   = self.eval_color(self.color)
+        self.padding = self.eval(self.padding)
+        self.margin  = self.eval(self.margin)
     
 
     def schema(self):

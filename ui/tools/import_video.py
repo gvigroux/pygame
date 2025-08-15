@@ -8,39 +8,22 @@ import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 import queue
 from concurrent.futures import ThreadPoolExecutor
-
-class ImportVideoTool:
-    def __init__(self, state) :
-        self.state = state
-
-        # Crée la fenêtre Toplevel
-        self.window = ttk.Toplevel()
-        self.window.title("Import Video")
-
-        # Définir la taille souhaitée
-        window_width = 600
-        window_height = 300
-
-        # Obtenir la taille de l'écran
-        screen_width = self.state['app'].winfo_screenwidth()
-        screen_height = self.state['app'].winfo_screenheight()
-
-        # Calculer les coordonnées
-        x = (screen_width - window_width) // 2
-        y = (screen_height - window_height) // 2
-
-        # Appliquer la géométrie centrée
-        self.window.geometry(f"{window_width}x{window_height}+{x}+{y}")
+from ui.components.toplevel import Toplevel
 
 
-        # Gestion de la fermeture
-        self.window.protocol("WM_DELETE_WINDOW", self.on_close)
+class ImportVideoTool(Toplevel):
+    def __init__(self, state, on_video_added=None) :
+        super().__init__(state, "Import Video")
+      
+        if( on_video_added ):
+            self.on_video_added = on_video_added
+        
 
         # Split
-        split_label = ttk.Label(self.window, text="Split video in clips :", font=("Arial", 12))
+        split_label = ttk.Label(self, text="Split video in clips :", font=("Arial", 12))
         split_label.pack(pady=5)
 
-        container_split = ttk.Frame(self.window)
+        container_split = ttk.Frame(self)
         container_split.pack(pady=5, padx=20, fill='x')
 
         select_btn = ttk.Button(
@@ -64,7 +47,7 @@ class ImportVideoTool:
 
         self.extract_audio_var = ttk.BooleanVar(value=False)
         extract_audio_check = ttk.Checkbutton(
-            self.window,
+            self,
             text="Extraire le son en MP3 pour chaque clip",
             variable=self.extract_audio_var,
             bootstyle="success"
@@ -73,13 +56,13 @@ class ImportVideoTool:
 
 
         # Label threshold
-        threshold_label = ttk.Label(self.window, text="Scene threshold (0-1) :", font=("Arial", 12))
+        threshold_label = ttk.Label(self, text="Scene threshold (0-1) :", font=("Arial", 12))
         threshold_label.pack(pady=(10, 0))
                 
         self.threshold_var = ttk.DoubleVar(value=0.35)
 
         slider = ttk.Scale(
-            self.window,
+            self,
             from_=0,
             to=1,
             orient='horizontal',
@@ -88,11 +71,11 @@ class ImportVideoTool:
         )
         slider.pack()
 
-        self.threshold_label = ttk.Label(self.window, text=f"Seuil : {self.threshold_var.get():.2f}")
+        self.threshold_label = ttk.Label(self, text=f"Seuil : {self.threshold_var.get():.2f}")
         self.threshold_label.pack()
 
         # Container pour les boutons d'action
-        action_frame = ttk.Frame(self.window)
+        action_frame = ttk.Frame(self)
         action_frame.pack(pady=10)
 
         # Nouveau bouton Découper
@@ -121,8 +104,13 @@ class ImportVideoTool:
         self.split_entry.insert(0, self.state["config"]["downloader"].get("split", ""))
 
         # Zone de log
-        self.log_text = ttk.Text(self.window, height=8, wrap='word')
+        self.log_text = ttk.Text(self, height=8, wrap='word')
         self.log_text.pack(fill='both', expand=True, padx=10, pady=10)
+
+
+    def _on_close(self):
+        self.state["config"]["downloader"]["split"] = self.split_entry.get()
+
 
     def update_threshold_label(self, event=None):
         value = self.threshold_var.get()
@@ -163,7 +151,7 @@ class ImportVideoTool:
 
         temp_log = "scene_changes.txt"
 
-        self.log_message("Analyzing video...")
+        self.log_message(f"Analyzing video... {path}")
 
         cmd = [
             "ffmpeg", "-i", path,
@@ -172,20 +160,10 @@ class ImportVideoTool:
         ]
         
         # Exécution avec capture des logs
-        return_code = self.run_ffmpeg_command(cmd, "[FFmpeg] ")
+        return_code = self.run_ffmpeg_command(cmd, "[FFmpeg] ", stderr=open(temp_log, "w", encoding="utf-8"))
         if return_code != 0:
                 self.log_message("[ERREUR] Échec de la détection des scènes")
                 return []
-
-        # try:
-        #     subprocess.run([
-        #         "ffmpeg", "-i", path,
-        #         "-filter_complex", f"select='gt(scene,{scene_threshold})',showinfo",
-        #         "-f", "null", "-"
-        #     ], stderr=open(temp_log, "w", encoding="utf-8"), stdout=subprocess.DEVNULL, check=True)
-        # except subprocess.CalledProcessError:
-        #     self.log_message("[ERREUR] Échec de l'exécution de ffmpeg pour détecter les cuts.")
-        #     return []
 
         timestamps = []
         if os.path.exists(temp_log):
@@ -211,13 +189,6 @@ class ImportVideoTool:
             self.split_entry.delete(0, 'end')
             self.split_entry.insert(0, filepath)
 
-
-    def on_close(self):
-        # Met à jour la config
-        self.state["config"]["downloader"]["split"] = self.split_entry.get()
-
-        # Détruire la fenêtre
-        self.window.destroy()
 
     
     def cut_video_by_interval(self):
@@ -248,99 +219,6 @@ class ImportVideoTool:
         # Appelle ta logique de découpe ici :
         self.cut_and_save_clips(video_path, timestamps)
 
-    # def cut_and_save_clipsOLD(self, video_path, timestamps, interval=0):
-    #     # Vérifie toujours la durée
-    #     result = subprocess.run([
-    #         "ffprobe", "-v", "error",
-    #         "-show_entries", "format=duration",
-    #         "-of", "default=noprint_wrappers=1:nokey=1",
-    #         video_path
-    #     ], capture_output=True, text=True)
-
-    #     try:
-    #         duration = float(result.stdout.strip())
-    #     except:
-    #         self.log_message("[ERROR] Unable to read video duration.")
-    #         return
-        
-    #     # On decoupe tous les X secondes
-    #     if( interval > 0 ):
-    #         time = interval
-    #         while( duration > time ):
-    #             timestamps.append(time)
-    #             time += interval
-
-    #     # TOUJOURS construire [0, CUTS..., END]
-    #     if not timestamps:
-    #         timestamps = [0.0, duration]
-    #     else:
-    #         timestamps = [0.0] + timestamps + [duration]
-
-    #     self.log_message(f"[INFO] Segments : {timestamps}")
-
-    #     base_dir = "C:\\PYGAME\\clips"
-    #     output_dir = os.path.join(base_dir, os.path.basename(video_path)[:-4])
-    #     os.makedirs(output_dir, exist_ok=True)
-
-    #     EPSILON = 0.001  # 1 ms
-
-    #     for i in range(len(timestamps) - 1):
-    #         start = timestamps[i]
-    #         end = timestamps[i + 1]
-    #         length = end - start
-
-    #         # Pour éviter chevauchement : raccourcir légèrement sauf le dernier segment
-    #         if i < len(timestamps) - 2:
-    #             length -= EPSILON
-            
-    #         output_file = os.path.join(output_dir, f"clip_{i:03}.mp4")
-
-          
-    #         cmd = [
-    #             "ffmpeg", "-y", "-i", video_path,
-    #             "-ss", str(start), "-t", str(length),
-    #             "-vf", "scale=w=608:h=1080:force_original_aspect_ratio=increase,crop=608:1080",
-    #             "-c:v", "libx264", "-preset", "ultrafast", "-crf", "18",
-    #             "-c:a", "aac", output_file
-    #         ]
-    #         self.log_message(f"Starting to create Clip_{i:03}")
-    #         return_code = self.run_ffmpeg_command(cmd, f"[Clip {i:03}] ")
-    #         if return_code == 0:
-    #             self.log_message(f"[OK] Clip {i:03} créé ({length:.2f}s)")
-    #             if self.extract_audio_var.get():
-    #                 self.extract_audio(video_path, start, length, output_file, i)
-    #         else:
-    #             self.log_message(f"[ÉCHEC] Clip {i:03} non créé")
-
-
-                
-            #  try:
-            #     subprocess.run([
-            #         "ffmpeg", "-y", "-i", video_path,
-            #         "-ss", str(start), "-t", str(length),
-            #         "-vf", "scale=w=608:h=1080:force_original_aspect_ratio=increase,crop=608:1080",
-            #         "-c:v", "libx264", "-preset", "ultrafast", "-crf", "18",
-            #         "-c:a", "aac", output_file
-            #     ], check=True)
-            #     self.log_message(f"Clip_{i:03} created ({length:.2f}s)")
-
-            #     if self.extract_audio_var.get():
-            #         audio_file = os.path.join(output_dir, f"clip_{i:03}.mp3")
-            #         try:
-            #             subprocess.run([
-            #                 "ffmpeg", "-y", "-i", video_path,
-            #                 "-ss", str(start), "-t", str(length),
-            #                 "-vn",  # pas de vidéo
-            #                 "-acodec", "libmp3lame",
-            #                 "-q:a", "2",  # qualité élevée (1 = meilleure)
-            #                 audio_file
-            #             ], check=True)
-            #             self.log_message(f"Audio MP3 created : clip_{i:03}.mp3")
-            #         except subprocess.CalledProcessError:
-            #             self.log_message(f"[ERROR] Unable to process audio clip_{i:03}")
-
-            # except subprocess.CalledProcessError:
-            #     self.log_message(f"[ERROR] clip_{i:03}")
 
 
     def extract_audio(self, video_path, start_time, duration, output_dir, clip_index):
@@ -387,11 +265,11 @@ class ImportVideoTool:
             return False
         
         
-    def run_ffmpeg_command(self, command, log_prefix=""):
+    def run_ffmpeg_command(self, command, log_prefix="", stderr=subprocess.PIPE):
         process = subprocess.Popen(
                 command,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                stderr=stderr,
                 universal_newlines=True,
                 encoding='utf-8'
             )
@@ -415,7 +293,7 @@ class ImportVideoTool:
         self.stop_processing = False
         
         # Démarrer le thread qui traite les messages
-        self.window.after(100, self.process_messages)
+        self.after(100, self.process_messages)
         
         # Démarrer le traitement dans un thread séparé
         threading.Thread(target=self._process_clips, 
@@ -490,6 +368,8 @@ class ImportVideoTool:
                         future.cancel()
                     else:
                         future.result()
+
+                # TODO: Add all clips to library (here or after each clip is processed)
             self.message_queue.put((f"[OK] End process", "success"))
 
         except Exception as e:
@@ -531,6 +411,7 @@ class ImportVideoTool:
                 self.message_queue.put((f"[SUCCÈS] Clip {clip_num} créé ({length:.2f}s)", "info"))
                 if self.extract_audio_var.get():
                     self.extract_audio(video_path, start, length, os.path.dirname(output_file), clip_num)
+                self.on_video_added(output_file)
                 return True
             else:
                 self.message_queue.put((f"[ÉCHEC] Clip {clip_num} non créé", "error"))
@@ -568,12 +449,12 @@ class ImportVideoTool:
                     self.log_text.insert("end", message + "\n")
                     
                 self.log_text.see("end")
-                self.window.update_idletasks()
+                self.update_idletasks()
                 
         except queue.Empty:
             pass
         
-        self.window.after(100, self.process_messages)
+        self.after(100, self.process_messages)
 
     def cancel_processing(self):
         """Permet d'annuler le traitement en cours"""

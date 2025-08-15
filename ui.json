@@ -2,22 +2,22 @@
     "config": {
         "downloader": {
             "url": "",
-            "split": "C:/Users/gvigroux/Downloads/IMG_4614.MP4"
+            "split": "C:/Users/gvigroux/Downloads/ayNPXKb_460sv.mp4"
         },
         "current": {
-            "file_path": "C:/PYGAME/scenes/2025-05-02-chat voleur.json"
+            "file_path": "C:/PYGAME/scenes/2025-08-12-Arcs.json"
         }
     },
     "layout": {
         "pane_sizes": [
-            648,
-            1338
+            552,
+            1021
         ],
-        "vertical_sash": 398,
+        "vertical_sash": 410,
         "window_size": [
             1920,
             1017
         ],
-        "maximized": true
+        "maximized": false
     }
 }

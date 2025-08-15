@@ -5,6 +5,7 @@ import pygame
 
 import requests
 
+from element.element import Element
 from element.sound import eSound
 
 API_KEY = "sk_a4ea9842ff92c551a2190616767d8f558e3318d0c397324b"
@@ -13,31 +14,36 @@ API_KEY = "sk_a4ea9842ff92c551a2190616767d8f558e3318d0c397324b"
 # Caroline: kwhMCf63M8O3rCfnQ3oQ
 
 
-class eVoice:
+class eVoice(Element):
     def __init__(self, id = 'kwhMCf63M8O3rCfnQ3oQ', text = None):
-        self.id = id
-        self.text = text
+        self.id     = id
+        self.text   = text
         self.volume = 0.8
-
-        text_bytes = text.encode('utf-8')
-        self.hash = hashlib.md5(text_bytes).hexdigest()
-        #TODO: path should be configurable
-        output_path = "c:\\PYGAME\\media\\voices\\"
-        self.path = f"{output_path}{self.id}_{self.hash}.mp3"
-
-        if not os.path.exists(output_path):
-            os.makedirs(output_path)
-
-        if not os.path.isfile(self.path):
-            self.download()
-
-        self.eSound = eSound(path=self.path,volume=0.8, loop=False)
+        self.hash   = None
+        self.path   = None
+        self.prepare()
         
-      
+    def prepare(self):
+        #TODO: si l'ID change, on ne recalcule pas la voice !!
+        text_bytes = self.text.encode('utf-8')
+        if ( hashlib.md5(text_bytes).hexdigest() != self.hash ):
+
+            self.hash = hashlib.md5(text_bytes).hexdigest()
+            
+            #TODO: path should be configurable
+            output_path = "c:\\PYGAME\\media\\voices\\"
+            self.path = f"{output_path}{self.id}_{self.hash}.mp3"
+
+            if not os.path.exists(output_path):
+                os.makedirs(output_path)
+
+            if not os.path.isfile(self.path):
+                self.download()
+
+            self.eSound = eSound(path=self.path,volume=0.8, loop=False)
         
     def enabled(self):
         return self.text is not None
-    
     
     def play(self, start):
         self.eSound.play(start)

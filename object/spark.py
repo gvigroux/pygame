@@ -19,6 +19,12 @@ class Spark(Object):
     def _draw(self, ctx):
         pass
 
+    def _schema(self):
+        return {
+            "size": ("size", "Size"),
+            "position": ("position", "Position"),
+            "fragment": ("fragment", "Fragment")
+        }
 
     def create_spark(self, fragment, color = None):
         
